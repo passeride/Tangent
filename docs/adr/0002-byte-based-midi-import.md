@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Created / decision date: 2026-10-24
-- Delivery: Initial native/WASM import implemented; Bevy integration not implemented
+- Delivery: Initial native/WASM import implemented; Bevy performance adapter implemented in ADR-0003
 - Requirements: [MIDI import](../spec/midi-import.md)
 
 ## Context and decision

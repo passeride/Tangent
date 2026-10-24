@@ -1,8 +1,7 @@
 # Product and visual design
 
-This directory holds Tangent's own design briefs and explorations. The initial
-structure contains **no finished screens, selected visual identity or design
-assets**. Product goals in the README are starting points, not approved layouts.
+This directory holds Tangent's own design briefs and explorations. The first piano design study has an implemented browser slice. Product goals
+beyond that slice remain proposals; see each brief for evidence and limitations.
 
 ## Start a design study
 
@@ -13,7 +12,7 @@ wireframes in [sketches](sketches/README.md), asset records in
 
 | Brief | Status | Sketches | Outcome |
 | --- | --- | --- | --- |
-| No studies yet | — | — | — |
+| [Piano player](piano-player.md) | Initial implementation | Owner-supplied sketch; not bundled | Four views, piano, sound and themes |
 
 ## Initial design questions
 

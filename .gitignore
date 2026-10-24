@@ -27,3 +27,6 @@ rustc-ice-*.txt
 /web/midi-import/pkg/
 /web/midi-import/node_modules
 /dist/
+
+/web/piano/pkg/
+/web/piano/node_modules

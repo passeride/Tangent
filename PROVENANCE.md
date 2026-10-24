@@ -62,3 +62,15 @@ The importer, its model, tests, CLI example, WASM boundary and inspection page
 were authored for this repository with AI assistance. Synthetic fixtures are
 generated from new event sequences. Third-party dependencies are obtained from
 original registries; Cargo.lock was generated here, not copied from the fork.
+
+## Piano implementation record — 2026-10-24
+
+The owner requested a playable piano, MIDI playback, four note presentations,
+themes and effects, and supplied a hand-drawn reference photo. That requirements
+sketch informs the new [design brief](docs/design/piano-player.md); the photo is
+not bundled. The implementation adds original domain/application Rust modules,
+Canvas/SVG geometry, Web Audio synthesis, original study events and browser tests.
+No legacy source/assets were consulted during this task; the disclosed prior
+context exposure remains unchanged. New Bevy dependencies come from crates.io,
+with their manifest licenses and license files recorded in THIRD_PARTY files.
+No external music font, sampled piano, recording or SoundFont is introduced.

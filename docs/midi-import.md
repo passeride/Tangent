@@ -1,11 +1,12 @@
 # MIDI import — first implemented element
 
-The new repository now contains a Rust workspace with two crates:
+The import boundary consists of two crates in the Rust workspace:
 
 - `tangent-midi`: pure byte-based SMF import with owned musical-performance data.
 - `tangent-midi-web`: a small WASM/JSON boundary for browser inspection.
 
-There is no Bevy app, sound engine, live device input or playback yet. This slice
+The importer itself has no UI/audio/device dependencies. A separate
+[Bevy-core browser piano](piano-player.md) now consumes it. This import-only slice
 is the foundation those consumers can use without importing another project's
 wrappers or models.
 
@@ -62,7 +63,7 @@ source notes are retained. These diagnostics matter before scoring can treat the
 file as a reference. Pairing does not cross source tracks.
 
 CC120/123 closes pending keys in the affected source track/port/channel with a
-`ChannelMode` ending. The future playback engine must merge events and interpret
+`ChannelMode` ending. Playback adapters must merge events and interpret
 shared channel/pedal state; import does not synthesize a sustain tail or perform
 all audible-voice processing. Do not use derived note spans as the only source for
 MIDI playback.
@@ -95,14 +96,15 @@ expected timings. Malformed input tests also mutate/truncate the encoded data.
 No original/fork test files or music assets are used.
 
 See [requirements and primary sources](spec/midi-import.md) and
-[ADR-0002](adr/0002-byte-based-midi-import.md). Next consumers are a Bevy asset/
-import boundary and a transport/virtual-piano playback slice; they are not part of
-this importer implementation.
+[ADR-0002](adr/0002-byte-based-midi-import.md). The separate
+[transport/virtual-piano slice](piano-player.md) now consumes this boundary.
 
 ## Current verification record (2026-10-24)
 
-21 Rust tests pass (20 importer tests and one JSON-boundary test), along with
+The import boundary has 21 passing Rust tests (20 importer tests and one
+JSON-boundary test), along with
 formatting, Clippy and a release WASM build. The real Chromium smoke test passes
 for the included study, malformed input and recovery. The native CLI was checked
 on the same newly authored study. Windows CI is configured but has not been
-verified locally. No physical piano, sound or Bevy UI verification is claimed.
+verified locally. This record concerns the import-only harness; piano/audio
+verification is recorded separately in [the piano guide](piano-player.md).

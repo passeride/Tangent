@@ -1,4 +1,4 @@
-name: Check MIDI import
+name: Check Tangent
 on:
   push:
     branches: [main]
@@ -32,14 +32,20 @@ jobs:
       - run: cargo build -p tangent-midi-web --target wasm32-unknown-unknown --release --locked
       - run: cargo install wasm-bindgen-cli --version 0.2.129 --locked
       - run: wasm-bindgen target/wasm32-unknown-unknown/release/tangent_midi_web.wasm --target web --out-dir web/midi-import/pkg
+      - run: cargo build -p tangent-player --target wasm32-unknown-unknown --release --locked
+      - run: wasm-bindgen target/wasm32-unknown-unknown/release/tangent_player.wasm --target web --out-dir web/piano/pkg
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/midi-import/package-lock.json
+          cache-dependency-path: |
+            web/midi-import/package-lock.json
+            web/piano/package-lock.json
       - run: npm ci --prefix web/midi-import
       - run: cd web/midi-import && npx playwright install --with-deps chromium
       - run: npm test --prefix web/midi-import
+      - run: npm ci --prefix web/piano
+      - run: npm test --prefix web/piano
       - name: Prepare import harness artifact
         run: |
           mkdir -p dist/midi-import
@@ -50,4 +56,16 @@ jobs:
         with:
           name: tangent-midi-import-web
           path: dist/midi-import
+          if-no-files-found: error
+
+      - name: Prepare piano artifact
+        run: |
+          mkdir -p dist/piano
+          cp web/piano/*.html web/piano/*.css web/piano/*.js dist/piano/
+          cp -r web/piano/pkg dist/piano/pkg
+          cp THIRD_PARTY.md THIRD_PARTY_NOTICES.txt dist/piano/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tangent-piano-web
+          path: dist/piano
           if-no-files-found: error

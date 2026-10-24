@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/tangent-midi", "crates/tangent-midi-web"]
+members = ["crates/tangent-midi", "crates/tangent-midi-web", "crates/tangent-core", "crates/tangent-player"]
 resolver = "2"
 
 [workspace.package]

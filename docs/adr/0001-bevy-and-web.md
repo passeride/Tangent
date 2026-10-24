@@ -3,7 +3,7 @@
 - Status: Accepted
 - Created: 2026-10-24
 - Decision date: 2026-10-24
-- Delivery: Not implemented
+- Delivery: Initial Bevy core/browser piano implemented via ADR-0003; GPU/native adapters and persistence remain open
 - Basis: The project's owner requested a new Bevy implementation with web deployment as a goal
 - Supersedes / superseded by: None
 

@@ -9,12 +9,15 @@ without importing Neothesia or code from its forks.
 
 ## Project status
 
-**First implementation slice: MIDI import.** A Rust workspace imports MIDI bytes
-on native and WASM targets. It preserves tracks, note spans, tempo and metadata,
-and includes a native inspection example plus a small browser import harness.
+**Playable web piano and MIDI playback.** The Rust workspace has a format-neutral
+music/piano model, a Bevy application core and browser Canvas/Web Audio adapters.
+Play with keyboard, pointer or touch; import MIDI, switch between four note
+views, choose a theme/piano profile and enable or disable sparkles and song audio.
 
-There is no Bevy application, sound engine, live MIDI connection, playback or
-public web deployment yet. See the [support contract and commands](docs/midi-import.md).
+See [piano build/run/test instructions](docs/piano-player.md) and the
+[MIDI support contract](docs/midi-import.md). Hardware Web MIDI is optional and
+has not been verified with a physical device. Full Bevy GPU rendering, native UI/
+audio, persistent library and MusicXML import are not implemented yet.
 
 The implementation is not certified as a completed clean room process. Prior
 source exposure remains documented in [PROVENANCE.md](PROVENANCE.md).
@@ -28,24 +31,25 @@ source exposure remains documented in [PROVENANCE.md](PROVENANCE.md).
 - Keep a personal music library, preferences and progress.
 - Add MusicXML support with an explicit supported subset and synchronized notation.
 
-These are product goals beyond the initial importer. Browser MIDI, audio and file
+These are product goals; the current piano slice implements a subset. Browser MIDI, audio and file
 access must be validated on target devices; keyboard and on-screen input should
 remain useful when hardware MIDI is unavailable.
 
 ## Technical direction
 
-Bevy provides the application and visual layer. Musical data, exercise rules and
+Bevy provides the application core; the first web renderer is an explicit Canvas adapter. Musical data, exercise rules and
 performance evaluation should be independently testable. Browser audio, MIDI,
 file access and persistence need explicit platform boundaries.
 
-Exact package versions, audio architecture, notation renderer and content formats
-will be selected through small prototypes and recorded decisions. Start with a
-working browser slice before building the complete interface.
+The initial sound/clock/rendering boundaries are recorded in ADR-0003. Full
+notation layout, sampled sound and further formats require separate decisions.
 
 ## Documentation
 
 | Area | Purpose |
 | --- | --- |
+| [Piano player](docs/piano-player.md) | Playable web slice and run/test commands |
+| [Follow-up work](docs/TODO.md) | Remaining implementation and architecture work |
 | [MIDI import](docs/midi-import.md) | Implemented scope, limitations and build/test commands |
 | [Documentation index](docs/README.md) | Entry point for architecture and design work |
 | [Architecture decisions](docs/adr/README.md) | Decision history, statuses and ADR template |
@@ -62,8 +66,8 @@ working browser slice before building the complete interface.
 3. Build a small MIDI playback and virtual-piano slice.
 4. Expand into practice, library and scored performance after those foundations work.
 
-The detailed implementation backlog will follow the initial design and feasibility
-work. The byte-based MIDI importer is delivered; the remaining application milestones are open.
+The importer and initial web piano/playback slice are delivered. Persistence,
+full notation and product modes remain open in [the backlog](docs/TODO.md).
 
 ## Contributing
 

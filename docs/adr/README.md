@@ -5,8 +5,9 @@ tradeoffs and evidence. It is not a task checklist or proof of implementation.
 
 | ID | Decision | Status | Delivery |
 | --- | --- | --- | --- |
-| [0001](0001-bevy-and-web.md) | Use Bevy and validate web from the first application slice | Accepted | App not implemented |
+| [0001](0001-bevy-and-web.md) | Use Bevy and validate web from the first application slice | Accepted | Initial Bevy core/browser piano |
 | [0002](0002-byte-based-midi-import.md) | Byte-based MIDI import and explicit source timing | Accepted | Initial importer implemented |
+| [0003](0003-performance-model-and-piano-web-slice.md) | Shared music model, Bevy core and browser piano/audio adapters | Accepted | Initial web piano implemented |
 
 ## Create an ADR
 
@@ -23,6 +24,5 @@ replaces an accepted one gets a new ADR and links in both directions. Preserve t
 old rationale rather than making history look as if the original choice never
 existed. Small local refactors do not require an ADR.
 
-Likely next questions: audio scheduling and clock ownership, browser MIDI
-integration, music/notation representation, local storage and the notation
-renderer. These are open topics, not preselected solutions.
+Remaining questions include GPU rendering, off-main-thread audio, authored-score
+layout, native adapters and local storage. See [follow-up tasks](../TODO.md).

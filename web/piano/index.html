@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tangent · Play</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <a class="brand" href="./" aria-label="Tangent home"
+          ><svg viewBox="0 0 48 48" aria-hidden="true">
+            <circle cx="21" cy="27" r="12" />
+            <path d="M27.65 43 41.65 7" /></svg
+          >TANGENT</a
+        ><span class="eyebrow">A LITTLE PRACTICE. A LITTLE PLAY.</span
+        ><button id="midi">Connect piano</button>
+      </header>
+      <section class="heading">
+        <div>
+          <span class="eyebrow">YOUR PIANO, YOUR PACE</span>
+          <h1>Make room for music.</h1>
+          <p>Follow the light, or find your own melody.</p>
+        </div>
+        <label class="import"
+          >↗ Import MIDI<input
+            id="file"
+            type="file"
+            accept=".mid,.midi,audio/midi"
+            aria-label="Import MIDI"
+        /></label>
+      </section>
+      <section class="studio" aria-label="Interactive piano">
+        <div class="toolbar">
+          <div>
+            <span class="live-dot"></span><strong id="title">First light</strong
+            ><span id="source" class="muted">Original study</span>
+          </div>
+          <div class="selectors">
+            <label
+              >View<select id="view">
+                <option value="blocks">Falling blocks</option>
+                <option value="staff">Staff lanes</option>
+                <option value="notes">Falling notes</option>
+                <option value="score">Sheet & playhead</option>
+              </select></label
+            ><label
+              >Mood<select id="theme">
+                <option value="aurora">Aurora</option>
+                <option value="ember">Ember</option>
+                <option value="paper">Paper</option>
+              </select></label
+            >
+          </div>
+        </div>
+        <div class="stage">
+          <canvas
+            id="piano"
+            tabindex="0"
+            role="application"
+            aria-label="Piano: play with pointer, touch, or keys A W S E D F T G Y H U J K. Space pauses."
+          ></canvas>
+          <div class="stage-label">
+            <span id="mode-name">FOLLOW THE FALLING LIGHT</span
+            ><span id="notation-hint">Performance view</span>
+          </div>
+        </div>
+        <div class="transport">
+          <button id="restart" aria-label="Restart">↺</button
+          ><button id="play" class="primary" disabled>▶ Play</button
+          ><output id="time">0:00 / 0:16</output
+          ><input
+            id="seek"
+            type="range"
+            min="0"
+            max="16000"
+            value="0"
+            aria-label="Song position"
+          /><label class="sound-label"
+            ><input id="autoplay" type="checkbox" checked /> Hear song</label
+          >
+        </div>
+      </section>
+      <footer>
+        <span
+          ><kbd>A</kbd>–<kbd>K</kbd> play · <kbd>Space</kbd> pause · tap or
+          touch the piano</span
+        >
+        <div>
+          <label
+            >Keys<select id="range">
+              <option value="49">49</option>
+              <option value="61">61</option>
+              <option value="88" selected>88</option>
+            </select></label
+          ><label
+            >Piano<select id="instrument">
+              <option value="felt">Soft felt</option>
+              <option value="bright">Bright keys</option>
+            </select></label
+          ><label
+            >Volume<input
+              id="volume"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.45" /></label
+          ><label
+            ><input id="effects" type="checkbox" checked /> Sparkles</label
+          >
+        </div>
+      </footer>
+      <p id="status" role="status">Loading piano…</p>
+      <p id="error" role="alert" hidden></p>
+      <details>
+        <summary>About these views</summary>
+        <p>
+          MIDI reading views use a sharp-based pitch spelling and approximate
+          duration symbols. They are not an engraved score. Staff lanes rotate
+          the two five-line staves into the falling direction, preserving
+          alignment with the piano. Falling noteheads wait at the strike line
+          for their key-down duration. The sheet view uses a moving playhead and
+          advances by page. Audio is a lightweight synthesized piano; percussion
+          channels are silent. MusicXML engraving and sampled pianos are future
+          work.
+        </p>
+      </details>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

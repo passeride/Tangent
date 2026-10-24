@@ -1,8 +1,10 @@
 # Contributor guidance
 
 Tangent is a new Bevy piano-practice project targeting web from the first
-application slice. The first implemented element is byte-based native/WASM MIDI import; the Bevy
-application and playback remain future work.
+application slice. Implemented slices include native/WASM MIDI import, a format-neutral musical core,
+a Bevy application core and browser Canvas/Web Audio piano/playback adapters.
+Read `docs/piano-player.md` and ADR-0003 for the actual delivered boundaries; full
+Bevy GPU rendering, native playback and authored-score import remain future work.
 
 ## Read first
 
@@ -72,7 +74,8 @@ asset provenance. Distinguish mockups from actual running-app screenshots.
 ## Validation and reporting
 
 For documentation changes, check local relative links and the staged diff. Use the actual commands in `docs/midi-import.md`: Cargo formatting/tests/Clippy,
-WASM build and browser smoke where applicable. There is no Bevy application yet.
+WASM build and browser smoke where applicable. The piano app commands are in
+`docs/piano-player.md`; test its real WASM/audio boundary when changing playback.
 Do not confuse building an import library with device, audio or app verification.
 
 Keep README, indexes and provenance current when their facts change. Do not mark
