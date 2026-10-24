@@ -93,3 +93,7 @@ Verification for this update: 29 native Rust tests, native and WASM warnings-den
 Clippy, release WASM build, real Bevy/Chromium tests, packaged `/Tangent/` site and
 embedded desktop launcher smoke pass locally. Fullscreen entry and exit, hidden
 HTML controls, OS file chooser and black-key pointer input are included.
+
+The bootstrap probes WebGL2 on a detached canvas before initializing Bevy, and
+reports asynchronous renderer failures. A browser test simulates unavailable
+WebGL2 and verifies a visible explanation instead of an endless loading screen.

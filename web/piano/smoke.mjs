@@ -105,6 +105,22 @@ try {
     ),
     true,
   );
+  const noGpu = await browser.newPage();
+  await noGpu.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (kind, ...args) {
+      return kind === "webgl2" ? null : original.call(this, kind, ...args);
+    };
+  });
+  await noGpu.goto(server.url);
+  await noGpu.waitForFunction(() =>
+    document
+      .getElementById("startup")
+      .textContent.includes("WebGL2 is unavailable"),
+  );
+  assert.equal(await noGpu.locator("#startup").isVisible(), true);
+  assert.equal(await noGpu.locator("canvas").count(), 1);
+  await noGpu.close();
   assert.deepEqual(errors, []);
   console.log(
     "Bevy GPU browser passed: one canvas, in-GPU controls, staff notes, sound, transport/volume shortcuts, fullscreen, settings, CC MIDI and responsive viewport.",
