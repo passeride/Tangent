@@ -22,3 +22,8 @@ rustc-ice-*.txt
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+# Generated browser bindings and test dependencies
+/web/midi-import/pkg/
+/web/midi-import/node_modules
+/dist/

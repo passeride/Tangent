@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tangent · MIDI import</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#10191f;color:#e8eeeb}body{margin:0;padding:clamp(20px,5vw,64px);background:radial-gradient(ellipse at top right,#213b3a66,transparent 65%);min-height:100vh;box-sizing:border-box}main{max-width:960px;margin:auto}header{display:flex;justify-content:space-between;align-items:center;gap:20px}h1{font-weight:550;letter-spacing:-.04em;font-size:clamp(32px,5vw,54px);margin:0}h2{font-weight:550;font-size:22px}.muted{color:#a8bbb7;line-height:1.6}.badge{border:1px solid #44625b;border-radius:30px;padding:7px 13px;font-size:12px;color:#a9d5c9}.panel{padding:28px;margin-top:28px;background:#19272dbb;border:1px solid #34494b;border-radius:18px}label{display:block;margin-bottom:12px;font-weight:550}input,button{font:inherit}input::file-selector-button,button{border:1px solid #50746c;background:#294c44;color:#effbf7;padding:10px 15px;border-radius:8px;cursor:pointer}button:focus-visible,input:focus-visible{outline:3px solid #a0ebd3;outline-offset:3px}button{margin-top:14px}input{max-width:100%}.stats{display:flex;gap:25px;flex-wrap:wrap;margin:20px 0}.stats strong{display:block;font-size:26px;font-weight:500}.stats span{color:#a8bbb7;font-size:13px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;max-height:420px;overflow:auto}#error{color:#ffbaaa;white-space:pre-wrap}.track{padding:14px 0;border-top:1px solid #34494b}.track strong{display:block}.track small{color:#a8bbb7}a{color:#a9e3cf}footer{margin:24px 0;font-size:13px;color:#a8bbb7}[hidden]{display:none!important}
+</style>
+</head>
+<body><main>
+<header><h1>Tangent</h1><span class="badge">MIDI import · first slice</span></header>
+<p class="muted">Open a MIDI file to inspect its notes, tracks and timing. Your file stays in this browser. This is an import harness, without playback or device access.</p>
+<section class="panel" aria-labelledby="import-title">
+<h2 id="import-title">Bring in a piece</h2>
+<label for="file">Choose a MIDI file (.mid or .midi)</label>
+<input id="file" type="file" accept=".mid,.midi,audio/midi">
+<p id="status" class="muted" role="status">Loading the import module…</p>
+<button id="demo" type="button" disabled>Try the original three-note study</button>
+<p id="error" role="alert" hidden></p>
+</section>
+<section id="result" class="panel" aria-labelledby="result-title" hidden>
+<h2 id="result-title"></h2><div id="stats" class="stats"></div><div id="tracks"></div>
+<p id="warnings" class="muted"></p>
+<details><summary>Inspect the imported data</summary><pre id="json"></pre></details>
+</section>
+<footer>Standard MIDI Files 0 and 1 · metrical timing · 16 MiB maximum. No files are uploaded or retained after reload.</footer>
+</main><script type="module" src="app.js"></script></body></html>

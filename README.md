@@ -9,12 +9,15 @@ without importing Neothesia or code from its forks.
 
 ## Project status
 
-**Planning and design.** There is no application, Cargo workspace, downloadable
-build or deployed web version yet. Architecture decisions and design studies
-will be recorded here before and alongside implementation.
+**First implementation slice: MIDI import.** A Rust workspace imports MIDI bytes
+on native and WASM targets. It preserves tracks, note spans, tempo and metadata,
+and includes a native inspection example plus a small browser import harness.
 
-This repository does not claim that a clean room process has already been
-completed. See [provenance and implementation boundaries](PROVENANCE.md).
+There is no Bevy application, sound engine, live MIDI connection, playback or
+public web deployment yet. See the [support contract and commands](docs/midi-import.md).
+
+The implementation is not certified as a completed clean room process. Prior
+source exposure remains documented in [PROVENANCE.md](PROVENANCE.md).
 
 ## Product direction
 
@@ -25,7 +28,7 @@ completed. See [provenance and implementation boundaries](PROVENANCE.md).
 - Keep a personal music library, preferences and progress.
 - Add MusicXML support with an explicit supported subset and synchronized notation.
 
-These are goals, not currently available features. Browser MIDI, audio and file
+These are product goals beyond the initial importer. Browser MIDI, audio and file
 access must be validated on target devices; keyboard and on-screen input should
 remain useful when hardware MIDI is unavailable.
 
@@ -43,6 +46,7 @@ working browser slice before building the complete interface.
 
 | Area | Purpose |
 | --- | --- |
+| [MIDI import](docs/midi-import.md) | Implemented scope, limitations and build/test commands |
 | [Documentation index](docs/README.md) | Entry point for architecture and design work |
 | [Architecture decisions](docs/adr/README.md) | Decision history, statuses and ADR template |
 | [Product and visual design](docs/design/README.md) | Design questions, briefs and sketch index |
@@ -59,7 +63,7 @@ working browser slice before building the complete interface.
 4. Expand into practice, library and scored performance after those foundations work.
 
 The detailed implementation backlog will follow the initial design and feasibility
-work. This bootstrap contains documentation only.
+work. The byte-based MIDI importer is delivered; the remaining application milestones are open.
 
 ## Contributing
 
@@ -76,4 +80,6 @@ as proof of source independence.
 
 A project-wide license has not been selected. Do not assume that this repository
 is MIT, Apache-2.0 or licensed under the terms of another Tangent project.
-Dependencies, fonts, music and audio assets will require their own notices.
+Dependencies retain their own licenses: see [THIRD_PARTY.md](THIRD_PARTY.md) and
+[license notices](THIRD_PARTY_NOTICES.txt). Fonts, music and audio assets will
+require their own records when introduced.

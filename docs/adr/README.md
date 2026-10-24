@@ -5,7 +5,8 @@ tradeoffs and evidence. It is not a task checklist or proof of implementation.
 
 | ID | Decision | Status | Delivery |
 | --- | --- | --- | --- |
-| [0001](0001-bevy-and-web.md) | Use Bevy and validate web from the first application slice | Accepted | Not implemented |
+| [0001](0001-bevy-and-web.md) | Use Bevy and validate web from the first application slice | Accepted | App not implemented |
+| [0002](0002-byte-based-midi-import.md) | Byte-based MIDI import and explicit source timing | Accepted | Initial importer implemented |
 
 ## Create an ADR
 

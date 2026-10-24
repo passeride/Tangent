@@ -10,12 +10,14 @@ bootstrap was then prepared at the owner's request using AI assistance.
 
 The planning conversation and assistant have prior exposure to the Neothesia
 fork's source code. This fact is recorded explicitly: a new repository is not
-proof that its contributors or their context are unexposed. The current work is
-project documentation, not a completed source-independent implementation or a
-certification of clean room status.
+proof that its contributors or their context are unexposed. The owner subsequently authorized MIDI implementation directly on main. This
+work proceeds with the same disclosed exposure; it is not represented as a
+completed source-independent handoff or certification of clean room status.
 
-No implementation, third-party runtime dependency, music fixture, font,
-SoundFont, shader or visual asset is introduced by this bootstrap. The documents
+The documentation bootstrap introduced no implementation or runtime assets.
+The subsequent MIDI slice adds newly authored Rust/JS/HTML, synthetic test-event
+sequences and independent dependencies recorded in THIRD_PARTY.md. No font,
+SoundFont, shader or prior project asset is introduced. The documents
 were written for this repository; the old fork's source files, tests, assets and
 ADRs have not been transplanted here. Exposure still needs consideration when
 preparing any implementation handoff.
@@ -37,11 +39,26 @@ new material is introduced.
 
 | Category | Current state | Record when introduced |
 | --- | --- | --- |
-| Implementation code | Not started | Contributor/context, approved inputs and commit history |
-| Requirements handoff | Not established | Version, sources, review and rights |
-| Runtime dependencies | None | Package, version/hash, original source, license and notices |
-| Visual/music/audio assets | None | Use the [design asset register](docs/design/assets/README.md) |
+| Implementation code | Initial MIDI import, authorized 2026-10-24; same disclosed context | Contributor/context, approved inputs and commit history |
+| Requirements handoff | MIDI requirements recorded in docs/spec/midi-import.md; no independent clean room review claimed | Version, sources, review and rights |
+| Runtime dependencies | See THIRD_PARTY.md and lockfiles | Package, version/hash, original source, license and notices |
+| Visual/music/audio assets | No external assets; original synthetic MIDI test data | Use the [design asset register](docs/design/assets/README.md) |
 | Project license | Not selected | Explicit owner decision and applicable scope |
 
 This is a factual project record and process direction, not a legal determination.
 Do not remove or rewrite exposure history to make a stronger claim of independence.
+
+## MIDI implementation record — 2026-10-24
+
+Authorized task: start implementing MIDI import in this new repository directly
+on main. The implementation requirements are recorded in
+[docs/spec/midi-import.md](docs/spec/midi-import.md). Their references are MIDI
+Association documentation and midly's independent package/API documentation.
+No Neothesia/fork source was opened or imported for this task; the assistant's
+earlier source exposure remains disclosed above. This statement does not assert
+that exposure has been eliminated.
+
+The importer, its model, tests, CLI example, WASM boundary and inspection page
+were authored for this repository with AI assistance. Synthetic fixtures are
+generated from new event sequences. Third-party dependencies are obtained from
+original registries; Cargo.lock was generated here, not copied from the fork.

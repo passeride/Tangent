@@ -1,0 +1,53 @@
+name: Check MIDI import
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rust:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo test --workspace --locked
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -p tangent-midi-web --target wasm32-unknown-unknown --release --locked
+      - run: cargo install wasm-bindgen-cli --version 0.2.129 --locked
+      - run: wasm-bindgen target/wasm32-unknown-unknown/release/tangent_midi_web.wasm --target web --out-dir web/midi-import/pkg
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/midi-import/package-lock.json
+      - run: npm ci --prefix web/midi-import
+      - run: cd web/midi-import && npx playwright install --with-deps chromium
+      - run: npm test --prefix web/midi-import
+      - name: Prepare import harness artifact
+        run: |
+          mkdir -p dist/midi-import
+          cp web/midi-import/index.html web/midi-import/app.js dist/midi-import/
+          cp -r web/midi-import/pkg dist/midi-import/pkg
+          cp THIRD_PARTY.md THIRD_PARTY_NOTICES.txt dist/midi-import/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tangent-midi-import-web
+          path: dist/midi-import
+          if-no-files-found: error
