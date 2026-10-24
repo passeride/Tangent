@@ -838,6 +838,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tangent-desktop"
+version = "0.1.0"
+
+[[package]]
 name = "tangent-midi"
 version = "0.1.0"
 dependencies = [

@@ -21,3 +21,12 @@ material. Unknown provenance means it is not ready for the runtime bundle.
 Do not move assets from another repository merely because it also uses the name
 Tangent. References and shipped assets are different categories; a reference URL
 is not permission to redistribute its contents.
+
+## Test music and screenshots — 2026-10-24
+
+- `web/piano/samples/bach-prelude-bwv924a.mid`: original unmodified Mutopia MIDI,
+  Bach / typesetting by jeff covey, CC BY-SA 3.0. Exact source, checksum and credit:
+  [sample attribution](../../../web/piano/samples/ATTRIBUTION.md). Runtime ready.
+- `docs/screenshots/piano-{blocks,staff,notes,score}.png`: real Chromium captures
+  of this repository's app with its original study, newly created for README.
+  Reproduce via `web/piano/capture.mjs`; no external music/photo is embedded.

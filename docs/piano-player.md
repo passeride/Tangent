@@ -16,8 +16,8 @@ python3 -m http.server 8080 --directory web/piano
 
 Open http://localhost:8080. Press Play, tap a piano key or use A–K to activate
 sound. Import a MIDI file with the Import MIDI control. Files are processed in
-memory and are not uploaded or persisted. Nothing is publicly deployed by this
-change. GitHub Actions produces a `tangent-piano-web` artifact containing the
+memory and are not uploaded or persisted. The distribution workflow now includes GitHub Pages deployment; see
+[distribution status/setup](distribution.md). GitHub Actions produces a `tangent-piano-web` artifact containing the
 static app and generated WASM; serve it over HTTP rather than opening file URLs.
 
 ## Scope

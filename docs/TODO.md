@@ -18,7 +18,9 @@ this file tracks the remaining work, not an authorization gate.
 - Index long sustained notes and visible windows; frame JSON and prefix scanning
   are prototype boundaries and need dense/long-song profiling.
 - Save user settings and imported songs through a browser storage adapter.
-- Add native input, audio and renderer adapters. This web slice is not a Windows app.
+- Add true native input, audio and renderer adapters. Desktop downloads now use
+  browser-backed launchers; they do not implement a native Bevy/audio view.
+- Add managed desktop lifecycle/quit UI, signing and macOS notarization.
 
 ## Reading views
 

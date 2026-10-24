@@ -9,6 +9,8 @@ tradeoffs and evidence. It is not a task checklist or proof of implementation.
 | [0002](0002-byte-based-midi-import.md) | Byte-based MIDI import and explicit source timing | Accepted | Initial importer implemented |
 | [0003](0003-performance-model-and-piano-web-slice.md) | Shared music model, Bevy core and browser piano/audio adapters | Accepted | Initial web piano implemented |
 
+| [0004](0004-distribution-pages-and-desktop-launchers.md) | Tested web distribution, Pages and desktop launchers | Accepted | Packaging implemented; CI/deployment verified separately |
+
 ## Create an ADR
 
 1. Copy [the template](template.md) to `NNNN-short-title.md`, using the next unused

@@ -1,0 +1,9 @@
+[package]
+name = "tangent-desktop"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+build = "build.rs"
+[[bin]]
+name = "tangent"
+path = "src/main.rs"

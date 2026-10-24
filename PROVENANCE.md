@@ -74,3 +74,14 @@ No legacy source/assets were consulted during this task; the disclosed prior
 context exposure remains unchanged. New Bevy dependencies come from crates.io,
 with their manifest licenses and license files recorded in THIRD_PARTY files.
 No external music font, sampled piano, recording or SoundFont is introduced.
+
+## Distribution and sample record — 2026-10-24
+
+The owner authorized screenshots, platform builds, GitHub Pages hosting and a CC
+MIDI sample. New standard-library Rust launcher, build/packaging scripts and CI
+were authored in this repository without consulting legacy source. No new runtime
+registry dependency is added. The external MIDI is independently obtained from
+Mutopia: Bach Prelude BWV 924a, typeset by jeff covey, CC BY-SA 3.0. Original bytes,
+hash, source, credit and full license are in `web/piano/samples`. This music license
+does not select a project-wide source-code license. README screenshots are actual
+app captures with the original study, not assets copied from another project.

@@ -142,3 +142,12 @@ The two web harnesses use Playwright/playwright-core 1.56.1 (Apache-2.0), with o
 ## Updating
 
 Regenerate/check metadata and license texts when dependencies change. Check compound license requirements and both native/WASM builds. The wasm-bindgen CLI must match the locked crate version.
+
+## Included MIDI asset
+
+`web/piano/samples/bach-prelude-bwv924a.mid` is an unmodified Mutopia file:
+Johann Sebastian Bach, Prelude BWV 924a, typeset by jeff covey © 2007,
+CC BY-SA 3.0 Unported. Source, exact hash and attribution are in
+[samples/ATTRIBUTION.md](web/piano/samples/ATTRIBUTION.md); the complete license is
+bundled alongside it. It is not relicensed as application code. The native
+launcher adds no registry dependencies and embeds these notices with the music.

@@ -174,6 +174,30 @@ try {
       live = next;
     },
   });
+  $("sample").disabled = false;
+  $("sample").onclick = async () => {
+    const ticket = ++generation;
+    $("sample").disabled = true;
+    try {
+      const response = await fetch(
+        new URL("./samples/bach-prelude-bwv924a.mid", import.meta.url),
+      );
+      if (!response.ok)
+        throw new Error(`Sample download failed (${response.status})`);
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (ticket !== generation) return;
+      player.load_midi(bytes, "Bach · Prelude BWV 924a");
+      input.clear();
+      refreshSong();
+      status(
+        "Bach loaded · press Play. MIDI: jeff covey / Mutopia, CC BY-SA 3.0.",
+      );
+    } catch (e) {
+      error(e);
+    } finally {
+      $("sample").disabled = false;
+    }
+  };
   $("play").disabled = false;
   $("play").onclick = toggle;
   $("restart").onclick = () => {

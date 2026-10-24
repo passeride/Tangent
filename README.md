@@ -7,6 +7,40 @@ Tangent is a new project with its own repository and history. The goal is an
 independent implementation, developed through a documented clean room process,
 without importing Neothesia or code from its forks.
 
+
+[Play in the browser](https://passeride.github.io/Tangent/) ·
+[Download platform builds](https://github.com/passeride/Tangent/actions/workflows/check.yml) ·
+[Run/build guide](docs/distribution.md)
+
+The browser link becomes available after the first successful Pages deployment.
+Click **Try Bach**, then **Play**, to test the included Prelude BWV 924a.
+MIDI typesetting by **jeff covey / Mutopia**, **CC BY-SA 3.0**;
+[source, attribution and license](web/piano/samples/ATTRIBUTION.md).
+
+## Screenshots
+
+Actual running app, captured with Chromium at 1440 px width using Tangent's
+original demonstration study. These are app screenshots, not design mockups.
+
+![Piano with falling blocks](docs/screenshots/piano-blocks.png)
+
+| Staff lanes with ledger lines | Falling noteheads |
+| --- | --- |
+| ![Staff lanes](docs/screenshots/piano-staff.png) | ![Falling notes](docs/screenshots/piano-notes.png) |
+
+![Stationary sheet reading view with a moving playhead](docs/screenshots/piano-score.png)
+
+Reproduce with `node web/piano/capture.mjs` after building the WASM package.
+
+## Platform builds
+
+Every push to main builds the web player and downloadable Windows x64/ARM64,
+Linux x64/ARM64 and macOS Intel/Apple Silicon packages. Desktop packages contain
+a self-contained launcher that serves the same player on localhost and opens
+your browser. They do not require Rust, Node or Python installed. See the
+[distribution guide](docs/distribution.md) for downloads, starting/stopping,
+checksums and unsigned-build limitations. Android/iOS use the web version.
+
 ## Project status
 
 **Playable web piano and MIDI playback.** The Rust workspace has a format-neutral
@@ -16,8 +50,8 @@ views, choose a theme/piano profile and enable or disable sparkles and song audi
 
 See [piano build/run/test instructions](docs/piano-player.md) and the
 [MIDI support contract](docs/midi-import.md). Hardware Web MIDI is optional and
-has not been verified with a physical device. Full Bevy GPU rendering, native UI/
-audio, persistent library and MusicXML import are not implemented yet.
+has not been verified with a physical device. Desktop launchers package this browser player. Full Bevy GPU rendering, native
+UI/audio, persistent library and MusicXML import are not implemented yet.
 
 The implementation is not certified as a completed clean room process. Prior
 source exposure remains documented in [PROVENANCE.md](PROVENANCE.md).

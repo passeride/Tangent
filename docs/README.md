@@ -20,3 +20,5 @@ GitHub without a documentation server. No docs framework is required yet.
 
 - [Browser piano](piano-player.md): delivered behavior, limitations and commands.
 - [Follow-up work](TODO.md): implementation and architecture backlog.
+
+- [Distribution](distribution.md): web hosting, platform downloads and local launchers.

@@ -299,3 +299,31 @@ select:focus-visible,
     font-size: 10px;
   }
 }
+
+.heading {
+  gap: 12px;
+}
+.heading > div {
+  margin-right: auto;
+}
+.credits {
+  font-size: 10px;
+  margin-top: 14px;
+}
+.credits a {
+  color: var(--accent);
+}
+@media (max-width: 650px) {
+  .heading {
+    flex-wrap: wrap;
+  }
+  .heading > div {
+    flex-basis: 100%;
+  }
+  .heading h1 {
+    font-size: 29px;
+  }
+  .heading > button {
+    margin-right: auto;
+  }
+}
