@@ -44,14 +44,16 @@ checksums and unsigned-build limitations. Android/iOS use the web version.
 ## Project status
 
 **Playable web piano and MIDI playback.** The Rust workspace has a format-neutral
-music/piano model, a Bevy application core and browser Canvas/Web Audio adapters.
+music/piano model, one Bevy application with in-engine UI/wgpu rendering and a Web Audio adapter.
 Play with keyboard, pointer or touch; import MIDI, switch between four note
 views, choose a theme/piano profile and enable or disable sparkles and song audio.
 
 See [piano build/run/test instructions](docs/piano-player.md) and the
 [MIDI support contract](docs/midi-import.md). Hardware Web MIDI is optional and
-has not been verified with a physical device. Desktop launchers package this browser player. Full Bevy GPU rendering, native
-UI/audio, persistent library and MusicXML import are not implemented yet.
+has not been verified with a physical device. Desktop launchers package this
+browser player. All player controls and visualizations render inside the Bevy GPU
+canvas.
+Native OS windows/audio, persistent library and MusicXML import remain future work.
 
 The implementation is not certified as a completed clean room process. Prior
 source exposure remains documented in [PROVENANCE.md](PROVENANCE.md).
@@ -71,11 +73,14 @@ remain useful when hardware MIDI is unavailable.
 
 ## Technical direction
 
-Bevy provides the application core; the first web renderer is an explicit Canvas adapter. Musical data, exercise rules and
+Bevy owns the application, UI, keyboard/pointer input and GPU drawing in one
+full-page canvas. The browser adapter supplies audio, file/device capabilities
+and fullscreen, with no separate HTML application menus. Musical data, exercise rules and
 performance evaluation should be independently testable. Browser audio, MIDI,
 file access and persistence need explicit platform boundaries.
 
-The initial sound/clock/rendering boundaries are recorded in ADR-0003. Full
+The sound/clock boundaries are recorded in ADR-0003; ADR-0005 replaces its
+initial Canvas/HTML presentation with a single Bevy GPU surface. Full
 notation layout, sampled sound and further formats require separate decisions.
 
 ## Documentation
@@ -121,3 +126,20 @@ is MIT, Apache-2.0 or licensed under the terms of another Tangent project.
 Dependencies retain their own licenses: see [THIRD_PARTY.md](THIRD_PARTY.md) and
 [license notices](THIRD_PARTY_NOTICES.txt). Fonts, music and audio assets will
 require their own records when introduced.
+
+## Player shortcuts
+
+| Action | Shortcut |
+| --- | --- |
+| Play / pause | Space |
+| Seek backward / forward | Left / Right (5s), Shift for 15s |
+| Volume down / up | Down / Up (5%) |
+| Beginning / end | Home / End |
+| Fullscreen | F11 or the in-engine Full button |
+| Settings and all shortcuts | F1; Esc closes |
+| View / theme / piano / range | V / B / X / R |
+| Song audio / particles | M / P |
+| Import / Bach sample / MIDI | Ctrl+O / Ctrl+B / Ctrl+M |
+
+Staff notes and staff blocks both include five-line bass and treble staves,
+with ledger strokes outside them. All menus are inside the GPU canvas.

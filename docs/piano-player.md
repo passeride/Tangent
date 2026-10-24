@@ -1,8 +1,9 @@
 # Browser piano and song playback
 
 This is the first interactive application slice, built on the existing importer.
-The Bevy core runs in WASM; Canvas and Web Audio are explicit browser adapters.
-See [ADR-0003](adr/0003-performance-model-and-piano-web-slice.md) for boundaries.
+The complete Bevy UI/wgpu application runs in WASM. Web Audio, file access,
+MIDI and fullscreen are browser capabilities; no HTML menus are used.
+See [ADR-0005](adr/0005-one-bevy-gpu-surface.md) for the current boundaries.
 
 ## Run locally
 
@@ -26,7 +27,8 @@ static app and generated WASM; serve it over HTTP rather than opening file URLs.
 - Original demonstration study and local MIDI type 0/1 import.
 - Audio-clock transport, play/pause/restart/seek and optional song sound.
 - Falling blocks, rotated staff blocks with ledger lines, held falling noteheads,
-  stationary grand-staff reading view with paged playhead.
+  stationary grand-staff reading view with paged playhead. Staff lines are also
+  present behind the falling noteheads.
 - Three visual themes, two synthesized piano profiles, volume and sparkles.
 - Velocity, file sustain/controller/bend handling and bounded voices. Hardware
   note input is supported; hardware pedals/controllers are not yet interpreted.
@@ -68,3 +70,26 @@ checks include a nonzero analyser signal, FIFO repeated keys, sustain release,
 silent state reconstruction at seek and cancellation of future voices. Desktop,
 notation and narrow-layout screenshots were inspected. Windows CI is configured;
 no Windows UI, physical MIDI piano or real-speaker latency result is claimed.
+
+## Single-surface UI update — 2026-10-24
+
+All menus, piano keys, notes, staff lines, progress, settings and help are Bevy UI
+inside one full-window GPU canvas. The former Canvas 2D modules are removed.
+The shell has only that canvas, a hidden OS file picker and a startup-error fallback.
+The renderer uses wgpu with WebGL2; unsupported GPUs/browsers show a startup error.
+
+Space plays/pauses; Left/Right seek 5s (Shift 15s); Up/Down adjust volume 5%;
+Home/End; F11 fullscreen; F1 settings; Esc closes settings; V view; B theme;
+M song sound; P sparkles; X piano; R range; Ctrl+O import; Ctrl+B Bach; Ctrl+M MIDI.
+A W S E D F T G Y H U J K remain the piano keys.
+
+`npm test --prefix web/piano` now loads the actual Bevy GPU application and tests
+in-canvas controls, staff-note mode, transport/volume shortcuts, fullscreen entry/
+exit, MIDI import and viewport containment. The packaged-site smoke tests
+`/Tangent/` paths. Software GPU rendering in CI does not establish physical
+hardware performance or sound latency.
+
+Verification for this update: 29 native Rust tests, native and WASM warnings-denied
+Clippy, release WASM build, real Bevy/Chromium tests, packaged `/Tangent/` site and
+embedded desktop launcher smoke pass locally. Fullscreen entry and exit, hidden
+HTML controls, OS file chooser and black-key pointer input are included.

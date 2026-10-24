@@ -25,5 +25,6 @@ for directory in ['pkg', 'samples']:
     shutil.copytree(source / directory, output / directory)
 for filename in ['THIRD_PARTY.md', 'THIRD_PARTY_NOTICES.txt']:
     shutil.copy2(root / filename, output / filename)
+shutil.copytree(root / 'licenses', output / 'licenses')
 (output / '.nojekyll').touch()
 print(output)

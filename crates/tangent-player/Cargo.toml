@@ -14,3 +14,4 @@ bevy_app = { version = "=0.20.0", default-features = false, features = ["std"] }
 bevy_ecs = { version = "=0.20.0", default-features = false, features = ["std"] }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen.workspace = true
+bevy = { version = "=0.20.0", default-features = false, features = ["std", "default_app", "ui_bevy_render", "bevy_winit", "default_font", "webgl2", "web"] }

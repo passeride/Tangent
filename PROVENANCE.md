@@ -85,3 +85,13 @@ Mutopia: Bach Prelude BWV 924a, typeset by jeff covey, CC BY-SA 3.0. Original by
 hash, source, credit and full license are in `web/piano/samples`. This music license
 does not select a project-wide source-code license. README screenshots are actual
 app captures with the original study, not assets copied from another project.
+
+## Single Bevy surface — 2026-10-24
+
+The owner clarified that the whole application, controls and note views must be
+one Bevy GPU surface. New Rust scene/layout/control/theme modules replace the
+Canvas/HTML renderer; the JS adapter now only supplies browser capabilities.
+Independent Bevy 0.20 registry source/API and official examples were consulted;
+no excluded legacy source/assets were consulted. Dependencies/notices were
+regenerated; Bevy's embedded Fira Mono subset adds a separately recorded SIL OFL
+font attribution/license. Screenshots are actual new-app captures.

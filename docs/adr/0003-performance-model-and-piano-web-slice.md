@@ -1,6 +1,6 @@
 # ADR-0003: Shared performance model and a browser piano adapter
 
-- Status: Accepted
+- Status: Superseded in part by [ADR-0005](0005-one-bevy-gpu-surface.md) (Canvas/HTML presentation only)
 - Created / decision date: 2026-10-24
 - Delivery: Bevy application core and browser piano implemented; GPU/native rendering and authored-score import remain open
 - Related: [0001](0001-bevy-and-web.md), [0002](0002-byte-based-midi-import.md), [piano design](../design/piano-player.md)

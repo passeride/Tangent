@@ -1,4 +1,4 @@
-import { instruments } from "./themes.js";
+import { instruments } from "./instruments.js";
 // Web Audio boundary. Scheduling uses the audio clock, independently of rendering.
 export class PianoAudio {
   context = null;

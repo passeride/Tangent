@@ -1,56 +1,25 @@
-// Reproducible screenshots of the actual app, using its original study.
-import { createServer } from "node:http";
-import { readFile, mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
-const root = new URL("./", import.meta.url),
-  output = new URL("../../docs/screenshots/", import.meta.url);
-await mkdir(output, { recursive: true });
-const server = createServer(async (req, res) => {
-  try {
-    const file = new URL(
-      new URL(req.url, "http://localhost").pathname.slice(1) || "index.html",
-      root,
-    );
-    if (!file.href.startsWith(root.href)) throw Error();
-    res.setHeader(
-      "Content-Type",
-      {
-        wasm: "application/wasm",
-        js: "text/javascript",
-        css: "text/css",
-        html: "text/html",
-      }[file.pathname.split(".").pop()] ?? "application/octet-stream",
-    );
-    res.end(await readFile(file));
-  } catch {
-    res.writeHead(404);
-    res.end();
-  }
-});
-await new Promise((r) => server.listen(0, "127.0.0.1", r));
+import { serve, ready, gpuArgs } from "./browser-helpers.mjs";
+const server = await serve(new URL("./", import.meta.url).pathname);
 let browser;
 try {
-  browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+  browser = await chromium.launch({ headless: true, args: gpuArgs });
   const page = await browser.newPage({
-    viewport: { width: 1440, height: 1080 },
+    viewport: { width: 1440, height: 960 },
     deviceScaleFactor: 1,
   });
-  await page.goto(`http://127.0.0.1:${server.address().port}/`);
-  await page.waitForFunction(() => !!window.tangentDiagnostics);
-  await page.locator("#seek").evaluate((el) => {
-    el.value = "2100";
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-  });
+  await ready(page, server.url);
+  await page.keyboard.press("ArrowRight");
   for (const mode of ["blocks", "staff", "notes", "score"]) {
-    await page.selectOption("#view", mode);
-    await page.waitForTimeout(80);
+    await page.waitForTimeout(150);
     await page.screenshot({
-      path: new URL(`piano-${mode}.png`, output).pathname,
-      fullPage: true,
+      path: new URL(`../../docs/screenshots/piano-${mode}.png`, import.meta.url)
+        .pathname,
     });
+    await page.keyboard.press("KeyV");
   }
-  console.log("Captured four actual app views in docs/screenshots/.");
+  console.log("Captured four real Bevy/wgpu screens.");
 } finally {
   await browser?.close();
-  await new Promise((r) => server.close(r));
+  await server.close();
 }

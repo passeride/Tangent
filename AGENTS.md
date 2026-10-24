@@ -2,12 +2,13 @@
 
 Tangent is a new Bevy piano-practice project targeting web from the first
 application slice. Implemented slices include native/WASM MIDI import, a format-neutral musical core,
-a Bevy application core and browser Canvas/Web Audio piano/playback adapters.
+one Bevy UI/wgpu application and a browser audio/file/MIDI capability adapter.
 Desktop launcher packaging and Pages deployment are described in
 `docs/distribution.md` and ADR-0004. Keep the distinction between a browser-backed
 launcher and native rendering/audio explicit.
-Read `docs/piano-player.md` and ADR-0003 for the actual delivered boundaries; full
-Bevy GPU rendering, native playback and authored-score import remain future work.
+Read `docs/piano-player.md` and ADR-0005 for the actual delivered boundaries;
+native windows/audio and authored-score import remain future work. Read ADR-0005:
+all application controls and visuals must remain inside the single Bevy canvas.
 
 ## Read first
 

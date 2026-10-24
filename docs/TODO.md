@@ -5,8 +5,8 @@ this file tracks the remaining work, not an authorization gate.
 
 ## Piano/playback foundation
 
-- Move/benchmark Canvas drawing against Bevy GPU rendering on WebGL2/WebGPU before
-  selecting the long-term visual adapter. Preserve domain and hit geometry.
+- Profile the delivered Bevy UI/wgpu surface on real desktop/mobile GPUs.
+  WebGL2 is the current backend; evaluate WebGPU separately when justified.
 - Move audio lookahead off the rendering/main thread where profiling justifies it;
   add output/display latency calibration and stress cases with dense piano files.
 - Extract controller/voice-state reconstruction into a shared, testable reducer
@@ -38,5 +38,5 @@ this file tracks the remaining work, not an authorization gate.
 
 - Practice matching and scoring consume performed notes; they do not belong in
   renderers or the import parser. Add their own requirements/ADRs before rules.
-- Add full reduced-motion preferences, contrast checks and an accessible noncanvas
-  note/event representation. Effects can already be disabled manually.
+- Add full reduced-motion preferences, contrast checks and accessible Bevy UI semantics for
+  note/event information. Effects can already be disabled manually.

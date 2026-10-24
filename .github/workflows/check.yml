@@ -22,6 +22,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - run: cargo clippy -p tangent-player --target wasm32-unknown-unknown --locked -- -D warnings
       - run: cargo build -p tangent-midi-web -p tangent-player --target wasm32-unknown-unknown --release --locked
       - run: cargo install wasm-bindgen-cli --version 0.2.129 --locked
       - run: wasm-bindgen target/wasm32-unknown-unknown/release/tangent_midi_web.wasm --target web --out-dir web/midi-import/pkg

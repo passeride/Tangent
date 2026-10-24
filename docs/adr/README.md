@@ -11,6 +11,8 @@ tradeoffs and evidence. It is not a task checklist or proof of implementation.
 
 | [0004](0004-distribution-pages-and-desktop-launchers.md) | Tested web distribution, Pages and desktop launchers | Accepted | Packaging implemented; CI/deployment verified separately |
 
+| [0005](0005-one-bevy-gpu-surface.md) | One Bevy/wgpu surface, all controls and notation in-engine | Accepted | Replaces the initial Canvas/HTML presentation |
+
 ## Create an ADR
 
 1. Copy [the template](template.md) to `NNNN-short-title.md`, using the next unused

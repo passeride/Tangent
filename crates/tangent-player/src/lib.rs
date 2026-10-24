@@ -1,11 +1,16 @@
 //! Bevy application state, with explicit browser rendering/audio adapters.
 mod import;
+#[cfg(target_arch = "wasm32")]
+mod scene;
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn run_player() {
+    scene::run();
+}
 use bevy_app::{App, Update};
 use bevy_ecs::prelude::*;
 use serde::Serialize;
 use tangent_core::{music::Song, piano::PianoLayout, transport::Transport};
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
 #[derive(Resource)]
 struct Playback {
     song: Song,
@@ -24,7 +29,6 @@ struct Frame<'a> {
     duration_us: u64,
     notes: Vec<&'a tangent_core::music::PerformanceNote>,
 }
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub struct Player {
     app: App,
     layout: PianoLayout,
@@ -34,9 +38,7 @@ impl Default for Player {
         Self::new()
     }
 }
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl Player {
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(constructor))]
     pub fn new() -> Self {
         let song = import::study();
         let transport = Transport {

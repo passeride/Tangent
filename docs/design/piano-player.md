@@ -22,7 +22,8 @@ A single view selector offers:
    nonuniform. Short ledger strokes extend these staves locally for outlying
    pitches. Sharp signs identify black keys. This is a learning projection, not
    conventional horizontal engraving.
-3. **Falling notes:** noteheads/stems/flags descend to the strike line and stay
+3. **Falling notes:** the same staff/ledger lines remain visible while
+   noteheads/stems/flags descend to the strike line and stay
    there until release. A small progress ring indicates remaining key-down time.
    Approximate symbol categories are not authoritative written rhythms.
 4. **Sheet & playhead:** stationary bass/treble pitch notation, ledger lines and
@@ -66,3 +67,10 @@ been tested. See [follow-up tasks](../TODO.md).
 The supplied sketch informed the hierarchy; its photo is not bundled. The small
 circle-and-tangent mark, clefs and note shapes are newly drawn SVG/Canvas geometry.
 No external fonts, music recordings or SoundFont are bundled.
+
+## In-engine surface update — 2026-10-24
+
+Per the owner clarification, the page is one Bevy instance/camera/canvas, sized to
+its viewport. All application menus, controls, settings and shortcut help render
+with Bevy UI through wgpu. Native file/permission dialogs are capability boundaries.
+The former HTML/Canvas UI is removed. See ADR-0005 and the README shortcut table.
