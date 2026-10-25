@@ -200,7 +200,6 @@ fn visual_metronome_beat_units_and_dots_set_quarter_tempo_without_sound() {
     }
 }
 
-
 // Construct synthetic ZIP archives here instead of importing a fixture from
 // another project or depending on browser-only decompression behavior.
 fn put16(out: &mut Vec<u8>, n: u16) {
@@ -278,7 +277,11 @@ fn compressed_and_stored_mxl_import_through_the_normal_musicxml_adapter() {
             ("mimetype", b"application/vnd.recordare.musicxml", false),
             ("META-INF/container.xml", ROOT.as_bytes(), deflate),
             ("scores/piano.musicxml", PIANO, deflate),
-            ("images/ignored.png", b"non-XML resource is never extracted", true),
+            (
+                "images/ignored.png",
+                b"non-XML resource is never extracted",
+                true,
+            ),
         ]);
         let compressed = import(&archive, "fallback".into()).unwrap();
         let plain = import(PIANO, "fallback".into()).unwrap();
@@ -314,9 +317,8 @@ fn malformed_and_unsafe_mxl_files_are_rejected() {
         "C:/windows.xml",
         "sub\\outside.xml",
     ] {
-        let manifest = format!(
-            "<container><rootfiles><rootfile full-path='{root}'/></rootfiles></container>"
-        );
+        let manifest =
+            format!("<container><rootfiles><rootfile full-path='{root}'/></rootfiles></container>");
         let zip = mxl_zip(&[
             ("META-INF/container.xml", manifest.as_bytes(), false),
             ("p.xml", PIANO, false),
@@ -324,10 +326,7 @@ fn malformed_and_unsafe_mxl_files_are_rejected() {
         assert!(import(&zip, "x".into()).is_err(), "{root}");
     }
 
-    let alternate = ROOT.replace(
-        "application/vnd.recordare.musicxml+xml",
-        "application/pdf",
-    );
+    let alternate = ROOT.replace("application/vnd.recordare.musicxml+xml", "application/pdf");
     let wrong_type = mxl_zip(&[
         ("META-INF/container.xml", alternate.as_bytes(), false),
         ("scores/piano.musicxml", PIANO, false),
@@ -381,7 +380,5 @@ fn mxl_uncompressed_size_limit_is_enforced_before_decompression() {
         .unwrap();
     zip[score_directory + 24..score_directory + 28]
         .copy_from_slice(&(16_u32 * 1024 * 1024 + 1).to_le_bytes());
-    assert!(import(&zip, "x".into())
-        .unwrap_err()
-        .contains("size limit"));
+    assert!(import(&zip, "x".into()).unwrap_err().contains("size limit"));
 }
