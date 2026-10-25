@@ -180,9 +180,14 @@ impl State {
     }
 }
 pub fn run() {
-    let mut state = State::new();
+    #[cfg(target_arch = "wasm32")]
+    let state = State::new();
     #[cfg(not(target_arch = "wasm32"))]
-    { state.status = "Native MIDI/audio ready; press F1 for settings".into(); }
+    let state = {
+        let mut state = State::new();
+        state.status = "Native MIDI/audio ready; press F1 for settings".into();
+        state
+    };
     platform::action("song", &serde_json::to_string(&state.song).unwrap());
     let mut app = App::new();
     app
