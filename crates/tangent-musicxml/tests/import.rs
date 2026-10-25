@@ -376,7 +376,7 @@ fn mxl_uncompressed_size_limit_is_enforced_before_decompression() {
         .enumerate()
         .filter(|(_, w)| *w == b"PK\x01\x02")
         .map(|(i, _)| i)
-        .last()
+        .next_back()
         .unwrap();
     zip[score_directory + 24..score_directory + 28]
         .copy_from_slice(&(16_u32 * 1024 * 1024 + 1).to_le_bytes());
