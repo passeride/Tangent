@@ -321,17 +321,21 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 else { "Computer audio" },
                 Action::MidiOutputSelect(None), t);
             let page = state.midi_dropdown_page;
-            for (offset, port) in state.midi_outputs.iter()
-                .enumerate().skip(page * 5).take(5) {
-                let max_chars = ((content_w - 44.) / 7.).max(10.) as usize;
-                let name: String = port.name.chars().take(max_chars).collect();
-                let marker = if port.id == state.midi_output { "[selected] " }
-                    else if state.preferred_midi_output.as_deref() == Some(&port.name) { "[saved] " }
-                    else { "" };
+            // Snapshot labels first: drawing buttons needs a mutable State.
+            let ports: Vec<(usize, String)> = state.midi_outputs.iter()
+                .enumerate().skip(page * 5).take(5)
+                .map(|(index, port)| {
+                    let max_chars = ((content_w - 110.) / 7.).max(10.) as usize;
+                    let name: String = port.name.chars().take(max_chars).collect();
+                    let marker = if port.id == state.midi_output { "[selected] " }
+                        else if state.preferred_midi_output.as_deref() == Some(port.name.as_str()) { "[saved] " }
+                        else { "" };
+                    (index, format!("{marker}{name}"))
+                }).collect();
+            for (offset, label) in ports {
                 d.button(state, content_x + 8.,
                     start + 36. * (offset - page * 5 + 1) as f32,
-                    content_w - 16., format!("{marker}{name}"),
-                    Action::MidiOutputSelect(Some(offset)), t);
+                    content_w - 16., label, Action::MidiOutputSelect(Some(offset)), t);
             }
             if state.midi_outputs.is_empty() {
                 d.text(content_x + 12., start + 43.,
