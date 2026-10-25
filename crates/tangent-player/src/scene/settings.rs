@@ -273,10 +273,24 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 format!("Sparkles: {}", if state.effects { "On" } else { "Off" }),
                 Action::Effects,
             ));
-            "Effects are cosmetic. Expected-key glow works with sparkles disabled."
+            entries.push((
+                format!(
+                    "Intensity: {}",
+                    ["Soft", "Full", "Punchy"][state.effect_strength as usize]
+                ),
+                Action::EffectStrength,
+            ));
+            "Cosmetic hit feedback; reduced motion disables bursts. Key glow stays visible."
         }
         SettingsTab::Accessibility => {
-            "Reduced motion, UI scaling and high-contrast controls are planned, not yet available."
+            entries.push((
+                format!(
+                    "Reduced motion: {}",
+                    if state.reduced_motion { "On" } else { "Off" }
+                ),
+                Action::ReducedMotion,
+            ));
+            "Reduced motion removes bursts and expanding rings. Note and key feedback stays visible."
         }
         SettingsTab::Data => {
             entries.extend([

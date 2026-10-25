@@ -66,3 +66,14 @@ check an actual 4K viewport at normal and HiDPI scaling.
 **Caveat:** Hanabi currently requires WebGPU on WASM; enabling it directly in
 the shipped WebGL2 application would break browsers without WebGPU. The default
 web build therefore deliberately does not instantiate Hanabi.
+
+## Attack detail and comfort
+
+UI sparks launch in an upward fan with fading velocity trails and a white core;
+shockwave arcs expand quickly and decay gently. Hanabi starts bright and settles
+to its grade colour. Settings → Effects offers Soft / Full / Punchy intensity.
+Settings → Accessibility → Reduced motion removes bursts/rings on both backends;
+played-key colour, expected glow and practice pitch pointers remain available.
+Both preferences are saved, with backwards-compatible defaults for older data.
+No camera shake or full-screen flash is used. Practice streak text no longer
+occupies the exercise heading. See ADR-0017 and the physical checks below.

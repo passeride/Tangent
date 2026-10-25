@@ -78,7 +78,20 @@ try {
   await page.keyboard.press('Escape');await click(page,'main');await click(page,'train');await click(page,'train-notes');
   const first=await page.evaluate(()=>tangentDiagnostics());
   assert.equal(first.practice_hint,false);assert.deepEqual(first.expected_glow,[]);assert.equal(first.music_clefs,2);
+  await page.evaluate(()=>window.midiSent=[]);
+  await click(page,'practice-listen');
+  await page.waitForFunction(()=>midiSent.some(b=>b[0]===0x9f&&b[1]===60));
+  await page.waitForFunction(()=>midiSent.some(b=>b[0]===0x8f&&b[1]===60));
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).completed,0,'Reference does not answer the exercise');
+  assert.deepEqual((await page.evaluate(()=>tangentDiagnostics())).solid_keys,[],'Reference is not player input');
+  // Real MIDI, an octave below: show exact staff position and distance, no echo.
+  await page.evaluate(()=>fakeMidi.inputs.get('p45-in').onmidimessage({data:[0x90,48,100]}));
+  await page.waitForFunction(()=>tangentDiagnostics().practice_played_label?.includes('12 semitones below'));
+  await mkdir(new URL('../../dist/verification/',import.meta.url),{recursive:true});
+  await page.screenshot({path:new URL('../../dist/verification/train-live-pointer.png',import.meta.url).pathname});
+  await page.evaluate(()=>fakeMidi.inputs.get('p45-in').onmidimessage({data:[0x80,48,0]}));
   await page.keyboard.down('KeyS');await page.waitForFunction(()=>tangentDiagnostics().practice_wrong);
+  await page.waitForFunction(()=>tangentDiagnostics().practice_played_label?.includes('2 semitones above'));
   await page.keyboard.up('KeyS');
   await page.keyboard.down('KeyA');await page.waitForFunction(()=>tangentDiagnostics().practice_waiting_release);
   assert.deepEqual((await page.evaluate(()=>tangentDiagnostics())).target,[60]);

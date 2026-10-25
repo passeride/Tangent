@@ -261,7 +261,8 @@ pub(super) mod gpu {
         );
         let [r, g, b] = preset.rgb();
         let mut gradient = bevy_hanabi::Gradient::new();
-        gradient.add_key(0., Vec4::new(r, g, b, 0.98));
+        gradient.add_key(0., Vec4::new(1., 1., 1., 1.));
+        gradient.add_key(0.10, Vec4::new(r, g, b, 0.98));
         gradient.add_key(0.72, Vec4::new(r, g, b, 0.70));
         gradient.add_key(1., Vec4::new(r, g, b, 0.));
         EffectAsset::new(
@@ -290,12 +291,12 @@ pub(super) mod gpu {
         let dt = time.delta_secs().min(0.05);
         for (entity, mut life) in &mut running {
             life.0 -= dt;
-            if life.0 <= 0. || !state.effects || state.screen != Screen::Session {
+            if life.0 <= 0. || !state.animated_effects() || state.screen != Screen::Session {
                 commands.entity(entity).despawn();
             }
         }
         let events = std::mem::take(&mut state.gpu_bursts);
-        if !state.effects || state.screen != Screen::Session {
+        if !state.animated_effects() || state.screen != Screen::Session {
             return;
         }
         let Ok(window) = windows.single() else { return };
@@ -306,7 +307,7 @@ pub(super) mod gpu {
             let mut properties = EffectProperties::default();
             properties.set(
                 "vfx_scale",
-                viewport_scale(window.width(), window.height()).into(),
+                (viewport_scale(window.width(), window.height()) * state.effect_scale()).into(),
             );
             commands.spawn((
                 ParticleEffect::new(catalog.0[event.preset as usize].clone()),

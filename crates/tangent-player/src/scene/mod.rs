@@ -95,6 +95,8 @@ pub struct State {
     view: View,
     theme: usize,
     effects: bool,
+    reduced_motion: bool,
+    effect_strength: u8,
     volume: f32,
     instrument: usize,
     hear: bool,
@@ -165,6 +167,8 @@ impl State {
             view: View::Blocks,
             theme: 0,
             effects: true,
+            reduced_motion: false,
+            effect_strength: 1,
             volume: 0.45,
             instrument: 0,
             hear: true,
@@ -210,6 +214,8 @@ impl State {
             },
             theme: self.theme,
             effects: self.effects,
+            reduced_motion: self.reduced_motion,
+            effect_strength: self.effect_strength,
             volume: self.volume,
             instrument: self.instrument,
             hear: self.hear,
@@ -222,6 +228,8 @@ impl State {
         self.view = [View::Blocks, View::Staff, View::Notes, View::Score][p.view as usize];
         self.theme = p.theme;
         self.effects = p.effects;
+        self.reduced_motion = p.reduced_motion;
+        self.effect_strength = p.effect_strength;
         self.volume = p.volume;
         self.instrument = p.instrument;
         self.hear = p.hear;
@@ -345,6 +353,12 @@ impl State {
         });
         platform::action("fingerprint-query", &request.to_string());
     }
+    fn animated_effects(&self) -> bool {
+        self.effects && !self.reduced_motion
+    }
+    fn effect_scale(&self) -> f32 {
+        [0.65, 1.0, 1.35][self.effect_strength as usize]
+    }
     fn stop_reference(&mut self) {
         for key in self.reference_keys.drain(..) {
             platform::action("off", &format!("reference:{key}"));
@@ -372,6 +386,7 @@ impl State {
         self.practice.answer(&[]);
         self.live_bursts.clear();
         self.ripples.clear();
+        self.particles.clear();
         #[cfg(not(target_arch = "wasm32"))]
         self.gpu_bursts.clear();
         self.feedback.reset();

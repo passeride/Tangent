@@ -29,7 +29,7 @@ try {
     await click(page, id);
     await page.waitForFunction(before => JSON.stringify(tangentDiagnostics().preferences) !== before, before);
   }
-  const expected = await page.evaluate(() => tangentDiagnostics().preferences);
+  let expected = await page.evaluate(() => tangentDiagnostics().preferences);
   await page.waitForFunction(() => tangentDiagnostics().storage.pending === 0 && tangentDiagnostics().storage.revision >= 7);
   // A full browser restart uses the same durable profile and origin.
   await context.close();

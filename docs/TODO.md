@@ -52,7 +52,9 @@ this file tracks the remaining work, not an authorization gate.
   ADR-0008. [x] Extend the fixed C-major exercises with bass-clef targets, curriculum
   options and feedback (delivered in ADR-0015). Timed scoring, progress persistence and adaptive exercise
   selection remain future work in the domain layer.
-- Add full reduced-motion preferences, contrast checks and accessible Bevy UI semantics for
+- [x] Persistent reduced-motion preference and effect intensity (ADR-0017).
+- [x] Optional practice reference audio and exact live pitch pointers (ADR-0017).
+- Add contrast checks and accessible Bevy UI semantics for
   note/event information. Effects can already be disabled manually.
 
 ## MusicXML follow-up (ADR-0006)

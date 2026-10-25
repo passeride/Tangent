@@ -32,6 +32,8 @@ pub enum Action {
     Theme,
     Hear,
     Effects,
+    EffectStrength,
+    ReducedMotion,
     Instrument,
     Range,
     Import,
@@ -86,6 +88,8 @@ impl Action {
             Self::Theme => "theme",
             Self::Hear => "hear",
             Self::Effects => "effects",
+            Self::EffectStrength => "effect-strength",
+            Self::ReducedMotion => "reduced-motion",
             Self::Instrument => "instrument",
             Self::Range => "range",
             Self::Import => "import",
@@ -359,6 +363,13 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             };
             state.panic();
             state.practice.configure(clef, level);
+        }
+        Action::EffectStrength => state.effect_strength = (state.effect_strength + 1) % 3,
+        Action::ReducedMotion => {
+            state.reduced_motion = !state.reduced_motion;
+            state.particles.clear();
+            state.ripples.clear();
+            state.live_bursts.clear();
         }
         Action::PracticeListen => state.hear_target(),
         Action::PracticeHint => state.practice.hint = !state.practice.hint,

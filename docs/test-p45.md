@@ -23,3 +23,12 @@ testen; støtte for pedal fra fysisk MIDI er fortsatt et eget arbeidspunkt.
 
 PowerShell-starteren kjører først en enkel programtest, åpner Tangent og ber om
 korte testresultater når du lukker det. Rapporten lagres ved siden av programmet.
+
+## Practice reference and visual distance
+
+- Train → Notes: Hear target sounds briefly without completing the exercise.
+- Play a wrong octave: the coloured note shows the real pitch and ±12 semitones.
+- Press the right note: target stays until full key release. Repeat with bass clef.
+- Hear target, then play/pause/leave immediately: no hanging note or hardware echo.
+- Effects → Punchy should feel stronger. Reduced motion disables bursts; played
+  notes and expected-key glow remain. Restart and check both settings persist.

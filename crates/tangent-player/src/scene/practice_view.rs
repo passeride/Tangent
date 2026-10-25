@@ -110,7 +110,7 @@ fn staff(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme, chords
     // Include every played pitch in the vertical extent, even outside the
     // visible piano range. Never clamp a wrong octave onto another staff line.
     let mut lo = -1.5_f32;
-    let mut hi = 16.;
+    let mut hi = 16._f32;
     for &key in targets.iter().chain(held.iter()) {
         lo = lo.min(unit(key) - 4.);
         hi = hi.max(unit(key) + 1.);

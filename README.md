@@ -75,7 +75,9 @@ permission; if the device is unavailable, Computer audio is used until reconnect
 The selected output replaces computer audio; leave the piano's Local Control On. Physical piano input
 is not echoed. **Solid keys mean played input; glowing edges mean expected song
 notes.** Train → Notes offers treble, bass or both clefs, three levels and Show hint.
-The answer stays visible until all keys are released. See [MIDI and practice details](docs/adr/0015-midi-output-and-reading-practice.md).
+The answer stays visible until all keys are released. **Hear target** auditions the note;
+your played pitch appears in the pressed-key colour on the staff, with semitone
+distance feedback. Effects have Soft/Full/Punchy intensity and a saved reduced-motion setting. See [MIDI and practice details](docs/adr/0015-midi-output-and-reading-practice.md).
 
 ## Project status
 
