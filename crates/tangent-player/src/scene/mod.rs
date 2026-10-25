@@ -228,7 +228,10 @@ impl State {
 pub fn run() {
     let state = State::new();
     platform::action("song", &serde_json::to_string(&state.song).unwrap());
-    platform::action("fingerprint-index", &serde_json::to_string(&fingerprint::index_song(&state.song)).unwrap());
+    platform::action(
+        "fingerprint-index",
+        &serde_json::to_string(&fingerprint::index_song(&state.song)).unwrap(),
+    );
     App::new()
         .insert_resource(state)
         .insert_resource(draw::Pool::default())
@@ -311,7 +314,10 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
                         );
                         state.song = song;
                         platform::action("song", &serde_json::to_string(&state.song).unwrap());
-                        platform::action("fingerprint-index", &serde_json::to_string(&fingerprint::index_song(&state.song)).unwrap());
+                        platform::action(
+                            "fingerprint-index",
+                            &serde_json::to_string(&fingerprint::index_song(&state.song)).unwrap(),
+                        );
                         state.previous.clear();
                         state.particles.clear();
                         state.sync();
@@ -320,25 +326,38 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
                 }
             }
             "fingerprint-candidates" => {
-                if state.mode != Mode::FreeForm || state.screen != Screen::Session
+                if state.mode != Mode::FreeForm
+                    || state.screen != Screen::Session
                     || m["ticket"].as_u64() != Some(state.recognition_ticket)
                 {
                     continue;
                 }
-                let keys: Vec<u8> = m["keys"].as_array().map(|values| {
-                    values.iter().filter_map(|v| v.as_u64().and_then(|k| u8::try_from(k).ok())).collect()
-                }).unwrap_or_default();
+                let keys: Vec<u8> = m["keys"]
+                    .as_array()
+                    .map(|values| {
+                        values
+                            .iter()
+                            .filter_map(|v| v.as_u64().and_then(|k| u8::try_from(k).ok()))
+                            .collect()
+                    })
+                    .unwrap_or_default();
                 let candidates: Vec<fingerprint::Candidate> =
                     serde_json::from_value(m["candidates"].clone()).unwrap_or_default();
                 let matches = fingerprint::rank_matches(&keys, &candidates, 2);
                 if let Some(best) = matches.first() {
-                    let ambiguous = matches.get(1).is_some_and(|next|
-                        (best.similarity - next.similarity) < 0.08
-                        && best.song_id != next.song_id);
+                    let ambiguous = matches.get(1).is_some_and(|next| {
+                        (best.similarity - next.similarity) < 0.08 && best.song_id != next.song_id
+                    });
                     state.recognition_status = format!(
                         "{}: {} · {:.0}% interval similarity · note {}",
-                        if ambiguous { "Possible match" } else { "Recognized" },
-                        best.title, best.similarity * 100., best.note_index + 1
+                        if ambiguous {
+                            "Possible match"
+                        } else {
+                            "Recognized"
+                        },
+                        best.title,
+                        best.similarity * 100.,
+                        best.note_index + 1
                     );
                 }
             }
