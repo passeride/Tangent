@@ -3,9 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node smoke.mjs"
+    "test": "node storage-schema.test.mjs && node smoke.mjs && node storage-smoke.mjs",
+    "postinstall": "node prepare-sqlite.mjs"
   },
   "devDependencies": {
     "playwright": "1.56.1"
+  },
+  "dependencies": {
+    "sql.js": "1.15.1"
   }
 }

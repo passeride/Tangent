@@ -34,3 +34,5 @@ Remaining questions include GPU rendering, off-main-thread audio, authored-score
 layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 
 - [ADR-0008: Navigation and practice](0008-navigation-and-practice.md) — accepted; main menu, mode routing and independent exercise rules.
+
+- [ADR-0009: Local SQLite persistence](0009-local-sqlite-storage.md) — accepted; settings, export and future score schema.

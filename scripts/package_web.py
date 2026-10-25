@@ -11,7 +11,7 @@ output = Path(args.output).resolve()
 source = root / 'web/piano'
 if not output.is_relative_to(root / "dist") or output == root / "dist":
     raise SystemExit("Output must be a subdirectory of this repository's dist/")
-required = ['pkg/tangent_player.js', 'pkg/tangent_player_bg.wasm', 'samples/first-light.musicxml', 'samples/ATTRIBUTION.md']
+required = ['pkg/tangent_player.js', 'pkg/tangent_player_bg.wasm', 'samples/first-light.musicxml', 'samples/ATTRIBUTION.md', 'vendor/sql-wasm.js', 'vendor/sql-wasm.wasm']
 for path in required:
     if not (source / path).is_file():
         raise SystemExit(f'Missing {path}. Build the WASM package first.')
@@ -21,7 +21,7 @@ output.mkdir(parents=True)
 for pattern in ['*.html', '*.css', '*.js']:
     for path in source.glob(pattern):
         shutil.copy2(path, output / path.name)
-for directory in ['pkg', 'samples']:
+for directory in ['pkg', 'samples', 'vendor']:
     shutil.copytree(source / directory, output / directory)
 for filename in ['THIRD_PARTY.md', 'THIRD_PARTY_NOTICES.txt']:
     shutil.copy2(root / filename, output / filename)

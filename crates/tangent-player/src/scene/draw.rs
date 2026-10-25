@@ -241,7 +241,7 @@ pub fn render(
                 .map(|r| serde_json::json!({"key":k.key,"x":r.x,"y":r.y,"w":r.w,"h":r.h}))
         })
         .collect();
-    platform::report(&serde_json::json!({"screen":format!("{:?}",state.screen),"mode":format!("{:?}",state.mode),"completed":state.practice.completed,"target":state.practice.target(),"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())}).to_string());
+    platform::report(&serde_json::json!({"screen":format!("{:?}",state.screen),"mode":format!("{:?}",state.mode),"completed":state.practice.completed,"preferences":state.preferences(),"storage_status":state.storage_status,"target":state.practice.target(),"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())}).to_string());
     apply(&mut commands, &mut pool, d, &music_font.0);
 }
 fn apply(commands: &mut Commands, pool: &mut Pool, d: Drawing, music_font: &Handle<Font>) {
@@ -378,6 +378,7 @@ fn settings(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
         ("Full screen [F11]".into(), Action::Fullscreen),
         ("Return [Esc / F1]".into(), Action::Help),
         ("Main menu".into(), Action::Main),
+        ("Export database".into(), Action::ExportDatabase),
     ];
     let cols = if l.width > 700. { 3 } else { 2 };
     let row = if l.height < 600. { 35. } else { 43. };
@@ -439,7 +440,14 @@ fn settings(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
         t.ink,
     );
     d.text(l.margin, l.height - 30., &state.status, 11., t.muted);
-    let y = start + (19_usize.div_ceil(cols)) as f32 * row + 15.;
+    d.text(
+        l.margin,
+        l.height - 14.,
+        &state.storage_status,
+        10.,
+        t.muted,
+    );
+    let y = start + (20_usize.div_ceil(cols)) as f32 * row + 15.;
     let line = ((l.height - y - 16.) / 8.).clamp(10., 23.);
     for (i, text) in [
         "Space: play / pause",

@@ -1,7 +1,8 @@
 // Browser capability adapter: audio, files, MIDI and the fullscreen API.
 // No rendering, menus, note placement or transport rules live in this module.
 import { PianoAudio } from "./audio.js";
-export function installPlatform() {
+import { openStorage } from "./storage.js";
+export async function installPlatform() {
   const canvas = document.getElementById("tangent"),
     file = document.getElementById("midi-file"),
     audio = new PianoAudio();
@@ -21,6 +22,16 @@ export function installPlatform() {
     state = null;
   const status = (text) => queue.push({ type: "status", text });
   const fail = (error) => status(String(error.message ?? error));
+  let storage = null;
+  const storageStatus = text => queue.push({ type: "storage-status", text });
+  try {
+    storage = await openStorage();
+    storageStatus("Settings saved on this device.");
+    queue.push({ type: "preferences", data: storage.settings });
+  } catch (error) {
+    storageStatus("Local saving unavailable; existing data preserved.");
+    console.warn("Tangent storage:", error);
+  }
   function reset() {
     audio.stopSong();
     if (!song) return;
@@ -139,6 +150,23 @@ export function installPlatform() {
     action: (name, data) => {
       try {
         switch (name) {
+          case "save-settings":
+            if (storage) {
+              storageStatus("Saving settings…");
+              storage.saveSettings(JSON.parse(data))
+                .then(() => storageStatus("Settings saved on this device."))
+                .catch(() => storageStatus("Could not save settings. Export a backup."));
+            }
+            break;
+          case "export-database":
+            if (!storage) { storageStatus("Local database unavailable."); break; }
+            storage.exportDatabase().then(bytes => {
+              const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.sqlite3" }));
+              const link = document.createElement("a");
+              link.href = url; link.download = "tangent.sqlite"; link.click();
+              setTimeout(() => URL.revokeObjectURL(url), 30_000);
+            }).catch(() => storageStatus("Could not export database."));
+            break;
           case "song":
             song = JSON.parse(data);
             reset();
@@ -210,6 +238,7 @@ export function installPlatform() {
     state
       ? {
           ...state,
+          storage: storage?.diagnostics ?? { ready: false },
           energy: audio.energy(),
           audioState: audio.context?.state,
           voices: audio.voices.size,

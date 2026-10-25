@@ -25,6 +25,7 @@ pub enum Action {
     Midi,
     Help,
     Credits,
+    ExportDatabase,
 }
 impl Action {
     pub fn id(self) -> &'static str {
@@ -53,6 +54,7 @@ impl Action {
             Self::Midi => "midi",
             Self::Help => "help",
             Self::Credits => "credits",
+            Self::ExportDatabase => "export-database",
         }
     }
 }
@@ -174,6 +176,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         }
         Action::Midi => platform::action("midi", ""),
         Action::Credits => platform::action("credits", ""),
+        Action::ExportDatabase => platform::action("export-database", ""),
     }
 }
 pub fn input(

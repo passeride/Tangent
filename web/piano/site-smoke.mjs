@@ -9,6 +9,7 @@ try {
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await ready(page, server.url);
+  await page.waitForFunction(() => tangentDiagnostics().storage.ready);
   await click(page, "start-play");
   await page.waitForFunction(() => tangentDiagnostics().screen === "Session");
   const sample = await page.request.get(server.url + "samples/first-light.musicxml");

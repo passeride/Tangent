@@ -1,6 +1,6 @@
 # ADR-0004: One tested web distribution for Pages and desktop launchers
 
-- Status: Accepted
+- Status: Accepted; random-port decision superseded by [ADR-0009](0009-local-sqlite-storage.md)
 - Created / decision date: 2026-10-24
 - Delivery: Packaging implemented; CI results and live deployment tracked separately
 - Related: [ADR-0003](0003-performance-model-and-piano-web-slice.md), [distribution guide](../distribution.md)

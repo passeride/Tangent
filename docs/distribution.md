@@ -23,8 +23,8 @@ Extract the artifact ZIP, then extract the platform archive inside it.
 | macOS Intel | `Tangent-x86_64-apple-darwin` | `Tangent.app` |
 | macOS Apple Silicon | `Tangent-aarch64-apple-darwin` | `Tangent.app` |
 
-The launcher contains the web app and WASM, starts a read-only server on a random
-**127.0.0.1** port, and opens your default browser. It works without a network
+The launcher contains the web app and WASM, starts a read-only server at
+**127.0.0.1:38765**, and opens your default browser. It works without a network
 connection, Python, Node or Rust installed. A browser remains required. This is
 packaging for the current browser adapter, not a native Bevy GPU/audio build.
 There are no Android/iOS app packages; use the web version on those devices.
@@ -62,3 +62,11 @@ The environment assignment shown is for POSIX shells. In PowerShell set
 Builds without that environment variable support workspace checking/tests but
 produce a launcher that explicitly reports missing packaged assets at startup.
 Production packaging refuses a missing WASM or test-music asset.
+
+## Persistent origin and SQLite
+
+The launcher now uses `http://127.0.0.1:38765/` on each start to retain browser
+storage. Close the previous launcher before starting another. `TANGENT_PORT` can
+select another port; `0` selects a temporary port and therefore a new storage
+origin. The browser-local SQLite database can be downloaded via Settings → Export
+database. Pages and launcher data are separate. See ADR-0009.

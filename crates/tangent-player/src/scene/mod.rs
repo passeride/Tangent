@@ -6,7 +6,7 @@ mod menu;
 mod platform;
 mod score;
 mod theme;
-use super::import;
+use super::{import, preferences::Preferences};
 use bevy::{prelude::*, window::WindowResolution};
 use layout::Layout;
 use std::collections::{BTreeMap, BTreeSet};
@@ -65,6 +65,9 @@ pub struct State {
     buttons: Vec<(layout::Rect, controls::Action)>,
     arrow_repeat: f32,
     viewport_set: bool,
+    storage_ready: bool,
+    saved_preferences: Option<Preferences>,
+    storage_status: String,
 }
 struct Particle {
     x: f32,
@@ -104,7 +107,39 @@ impl State {
             buttons: vec![],
             arrow_repeat: 0.,
             viewport_set: false,
+            storage_ready: false,
+            saved_preferences: None,
+            storage_status: "Opening local storage…".into(),
         }
+    }
+    fn preferences(&self) -> Preferences {
+        Preferences {
+            version: 1,
+            view: match self.view {
+                View::Blocks => 0,
+                View::Staff => 1,
+                View::Notes => 2,
+                View::Score => 3,
+            },
+            theme: self.theme,
+            effects: self.effects,
+            volume: self.volume,
+            instrument: self.instrument,
+            hear: self.hear,
+            first_key: self.piano.keys.first().unwrap().key,
+            last_key: self.piano.keys.last().unwrap().key,
+        }
+    }
+    fn restore_preferences(&mut self, p: Preferences) {
+        self.view = [View::Blocks, View::Staff, View::Notes, View::Score][p.view as usize];
+        self.theme = p.theme;
+        self.effects = p.effects;
+        self.volume = p.volume;
+        self.instrument = p.instrument;
+        self.hear = p.hear;
+        self.piano = PianoLayout::new(p.first_key, p.last_key).unwrap();
+        self.viewport_set = true;
+        self.sync();
     }
     fn sync(&self) {
         platform::action("transport",&serde_json::json!({"position":self.transport.position_us,"playing":self.transport.playing,"volume":self.volume,"hear":self.hear,"instrument":self.instrument}).to_string());
@@ -191,6 +226,21 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
     }
     for m in messages {
         match m["type"].as_str().unwrap_or("") {
+            "preferences" => {
+                if !m["data"].is_null() {
+                    match serde_json::from_value::<Preferences>(m["data"].clone()) {
+                        Ok(p) if p.validate().is_ok() => state.restore_preferences(p),
+                        _ => {
+                            state.storage_status =
+                                "Saved settings are incompatible; database preserved.".into();
+                            continue;
+                        }
+                    }
+                }
+                state.saved_preferences = Some(state.preferences());
+                state.storage_ready = true;
+            }
+            "storage-status" => state.storage_status = m["text"].as_str().unwrap_or("").into(),
             "file" => {
                 let bytes: Vec<u8> = m["bytes"]
                     .as_array()
@@ -236,6 +286,13 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
             "pause" => state.panic(),
             "status" => state.status = m["text"].as_str().unwrap_or("").into(),
             _ => {}
+        }
+    }
+    if state.storage_ready {
+        let p = state.preferences();
+        if state.saved_preferences.as_ref() != Some(&p) {
+            platform::action("save-settings", &serde_json::to_string(&p).unwrap());
+            state.saved_preferences = Some(p);
         }
     }
     let dt = time.delta_secs().min(0.05);

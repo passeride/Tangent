@@ -36,7 +36,11 @@ fn main() -> std::io::Result<()> {
             "No packaged player. Build with TANGENT_WEB_DIST pointing to the prepared web distribution.",
         ));
     }
-    let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))?;
+    let port: u16 = std::env::var("TANGENT_PORT")
+        .unwrap_or_else(|_| "38765".into())
+        .parse()
+        .map_err(|_| std::io::Error::other("TANGENT_PORT must be a port number"))?;
+    let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port))?;
     let port = listener.local_addr()?.port();
     let url = format!("http://127.0.0.1:{port}/");
     println!("Tangent: {url}\nKeep this window open while playing. Ctrl+C closes Tangent.");

@@ -22,7 +22,7 @@ try {
       "WebGL2 is unavailable. Enable hardware acceleration or use a browser/device with WebGL2 support.",
     );
   context.getExtension("WEBGL_lose_context")?.loseContext();
-  installPlatform();
+  await installPlatform();
   await init();
   run_player();
 } catch (error) {

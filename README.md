@@ -71,7 +71,9 @@ has not been verified with a physical device. Desktop launchers package this
 browser player. All player controls and visualizations render inside the Bevy GPU
 canvas.
 Uncompressed partwise MusicXML import is available as an [explicit subset](docs/musicxml-import.md).
-Native OS windows/audio and persistent library remain future work.
+Settings now persist in a local SQLite database; Export database in Settings
+downloads a `.sqlite` backup. Scores/session tables are prepared for future use.
+Native OS windows/audio and persistent music library remain future work.
 
 The implementation is not certified as a completed clean room process. Prior
 source exposure remains documented in [PROVENANCE.md](PROVENANCE.md).

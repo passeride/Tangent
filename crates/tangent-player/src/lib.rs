@@ -1,5 +1,7 @@
 //! Bevy application state, with explicit browser rendering/audio adapters.
 mod import;
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+mod preferences;
 #[cfg(target_arch = "wasm32")]
 mod scene;
 #[cfg(target_arch = "wasm32")]

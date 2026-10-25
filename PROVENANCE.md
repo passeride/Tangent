@@ -121,3 +121,11 @@ Original Bevy navigation, piano-key wordmark geometry and independent core
 exercise rules implement the owner’s main-menu/Train request. No legacy source
 was consulted or imported, and no new dependency or external asset was added.
 The disclosed prior exposure remains unchanged; see ADR-0008.
+
+## Local SQLite storage — 2026-10-25
+
+Original preferences/schema/browser persistence code implements the owner’s
+SQLite request. Primary sql.js documentation was consulted; sql.js 1.15.1 is
+npm-locked, MIT, with its unchanged complete upstream license recorded. SQLite
+is public domain. No excluded legacy source/assets were consulted. ADR-0009
+records actual browser backing, schema and boundaries; prior exposure remains.

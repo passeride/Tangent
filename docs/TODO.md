@@ -17,7 +17,8 @@ this file tracks the remaining work, not an authorization gate.
   add port selection and browser capability coverage. No SysEx requirement.
 - Index long sustained notes and visible windows; frame JSON and prefix scanning
   are prototype boundaries and need dense/long-song profiling.
-- Save user settings and imported songs through a browser storage adapter.
+- [x] Save user settings in local SQLite; export a portable database (ADR-0009).
+- Add music-library persistence, database backup restore and meaningful score/session recording.
 - Add true native input, audio and renderer adapters. Desktop downloads now use
   browser-backed launchers; they do not implement a native Bevy/audio view.
 - Add managed desktop lifecycle/quit UI, signing and macOS notarization.

@@ -591,3 +591,7 @@ Bravura: unmodified font by Steinberg Media Technologies GmbH, SIL OFL 1.1; [ful
 Playwright/playwright-core 1.56.1 (Apache-2.0) and optional fsevents 2.3.2 (MIT) are locked in the web package-lock.json files. They are development tools, not shipped application dependencies. Chromium is downloaded for tests. Sources: https://github.com/microsoft/playwright and https://github.com/fsevents/fsevents.
 
 Regenerate with `python scripts/update_licenses.py` after `cargo fetch`. Preserve the separate font/music licenses. This inventory is not a legal opinion or a clean-room certification.
+
+## SQLite browser runtime
+
+sql.js 1.15.1 (MIT), SQLite compiled to WebAssembly. Locked in web/piano/package-lock.json; source https://github.com/sql-js/sql.js. SQLite is public domain. npm ci copies the exact runtime and complete upstream license into vendor/ for offline packaging. Full license: [sql.js-MIT.txt](licenses/sql.js-MIT.txt).

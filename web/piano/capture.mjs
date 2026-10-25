@@ -42,7 +42,7 @@ try {
   await click(page, "help");
   await page.waitForTimeout(700);
   await page.screenshot({ path: new URL("../../docs/screenshots/piano-pause.png", import.meta.url).pathname });
-  console.log("Captured six real Bevy/wgpu screens, including written first/second endings.");
+  console.log("Captured real Bevy/wgpu menus, practice and player screens, including written first/second endings.");
 } finally {
   await browser?.close();
   await server.close();

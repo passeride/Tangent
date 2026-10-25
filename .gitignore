@@ -30,3 +30,5 @@ rustc-ice-*.txt
 
 /web/piano/pkg/
 /web/piano/node_modules
+
+/web/piano/vendor/

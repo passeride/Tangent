@@ -12,6 +12,7 @@ Use the pinned Rust toolchain and wasm-bindgen CLI 0.2.129:
 ```sh
 cargo build -p tangent-player --target wasm32-unknown-unknown --release --locked
 wasm-bindgen target/wasm32-unknown-unknown/release/tangent_player.wasm --target web --out-dir web/piano/pkg
+npm ci --prefix web/piano
 python3 -m http.server 8080 --directory web/piano
 ```
 
@@ -126,3 +127,22 @@ warnings-denied Clippy, release WASM, real Chromium navigation/practice/audio
 smoke, packaged `/Tangent/` smoke and embedded Linux launcher smoke pass.
 Actual main-menu, Train and note-exercise screenshots are reproducible through
 `web/piano/capture.mjs`. Physical MIDI remains unverified.
+
+## Local database
+
+Settings are restored from SQLite on this browser/device. All setting changes
+are saved automatically; the bottom of Settings shows saving failures. Export
+database downloads `tangent.sqlite`, readable with normal SQLite tools. Stored
+settings: volume, theme, view, piano sound, range, effects and song sound.
+Music files, scores and exercise progress are not yet recorded. The schema has
+empty practice_sessions and scores tables for later work. See ADR-0009.
+
+The local launcher uses port 38765 so browser storage survives restarts. Pages
+and localhost have separate data, as do different browser profiles. TANGENT_PORT
+can override the port; changing it selects a different storage origin. Clearing
+site data removes the local copy. Keep exported backups when needed.
+
+SQLite verification: 45 Rust tests, native/WASM warnings-denied Clippy, real
+browser restart and settings restore, SQLite export/integrity/FKs, failed-write
+preservation, concurrent connections, storage-unavailable playback, packaged
+Pages SQLite loading and embedded launcher asset/port smoke pass.
