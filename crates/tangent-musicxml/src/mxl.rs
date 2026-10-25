@@ -27,7 +27,7 @@ fn u32_at(data: &[u8], at: usize) -> Result<u32, String> {
         .ok_or("Truncated MXL ZIP header")?;
     Ok(u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
 }
-fn field<'a>(data: &'a [u8], at: usize, len: usize) -> Result<&'a [u8], String> {
+fn field(data: &[u8], at: usize, len: usize) -> Result<&[u8], String> {
     data.get(at..at.checked_add(len).ok_or("Invalid MXL offset")?)
         .ok_or_else(|| "Truncated MXL ZIP entry".into())
 }
