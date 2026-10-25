@@ -491,35 +491,37 @@ fn backend(rx: Receiver<(String, String)>, out: Sender<Value>, files: Sender<(Ve
     let mut midi = connect_midi(&out);
     loop {
         match rx.recv_timeout(Duration::from_millis(4)) {
-            Ok((name, value)) => match name.as_str() {
-                "save-settings" => {
-                    if let Some((conn, _)) = &db
-                        && let Err(e) = save(conn, &value)
-                    {
-                        let _ = out.send(
-                            json!({"type":"storage-status","text":format!("Save failed: {e}")}),
-                        );
+            Ok((name, value)) => {
+                match name.as_str() {
+                    "save-settings" => {
+                        if let Some((conn, _)) = &db
+                            && let Err(e) = save(conn, &value)
+                        {
+                            let _ = out.send(
+                                json!({"type":"storage-status","text":format!("Save failed: {e}")}),
+                            );
+                        }
                     }
-                }
-                "export-database" => {
-                    if let Some((conn, path)) = &db {
-                        let info = match export(conn, path) {
-                            Ok(p) => format!("SQLite backup: {}", p.display()),
-                            Err(e) => format!("Export failed: {e}"),
-                        };
-                        let _ = out.send(json!({"type":"storage-status","text":info}));
+                    "export-database" => {
+                        if let Some((conn, path)) = &db {
+                            let info = match export(conn, path) {
+                                Ok(p) => format!("SQLite backup: {}", p.display()),
+                                Err(e) => format!("Export failed: {e}"),
+                            };
+                            let _ = out.send(json!({"type":"storage-status","text":info}));
+                        }
                     }
-                }
-                "fingerprint-index" => {
-                    if let Some((conn, _)) = &db {
-                        if let Err(e) = fingerprints::index(conn, &value) {
+                    "fingerprint-index" => {
+                        if let Some((conn, _)) = &db
+                            && let Err(e) = fingerprints::index(conn, &value)
+                        {
                             let _ = out.send(json!({"type":"storage-status","text":format!("Index failed: {e}")}));
                         }
                     }
-                }
-                "fingerprint-query" => {
-                    if let Some((conn, _)) = &db {
-                        if let Ok(request) = serde_json::from_str::<Value>(&value) {
+                    "fingerprint-query" => {
+                        if let Some((conn, _)) = &db
+                            && let Ok(request) = serde_json::from_str::<Value>(&value)
+                        {
                             match fingerprints::candidates(conn, &request["signatures"]) {
                                 Ok(candidates) => {
                                     let _ = out.send(json!({"type":"fingerprint-candidates",
@@ -531,36 +533,36 @@ fn backend(rx: Receiver<(String, String)>, out: Sender<Value>, files: Sender<(Ve
                             }
                         }
                     }
+                    "midi" => {
+                        // Release exclusive OS ports before attempting to reopen them.
+                        // Clear held keys because a note-off may be lost during rescan.
+                        midi.clear();
+                        audio.silence();
+                        let _ = out.send(json!({"type":"pause"}));
+                        midi = connect_midi(&out);
+                    }
+                    "import" => {
+                        let tx = rx_sender_file(files.clone(), out.clone());
+                        thread::spawn(move || {
+                            if let Some(path) = pick_file() {
+                                tx(&path);
+                            }
+                        });
+                    }
+                    "path" => import_path(Path::new(&value), &files, &out),
+                    "sample" => {
+                        let _ = files.send((
+                            include_bytes!("../../../../../web/piano/samples/first-light.musicxml")
+                                .to_vec(),
+                            "First light".into(),
+                        ));
+                    }
+                    "credits" => {
+                        let _ = out.send(json!({"type":"status","text":"First light is CC0 1.0; see web/piano/samples/ATTRIBUTION.md"}));
+                    }
+                    _ => audio.handle(&name, &value),
                 }
-                "midi" => {
-                    // Release exclusive OS ports before attempting to reopen them.
-                    // Clear held keys because a note-off may be lost during rescan.
-                    midi.clear();
-                    audio.silence();
-                    let _ = out.send(json!({"type":"pause"}));
-                    midi = connect_midi(&out);
-                }
-                "import" => {
-                    let tx = rx_sender_file(files.clone(), out.clone());
-                    thread::spawn(move || {
-                        if let Some(path) = pick_file() {
-                            tx(&path);
-                        }
-                    });
-                }
-                "path" => import_path(Path::new(&value), &files, &out),
-                "sample" => {
-                    let _ = files.send((
-                        include_bytes!("../../../../../web/piano/samples/first-light.musicxml")
-                            .to_vec(),
-                        "First light".into(),
-                    ));
-                }
-                "credits" => {
-                    let _ = out.send(json!({"type":"status","text":"First light is CC0 1.0; see web/piano/samples/ATTRIBUTION.md"}));
-                }
-                _ => audio.handle(&name, &value),
-            },
+            }
             Err(mpsc::RecvTimeoutError::Timeout) => {}
             Err(mpsc::RecvTimeoutError::Disconnected) => break,
         }
