@@ -1,4 +1,64 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { deflateRawSync } from "node:zlib";
+
+// In-memory MXL fixture built by the browser smoke test, not a downloaded score.
+function crc32(data) {
+  let crc = 0xffffffff;
+  for (const byte of data) {
+    crc ^= byte;
+    for (let i = 0; i < 8; i++)
+      crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+function compressedMxl(score) {
+  const manifest = Buffer.from(
+    '<container><rootfiles><rootfile full-path="score.musicxml"/></rootfiles></container>',
+  );
+  const files = [
+    ["META-INF/container.xml", manifest, false],
+    ["score.musicxml", score, true],
+  ];
+  const locals = [], central = [];
+  let offset = 0;
+  for (const [filename, data, deflate] of files) {
+    const name = Buffer.from(filename);
+    const packed = deflate ? deflateRawSync(data) : data;
+    const method = deflate ? 8 : 0;
+    const crc = crc32(data);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(method, 8);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(packed.length, 18);
+    local.writeUInt32LE(data.length, 22);
+    local.writeUInt16LE(name.length, 26);
+    locals.push(local, name, packed);
+    const item = Buffer.alloc(46);
+    item.writeUInt32LE(0x02014b50, 0);
+    item.writeUInt16LE(20, 4);
+    item.writeUInt16LE(20, 6);
+    item.writeUInt16LE(method, 10);
+    item.writeUInt32LE(crc, 16);
+    item.writeUInt32LE(packed.length, 20);
+    item.writeUInt32LE(data.length, 24);
+    item.writeUInt16LE(name.length, 28);
+    item.writeUInt32LE(offset, 42);
+    central.push(item, name);
+    offset += local.length + name.length + packed.length;
+  }
+  const directory = Buffer.concat(central);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(files.length, 8);
+  end.writeUInt16LE(files.length, 10);
+  end.writeUInt32LE(directory.length, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locals, directory, end]);
+}
+
 import { chromium } from "playwright";
 import { serve, ready, click, gpuArgs } from "./browser-helpers.mjs";
 const server = await serve(new URL("./", import.meta.url).pathname);
@@ -137,6 +197,19 @@ try {
   const xmlPickerPromise = page.waitForEvent("filechooser");
   await click(page, "import");
   await (await xmlPickerPromise).setFiles(new URL("../../crates/tangent-musicxml/tests/fixtures/piano.musicxml", import.meta.url).pathname);
+  await page.waitForFunction(() => tangentDiagnostics().notes === 5);
+  await click(page, "sample");
+  await page.waitForFunction(() => tangentDiagnostics().notes === 130);
+  const mxlPickerPromise = page.waitForEvent("filechooser");
+  await click(page, "import");
+  const mxl = compressedMxl(readFileSync(
+    new URL("../../crates/tangent-musicxml/tests/fixtures/piano.musicxml", import.meta.url),
+  ));
+  await (await mxlPickerPromise).setFiles({
+    name: "piano.mxl",
+    mimeType: "application/vnd.recordare.musicxml",
+    buffer: mxl,
+  });
   await page.waitForFunction(() => tangentDiagnostics().notes === 5);
   await page.keyboard.press("Space");
   await page.waitForFunction(() => tangentDiagnostics().playing && !tangentDiagnostics().help);

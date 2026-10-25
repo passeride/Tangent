@@ -1,6 +1,6 @@
 # MusicXML import
 
-Import `.musicxml` or `.xml` from the in-engine pause/settings menu (corner gear,
+Import `.musicxml`, `.xml` or compressed `.mxl` from the in-engine pause/settings menu (corner gear,
 Esc or F1), or Ctrl+O. The same player, audio scheduler and note views accept it.
 The first subset supports UTF-8 `score-partwise`, written pitch/flats/sharps,
 multiple parts, voices and bass/treble staves, chords, rests, backup/forward,
@@ -24,7 +24,7 @@ synchronized without musical timing logic in Bevy. Metronome beat-unit/per-minut
 Playback uses fixed velocity and the chosen synthesized piano; score pedal,
 dynamics and articulation playback remain future work.
 
-Compressed `.mxl`, score-timewise/opus, transposing instruments, non-G2/F4 clefs,
+Score-timewise/opus, transposing instruments, non-G2/F4 clefs,
 microtones and out-of-range pitches are explicit errors. Export uncompressed
 concert-pitch piano MusicXML. Nested/unclosed repeats and malformed endings are errors. D.C./D.S./coda
 navigation plays in written order with a warning; grace notes are skipped with a warning. Unsupported metronome relationships and clef changes produce warnings. Dynamics, lyrics, layout, slurs, ornaments,
@@ -39,6 +39,15 @@ Run `cargo test -p tangent-musicxml`, the workspace tests/Clippy and the WASM pi
 browser smoke. `tests/fixtures/piano.musicxml` is an original synthetic score,
 created for this repository; it exercises flats/chords/two staves/ties/tempo.
 
-Next: compressed MXL container validation and bounded decompression; richer
-authored engraving and nested navigation; dynamics/pedal and broader interoperability.
+Compressed MXL is read in-memory from ZIP (stored or DEFLATE) using
+`META-INF/container.xml` and its first `rootfile`. The file picker accepts
+`.mxl` on web and desktop. Archive and decompressed score must each be at
+most 16 MiB; the manifest is limited to 64 KiB and ZIP directories to 4,096
+entries. ZIP64, encrypted/multi-volume archives, malformed or duplicate paths,
+bad CRCs and unsafe rootfile paths are rejected. No bundled images or linked
+resources are resolved. Older containers without a `mimetype` file are accepted.
+See ADR-0010 for archive parsing choices and remaining format limits.
+
+Next: richer authored engraving and nested navigation; dynamics/pedal and
+broader interoperability.
 See ADR-0007 for the current written-score/performance-visit contract.

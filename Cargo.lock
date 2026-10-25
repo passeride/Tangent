@@ -4651,6 +4651,8 @@ dependencies = [
 name = "tangent-musicxml"
 version = "0.1.0"
 dependencies = [
+ "crc32fast",
+ "miniz_oxide 0.9.1",
  "roxmltree",
  "tangent-core",
 ]
