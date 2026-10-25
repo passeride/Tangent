@@ -401,12 +401,13 @@ fn mxl_rejects_conflicting_local_sizes_and_directory_payloads() {
     for field in [14, 18, 22] {
         let mut zip = valid.clone();
         zip[field] ^= 1;
-        assert!(import(&zip, "x".into()).unwrap_err().contains("local/central"));
+        assert!(
+            import(&zip, "x".into())
+                .unwrap_err()
+                .contains("local/central")
+        );
     }
-    let directory = valid
-        .windows(4)
-        .position(|w| w == b"PK\x01\x02")
-        .unwrap();
+    let directory = valid.windows(4).position(|w| w == b"PK\x01\x02").unwrap();
     let mut zip = valid.clone();
     // Consistent local/central lengths still must not include directory bytes.
     let oversized = directory as u32;
@@ -414,8 +415,7 @@ fn mxl_rejects_conflicting_local_sizes_and_directory_payloads() {
         zip[field..field + 4].copy_from_slice(&oversized.to_le_bytes());
     }
     for field in [20, 24] {
-        zip[directory + field..directory + field + 4]
-            .copy_from_slice(&oversized.to_le_bytes());
+        zip[directory + field..directory + field + 4].copy_from_slice(&oversized.to_le_bytes());
     }
     assert!(
         import(&zip, "x".into())
