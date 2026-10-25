@@ -439,9 +439,8 @@ pub fn input(
     }
     if state.screen != Screen::Session {
         if keys.just_pressed(KeyCode::F1) {
-            activate(&mut state,
-                if state.help { Action::SettingsBack } else { Action::Settings },
-                false);
+            let action = if state.help { Action::SettingsBack } else { Action::Settings };
+            activate(&mut state, action, false);
         }
         if keys.just_pressed(KeyCode::Escape) {
             if state.screen == Screen::Library && state.library.edit.is_some() {
