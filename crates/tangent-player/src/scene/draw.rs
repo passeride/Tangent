@@ -124,6 +124,7 @@ pub fn render(
     mut pool: ResMut<Pool>,
     windows: Query<&Window>,
     music_font: Res<MusicFont>,
+    mut clear_color: ResMut<ClearColor>,
 ) {
     let Ok(window) = windows.single() else {
         return;
@@ -135,7 +136,9 @@ pub fn render(
         ..Drawing::default()
     };
     state.buttons.clear();
-    d.rect(0., 0., l.width, l.height, t.bg, 0.);
+    // Let the Camera2d background show through UI, so native Hanabi particles
+    // can be composited underneath note widgets instead of a solid fullscreen node.
+    clear_color.0 = t.bg;
     if state.screen != Screen::Session && !state.help {
         if state.screen == Screen::Library {
             super::library::render(&mut d, &mut state, &l, t);
@@ -161,33 +164,43 @@ pub fn render(
                     && !state.previous.contains(&n.id)
                     && let Some(x) = l.center(&state.piano, n.key)
                 {
-                    bursts.push((x, n.id, t.colors[n.part % 4]));
+                    // The backing track can sparkle, but cannot increase streak.
+                    bursts.push((x, n.id, effects::Preset::FreePlay));
                 }
             }
         }
-        for key in std::mem::take(&mut state.live_bursts) {
+        for event in std::mem::take(&mut state.live_bursts) {
             if state.effects
-                && let Some(x) = l.center(&state.piano, key)
+                && let Some(x) = l.center(&state.piano, event.key)
             {
-                bursts.push((x, key as usize, t.colors[0]));
+                bursts.push((x, event.key as usize, event.preset));
             }
         }
-        for (x, id, color) in bursts {
-            for i in 0..8 {
+        state.previous = ids;
+        for (x, id, preset) in bursts.into_iter().take(32) {
+            let [r, g, b] = preset.rgb();
+            let color = Color::srgb(r, g, b);
+            state.gpu_bursts.push(effects::ScreenBurst {
+                x,
+                y: l.strike - 12.,
+                preset,
+            });
+            // Lightweight UI particles also work on WebGL2 (which has no
+            // compute shaders). Native renders Hanabi on top of this accent.
+            for i in 0..preset.count().min(24) {
                 let seed = ((id * 17 + i * 31) % 101) as f32;
                 state.particles.push(Particle {
                     x,
-                    y: l.strike,
-                    vx: seed - 50.,
-                    vy: -40. - seed,
-                    life: 0.4 + seed / 200.,
+                    y: l.strike - 12.,
+                    vx: (seed - 50.) * (if preset == effects::Preset::Wrong { 0.5 } else { 1. }),
+                    vy: -35. - seed,
+                    life: if preset == effects::Preset::Wrong { 0.32 } else { 0.7 },
                     color,
                 });
             }
         }
-        state.previous = ids;
-        if state.particles.len() > 400 {
-            let extra = state.particles.len() - 400;
+        if state.particles.len() > 600 {
+            let extra = state.particles.len() - 600;
             state.particles.drain(..extra);
         }
         if state.effects {
@@ -203,6 +216,10 @@ pub fn render(
             }
         }
         keyboard(&mut d, &state, &l, t);
+        if state.feedback.streak() >= 2 {
+            let streak = state.feedback.streak();
+            d.text(l.margin, 14., format!("{streak} note streak"), 14., t.colors[0]);
+        }
         if matches!(state.mode, Mode::Notes | Mode::Chords) {
             super::menu::exercise(&mut d, &mut state, &l, t);
         }
@@ -256,7 +273,7 @@ pub fn render(
             })
             .collect();
         let mut report = serde_json::json!({"status":state.status,"title":state.song.title,"library_total":state.library.total,"library_items":state.library.items,"library_editing":state.library.edit.is_some(),"library_focus":state.library.focus.map(|f|match f {library::Field::Search=>"search",library::Field::Title=>"title",library::Field::Composer=>"composer"}),"library_query":state.library.query,"library_sort":library::SORTS[state.library.sort],"library_format":library::FORMATS[state.library.format],"library_status":state.library.status,"screen":format!("{:?}",state.screen),"mode":format!("{:?}",state.mode),"completed":state.practice.completed,"preferences":state.preferences(),"storage_status":state.storage_status,"target":state.practice.target(),"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())});
-        report.as_object_mut().unwrap().extend(serde_json::json!({"practice_waiting_release":state.practice.waiting_release,"practice_wrong":state.practice.wrong,"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output}).as_object().unwrap().clone());
+        report.as_object_mut().unwrap().extend(serde_json::json!({"practice_waiting_release":state.practice.waiting_release,"streak":state.feedback.streak(),"best_streak":state.feedback.best(),"effects_backend":if cfg!(target_arch="wasm32") {"webgl2-fallback"} else {"hanabi+ui"},"practice_wrong":state.practice.wrong,"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output}).as_object().unwrap().clone());
         platform::report(&report.to_string());
     }
     apply(&mut commands, &mut pool, d, &music_font.0);
