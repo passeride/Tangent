@@ -17,7 +17,7 @@ try {
     Object.defineProperty(navigator,'requestMIDIAccess',{value:async()=>window.fakeMidi});
   });
   await ready(page,server.url);
-  await click(page,'help');await click(page,'midi');
+  await click(page,'settings');await click(page,'midi');
   await page.waitForFunction(()=>tangentDiagnostics().status.includes('MIDI input'));
   await click(page,'midi-output');
   await page.waitForFunction(()=>tangentDiagnostics().midi_output==='p45-test');
