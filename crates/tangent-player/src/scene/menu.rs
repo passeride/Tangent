@@ -33,6 +33,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     } else {
         vec![
             ("Play", Action::StartPlay),
+            ("Library", Action::Library),
             ("Train", Action::Train),
             ("FreeForm", Action::FreeForm),
             ("Settings", Action::Help),

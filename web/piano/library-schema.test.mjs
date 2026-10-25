@@ -1,0 +1,52 @@
+import assert from "node:assert/strict";
+import initSqlJs from "sql.js";
+import { migrate, writeSettings } from "./storage-schema.js";
+import { saveLibrarySong, listLibrary, readLibrarySource, removeLibrarySong, libraryLimits } from "./library-schema.js";
+const SQL = await initSqlJs();
+let db = new SQL.Database();
+migrate(db);
+writeSettings(db, { version: 1, marker: "preserve" });
+const source = new TextEncoder().encode("<score-partwise>original source bytes</score-partwise>");
+const metadata = { title: "Fixture", format: "MusicXML", duration_us: 123000000, note_count: 44 };
+const id = "a".repeat(64);
+saveLibrarySong(db, id, source, metadata);
+const imported = db.exec("SELECT imported_at FROM library_songs")[0].values[0][0];
+saveLibrarySong(db, id, source, metadata);
+assert.equal(listLibrary(db).total, 1);
+assert.equal(db.exec("SELECT imported_at FROM library_songs")[0].values[0][0], imported);
+const exported = db.export(); db.close(); db = new SQL.Database(exported); migrate(db);
+assert.deepEqual(readLibrarySource(db, id).source, source);
+assert.equal(listLibrary(db).items[0].title, "Fixture");
+assert.equal(JSON.parse(db.exec("SELECT payload FROM settings")[0].values[0][0]).marker, "preserve");
+for (let n = 0; n < 9; n++) saveLibrarySong(db, n.toString(16).padStart(64, "0"), source, { ...metadata, title: `Piece ${n}` });
+assert.equal(listLibrary(db, 0, 6).items.length, 6);
+assert.equal(listLibrary(db, 6, 6).items.length, 4);
+assert(!("source" in listLibrary(db).items[0]));
+assert.throws(() => saveLibrarySong(db, "not-a-hash", source, metadata));
+assert.throws(() => saveLibrarySong(db, id, new Uint8Array(libraryLimits.fileBytes + 1), metadata));
+assert.throws(() => saveLibrarySong(db, id, source, { ...metadata, duration_us: -1 }));
+removeLibrarySong(db, id);
+assert.throws(() => readLibrarySource(db, id), /no longer/);
+assert.equal(listLibrary(db).total, 9);
+assert.equal(db.exec("PRAGMA integrity_check")[0].values[0][0], "ok");
+db.close();
+// Upgrade a real v2 catalog without changing any existing settings or fingerprints.
+const old = new SQL.Database(); migrate(old);
+old.run("DROP TABLE library_songs; PRAGMA user_version=2;");
+old.run("INSERT INTO fingerprint_songs VALUES ('legacy','Preserved','now')");
+migrate(old);
+assert.equal(listLibrary(old).total, 0);
+assert.equal(old.exec("SELECT title FROM fingerprint_songs")[0].values[0][0], "Preserved");
+assert.equal(old.exec("PRAGMA user_version")[0].values[0][0], 3);
+old.close();
+console.log("Library SQLite passed: v2 migration, deduplication, original bytes, pagination, export/reopen, delete and input bounds.");
+
+const limited = new SQL.Database(); migrate(limited);
+for (let n = 0; n < libraryLimits.songs; n++)
+  saveLibrarySong(limited, n.toString(16).padStart(64, "0"), source, metadata);
+assert.throws(() => saveLibrarySong(limited, "f".repeat(64), source, metadata), /Library limit reached/);
+assert.equal(listLibrary(limited).total, libraryLimits.songs);
+// A duplicate remains idempotent even when the catalog is full.
+saveLibrarySong(limited, "0".repeat(64), source, metadata);
+assert.equal(listLibrary(limited).total, libraryLimits.songs);
+limited.close();

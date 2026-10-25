@@ -1,3 +1,4 @@
+import { saveLibrarySong, listLibrary, readLibrarySource, removeLibrarySong } from "./library-schema.js";
 // Genuine SQLite bytes persisted atomically in IndexedDB. No UI or scoring rules.
 import { migrate, readSettings, writeSettings, writeFingerprintedSong, findFingerprintCandidates, schemaVersion } from "./storage-schema.js";
 const filename = "tangent.sqlite";
@@ -50,6 +51,23 @@ export async function openStorage() {
   }
   return {
     settings, diagnostics, saveSettings,
+    saveLibrarySong(id, source, metadata) {
+      diagnostics.pending++;
+      const result = tail.then(() => transaction(db => saveLibrarySong(db, id, source, metadata)));
+      tail = result.catch(() => {});
+      return result.finally(() => { diagnostics.pending--; });
+    },
+    async listLibrary(offset, limit) { await tail; return transaction(db => listLibrary(db, offset, limit), false); },
+    readLibrarySource(id) {
+      const result = tail.then(() => transaction(db => readLibrarySource(db, id)));
+      tail = result.catch(() => {});
+      return result;
+    },
+    removeLibrarySong(id) {
+      const result = tail.then(() => transaction(db => removeLibrarySong(db, id)));
+      tail = result.catch(() => {});
+      return result;
+    },
     saveFingerprintSong(song) {
       diagnostics.pending++;
       const result = tail.then(() => transaction(db => writeFingerprintedSong(db, song)));

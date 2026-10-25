@@ -138,3 +138,10 @@ were consulted. It reuses already locked and inventoried miniz_oxide 0.9.1 and
 crc32fast 1.5.3, with no new registry packages or externally sourced fixtures.
 Synthetic ZIP test inputs are generated within repository tests. ADR-0010 records
 the container boundary, security limits and remaining unsupported ZIP features.
+
+## Local music library — 2026-10-25
+
+Original Bevy library UI, source-byte capability boundary and SQLite v3 migration
+authored for Tangent. Existing SQLite and hashing libraries are reused. Source
+files are user imports; no external music collection or excluded fork assets
+were copied. ADR-0013 records storage limits and remaining performance work.

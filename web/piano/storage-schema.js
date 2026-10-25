@@ -1,5 +1,6 @@
 // Portable SQLite schema. Musical matching stays in tangent-core (Rust).
-export const schemaVersion = 2;
+import { libraryMigration } from "./library-schema.js";
+export const schemaVersion = 3;
 
 export function migrate(db) {
   let version = db.exec("PRAGMA user_version")[0].values[0][0];
@@ -55,7 +56,9 @@ export function migrate(db) {
       CREATE INDEX fingerprint_signature_lookup ON fingerprint_ngrams(signature);
       PRAGMA user_version = 2;
       COMMIT;`);
+    version = 2;
   }
+  if (version === 2) db.run(`BEGIN; ${libraryMigration} COMMIT;`);
 }
 
 export function readSettings(db) {

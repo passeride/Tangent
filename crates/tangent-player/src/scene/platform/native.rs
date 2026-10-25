@@ -2,6 +2,8 @@
 //! The Bevy/render thread never opens devices, blocks on SQLite, or parses files.
 #[path = "native/fingerprints.rs"]
 mod fingerprints;
+#[path = "native/library.rs"]
+mod library;
 use midir::{Ignore, MidiInput, MidiInputConnection};
 use rodio::{DeviceSinkBuilder, MixerDeviceSink, Player, Source, source::SineWave};
 use rusqlite::{Connection, OptionalExtension};
@@ -33,20 +35,23 @@ struct Bus {
     actions: Sender<(String, String)>,
     updates: Mutex<Receiver<Value>>,
     files: Mutex<Receiver<(Vec<u8>, String)>>,
+    imports: Sender<(Vec<u8>, String)>,
 }
 fn bus() -> &'static Bus {
     BUS.get_or_init(|| {
         let (actions, rx) = mpsc::channel();
         let (updates, messages) = mpsc::channel();
         let (file_tx, files) = mpsc::channel();
+        let (imports, import_rx) = mpsc::channel();
         thread::Builder::new()
             .name("tangent-native-io".into())
-            .spawn(move || backend(rx, updates, file_tx))
+            .spawn(move || backend(rx, updates, file_tx, import_rx))
             .expect("spawn native audio/MIDI/storage worker");
         Bus {
             actions,
             updates: Mutex::new(messages),
             files: Mutex::new(files),
+            imports,
         }
     })
 }
@@ -68,6 +73,9 @@ pub fn pull() -> String {
         }
     }
     serde_json::to_string(&messages).unwrap_or_else(|_| "[]".into())
+}
+pub fn store_import(bytes: &[u8], metadata: &str) {
+    let _ = bus().imports.send((bytes.to_vec(), metadata.into()));
 }
 pub fn take_file() -> Option<(Vec<u8>, String)> {
     bus().files.lock().ok()?.try_recv().ok()
@@ -269,7 +277,7 @@ fn data_dir() -> Result<PathBuf, String> {
 fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch("PRAGMA foreign_keys = ON;")?;
     let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-    if version > 2 {
+    if version > 3 {
         return Err(rusqlite::Error::InvalidQuery);
     }
     if version == 0 {
@@ -313,6 +321,11 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
       PRAGMA user_version = 2;
       COMMIT;",
         )?;
+    }
+    if version < 3 {
+        conn.execute_batch("BEGIN;")?;
+        conn.execute_batch(library::MIGRATION)?;
+        conn.execute_batch("COMMIT;")?;
     }
     Ok(())
 }
@@ -485,11 +498,29 @@ fn connect_midi(out: &Sender<Value>) -> Vec<MidiInputConnection<()>> {
     }
     connections
 }
-fn backend(rx: Receiver<(String, String)>, out: Sender<Value>, files: Sender<(Vec<u8>, String)>) {
+fn backend(
+    rx: Receiver<(String, String)>,
+    out: Sender<Value>,
+    files: Sender<(Vec<u8>, String)>,
+    imports: Receiver<(Vec<u8>, String)>,
+) {
     let mut audio = Audio::new(&out);
     let db = storage(&out);
     let mut midi = connect_midi(&out);
     loop {
+        for (bytes, metadata) in imports.try_iter().take(1) {
+            let result = db
+                .as_ref()
+                .ok_or_else(|| "Local library unavailable".to_string())
+                .and_then(|(conn, _)| library::save(conn, &bytes, &metadata));
+            let message = match result {
+                Ok(()) => json!({"type":"library-updated","text":"Saved in library."}),
+                Err(e) => {
+                    json!({"type":"library-status","text":format!("Could not save piece: {e}")})
+                }
+            };
+            let _ = out.send(message);
+        }
         match rx.recv_timeout(Duration::from_millis(4)) {
             Ok((name, value)) => {
                 match name.as_str() {
@@ -509,6 +540,47 @@ fn backend(rx: Receiver<(String, String)>, out: Sender<Value>, files: Sender<(Ve
                                 Err(e) => format!("Export failed: {e}"),
                             };
                             let _ = out.send(json!({"type":"storage-status","text":info}));
+                        }
+                    }
+                    "library-list" => {
+                        if let Some((conn, _)) = &db {
+                            if let Ok(request) = serde_json::from_str::<Value>(&value) {
+                                match library::list(conn, &request) {
+                                    Ok(message) => {
+                                        let _ = out.send(message);
+                                    }
+                                    Err(e) => {
+                                        let _ = out.send(json!({"type":"library-status","text":e}));
+                                    }
+                                }
+                            }
+                        } else {
+                            let _ = out.send(
+                                json!({"type":"library-status","text":"Local library unavailable"}),
+                            );
+                        }
+                    }
+                    "library-open" => {
+                        if let Some((conn, _)) = &db {
+                            match library::open(conn, &value) {
+                                Ok(entry) => {
+                                    let _ = files.send(entry);
+                                }
+                                Err(e) => {
+                                    let _ = out.send(json!({"type":"library-status","text":format!("Could not open piece: {e}")}));
+                                }
+                            }
+                        }
+                    }
+                    "library-remove" => {
+                        if let Some((conn, _)) = &db {
+                            let message = match library::remove(conn, &value) {
+                                Ok(()) => {
+                                    json!({"type":"library-updated","text":"Piece removed from library."})
+                                }
+                                Err(e) => json!({"type":"library-status","text":e}),
+                            };
+                            let _ = out.send(message);
                         }
                     }
                     "fingerprint-index" => {
@@ -593,7 +665,7 @@ mod tests {
         let version: i64 = db
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 2);
+        assert_eq!(version, 3);
         let rows: i64 = db
             .query_row("SELECT count(*) FROM scores", [], |r| r.get(0))
             .unwrap();
