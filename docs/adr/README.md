@@ -44,3 +44,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0013: Local music library](0013-local-music-library.md) — accepted; source-byte persistence, metadata paging and reopen on web/native.
 
 - [ADR-0014: Library search and metadata](0014-library-search-and-metadata.md) — accepted; Unicode search, editing, sort/filter, batches and fingerprint ownership.
+
+- [ADR-0015: MIDI output and reading practice](0015-midi-output-and-reading-practice.md) — accepted; explicit output, no echo, played/glow cues and clef/level exercises.

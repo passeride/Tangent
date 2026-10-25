@@ -145,3 +145,20 @@ SQLite verification: 45 Rust tests, native/WASM warnings-denied Clippy, real
 browser restart and settings restore, SQLite export/integrity/FKs, failed-write
 preservation, concurrent connections, storage-unavailable playback, packaged
 Pages SQLite loading and embedded launcher asset/port smoke pass.
+
+## MIDI output and reading practice
+
+Settings → Rescan MIDI discovers outputs; Output cycles Computer audio and devices.
+Select the P-45/Digital Piano port to send playback to its speakers. Local Control
+must stay On: hardware input is displayed/evaluated but not echoed. Computer and
+onscreen keys are sent on channel 16. The piano's volume/timbre controls apply to
+external output; Tangent volume/profile controls affect computer synthesis.
+Output selection is session-only. Rescan on desktop resets it to Computer audio.
+Pause, seek, switching outputs and exiting silence the MIDI destination.
+
+Song notes glow around unfilled keys; your actual key presses fill them. These
+independent cues also work with sparkles disabled. Train → Notes has treble, bass
+and mixed clefs, stepwise/mixed/chromatic levels and an optional answer hint. Read
+the staff and match its exact octave; correct notes remain until full release.
+Advanced key signatures, score engraving and progress/scoring remain future work.
+See ADR-0015 and `web/piano/practice-midi-smoke.mjs` for scope and verification.

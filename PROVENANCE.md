@@ -153,3 +153,12 @@ fingerprint ownership and Windows/P-45 test/report workflow. The official Bevy
 v0.20.0 KeyboardInput source was consulted for text event semantics. Existing
 dependencies and original test music are reused; no excluded fork source/assets
 were consulted. ADR-0014 records the schema/capability changes.
+
+## MIDI output and reading practice — 2026-10-25
+
+Original MIDI output adapters, seek-state reconstruction, practice curricula and
+Bevy feedback/glow presentation implement the owner's follow-up after a successful
+P-45 test of the previous build. The earlier requirements were retrieved; no
+excluded legacy source/assets were opened. Existing midir/Web MIDI, Bravura and
+original music are reused, with no new dependency. ADR-0015 records boundaries;
+physical output is not established by simulated-device tests.

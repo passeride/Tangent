@@ -1,5 +1,6 @@
 // Browser capability adapter: audio, files, MIDI and the fullscreen API.
 // No rendering, menus, note placement or transport rules live in this module.
+import { MidiOutput } from "./midi-output.js";
 import { PianoAudio } from "./audio.js";
 import { openStorage } from "./storage.js";
 export async function installPlatform() {
@@ -22,6 +23,26 @@ export async function installPlatform() {
     state = null;
   const status = (text) => queue.push({ type: "status", text });
   const fail = (error) => status(String(error.message ?? error));
+  const midiOutput=new MidiOutput(error=>{
+    queue.push({type:"pause"}); reportOutputs();fail(error);
+  });
+  function reportOutputs() {
+    queue.push({type:"midi-outputs",ports:access?[...access.outputs.values()].filter(p=>p.state!=="disconnected").map(p=>({id:p.id,name:p.name??p.id})):[],selected:midiOutput.port?.id??""});
+  }
+  let outputGeneration=0;
+  async function selectOutput(id) {
+    const ticket=++outputGeneration;
+    // Pause first. Device selection is explicit and never restored blindly.
+    audio.panic(); midiOutput.select(null);
+    if(id) {
+      const port=access?.outputs.get(id);
+      if(!port||port.state==="disconnected")throw Error("Output changed; rescan MIDI.");
+      await port.open();
+      if(ticket!==outputGeneration)return;
+      midiOutput.select(port);
+    }
+    reportOutputs();
+  }
   let storage = null;
   const storageStatus = text => queue.push({ type: "storage-status", text });
   try {
@@ -41,22 +62,28 @@ export async function installPlatform() {
   }
   function reset() {
     audio.stopSong();
+    midiOutput.panic();
     if (!song) return;
     index = song.events.findIndex((e) => e.time_us >= transport.position);
     if (index < 0) index = song.events.length;
     anchor = audio.now - transport.position / 1e6;
-    if (transport.playing && transport.hear)
-      audio.restore(song.events, transport.position);
+    if (transport.playing && transport.hear) {
+      if(midiOutput.port) midiOutput.restore(song.events,transport.position);
+      else audio.restore(song.events, transport.position);
+    }
   }
   function schedule() {
     if (song && transport.playing && transport.hear) {
-      const horizon = (audio.now - anchor) * 1e6 + 100000;
+      // Physical output is sent only when due, so pause cannot leave scheduled
+      // attacks behind. Web Audio keeps its independent 100ms lookahead.
+      const horizon = (audio.now - anchor) * 1e6 + (midiOutput.port?0:100000);
       while (
         index < song.events.length &&
         song.events[index].time_us <= horizon
       ) {
         const e = song.events[index++];
-        audio.event(e, Math.max(audio.now, anchor + e.time_us / 1e6));
+        if(midiOutput.port)midiOutput.event(e);
+        else audio.event(e, Math.max(audio.now, anchor + e.time_us / 1e6));
       }
     }
   }
@@ -98,8 +125,13 @@ export async function installPlatform() {
     if (!navigator.requestMIDIAccess)
       throw Error("Web MIDI unavailable. Use touch or the computer keyboard.");
     access ??= await navigator.requestMIDIAccess({ sysex: false });
-    const attach = () => {
+    const attach = (event) => {
+      // Ignore a connection-state-only notification from port.open().
+      if(event && event.port.state!=="disconnected" && event.port.connection!=="closed") {reportOutputs();return;}
       queue.push({ type: "pause" });
+      audio.panic();midiOutput.panic();
+      if(midiOutput.port?.state==="disconnected")midiOutput.select(null);
+      reportOutputs();
       for (const port of access.inputs.values()) {
         port.onmidimessage = (e) => {
           const [s, key, value = 0] = e.data,
@@ -146,13 +178,16 @@ export async function installPlatform() {
     )
       e.preventDefault();
   });
+  window.addEventListener("pagehide",()=>midiOutput.panic());
   window.addEventListener("blur", () => {
     audio.panic();
+    midiOutput.panic();
     queue.push({ type: "pause" });
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
       audio.panic();
+      midiOutput.panic();
       queue.push({ type: "pause" });
     }
   });
@@ -263,13 +298,16 @@ export async function installPlatform() {
             break;
           case "on": {
             const n = JSON.parse(data);
-            audio.liveOn(n.id, n.key, n.velocity);
+            if(midiOutput.port)midiOutput.on(n.id,n.key,n.velocity);
+            else audio.liveOn(n.id, n.key, n.velocity);
             break;
           }
           case "off":
+            midiOutput.off(data);
             audio.liveOff(data);
             break;
           case "panic":
+            midiOutput.panic();
             audio.panic();
             break;
           case "fullscreen":
@@ -295,6 +333,9 @@ export async function installPlatform() {
               .catch(fail);
             break;
           }
+          case "midi-output":
+            selectOutput(data).catch(error=>{reportOutputs();fail(error);});
+            break;
           case "midi":
             midi().catch(fail);
             break;
@@ -319,6 +360,7 @@ export async function installPlatform() {
     state
       ? {
           ...state,
+          midiOutput: midiOutput.port?.id??"",
           imports: {...batchInfo,waiting:importReceipts.size},
           storage: storage?.diagnostics ?? { ready: false },
           energy: audio.energy(),

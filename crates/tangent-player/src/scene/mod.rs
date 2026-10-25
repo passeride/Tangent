@@ -43,6 +43,11 @@ enum Mode {
     Notes,
     Chords,
 }
+#[derive(serde::Deserialize)]
+struct MidiPort {
+    id: String,
+    name: String,
+}
 #[derive(Resource)]
 pub struct State {
     screen: Screen,
@@ -60,6 +65,8 @@ pub struct State {
     hear: bool,
     help: bool,
     status: String,
+    midi_outputs: Vec<MidiPort>,
+    midi_output: String,
     clock: f64,
     held: BTreeMap<String, u8>,
     previous: BTreeSet<usize>,
@@ -107,6 +114,8 @@ impl State {
             hear: true,
             help: false,
             status: "Tap a key or press Space to enable sound. F1: shortcuts".into(),
+            midi_outputs: vec![],
+            midi_output: String::new(),
             clock: platform::clock_us(),
             held: BTreeMap::new(),
             previous: BTreeSet::new(),
@@ -154,7 +163,7 @@ impl State {
         self.sync();
     }
     fn sync(&self) {
-        platform::action("transport",&serde_json::json!({"position":self.transport.position_us,"playing":self.transport.playing,"volume":self.volume,"hear":self.hear,"instrument":self.instrument}).to_string());
+        platform::action("transport",&serde_json::json!({"position":self.transport.position_us,"playing":self.transport.playing && self.mode==Mode::Play && self.screen==Screen::Session && !self.help,"volume":self.volume,"hear":self.hear,"instrument":self.instrument}).to_string());
     }
     fn source(&mut self, id: String, key: Option<u8>, velocity: u8) {
         if self.held.get(&id).copied() == key {
@@ -273,6 +282,8 @@ pub fn run() {
     #[cfg(not(target_arch = "wasm32"))]
     app.add_systems(Update, platform::native_window);
     app.run();
+    #[cfg(not(target_arch = "wasm32"))]
+    platform::shutdown();
 }
 fn update(mut state: ResMut<State>, time: Res<Time>) {
     let now = platform::clock_us();
@@ -291,6 +302,10 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
     }
     for m in messages {
         match m["type"].as_str().unwrap_or("") {
+            "midi-outputs" => {
+                state.midi_outputs = serde_json::from_value(m["ports"].clone()).unwrap_or_default();
+                state.midi_output = m["selected"].as_str().unwrap_or("").into();
+            }
             "preferences" => {
                 if !m["data"].is_null() {
                     match serde_json::from_value::<Preferences>(m["data"].clone()) {

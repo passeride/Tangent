@@ -3,6 +3,7 @@
 - Status: Accepted
 - Decision date: 2026-10-25
 - Delivery: Implemented; verification recorded in the change report
+- Superseded in exercise sequencing/presentation by [ADR-0015](0015-midi-output-and-reading-practice.md).
 - Related: [ADR-0005](0005-one-bevy-gpu-surface.md)
 
 ## Context and options

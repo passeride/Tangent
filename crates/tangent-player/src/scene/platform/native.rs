@@ -4,6 +4,8 @@
 mod fingerprints;
 #[path = "native/library.rs"]
 mod library;
+#[path = "native/midi_output.rs"]
+mod midi_output;
 use crate::library::SourceFile;
 use midir::{Ignore, MidiInput, MidiInputConnection};
 use rodio::{DeviceSinkBuilder, MixerDeviceSink, Player, Source, source::SineWave};
@@ -31,6 +33,7 @@ const LOOKAHEAD_US: u64 = 32_000;
 static BUS: OnceLock<Bus> = OnceLock::new();
 static START: OnceLock<Instant> = OnceLock::new();
 static FULLSCREEN: AtomicBool = AtomicBool::new(false);
+static SHUTDOWN_DONE: AtomicBool = AtomicBool::new(false);
 
 struct Bus {
     actions: Sender<(String, String)>,
@@ -84,6 +87,17 @@ pub fn take_file() -> Option<SourceFile> {
 pub fn take_fullscreen_request() -> bool {
     FULLSCREEN.swap(false, Ordering::AcqRel)
 }
+/// Called after Bevy returns, while the I/O worker can still silence hardware.
+pub fn shutdown() {
+    if BUS.get().is_none() {
+        return;
+    }
+    action("shutdown", "");
+    let deadline = Instant::now() + Duration::from_secs(1);
+    while !SHUTDOWN_DONE.load(Ordering::Acquire) && Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(5));
+    }
+}
 #[derive(Deserialize, Default)]
 struct Note {
     key: u8,
@@ -110,6 +124,7 @@ struct Transport {
     instrument: usize,
 }
 struct Audio {
+    output: midi_output::Output,
     stream: Option<MixerDeviceSink>,
     voices: HashMap<String, Player>,
     song: Song,
@@ -126,6 +141,7 @@ impl Audio {
             );
         }
         Self {
+            output: midi_output::Output::new(out.clone()),
             stream,
             voices: HashMap::new(),
             song: Song::default(),
@@ -135,6 +151,7 @@ impl Audio {
         }
     }
     fn silence(&mut self) {
+        self.output.panic();
         for (_, voice) in self.voices.drain() {
             voice.stop();
         }
@@ -146,6 +163,10 @@ impl Audio {
             .notes
             .partition_point(|n| n.start_us < self.transport.position);
         self.anchor = Instant::now();
+        self.output.reset(
+            self.transport.position,
+            self.transport.playing && self.transport.hear,
+        );
     }
     fn play_note(
         &mut self,
@@ -155,6 +176,9 @@ impl Audio {
         duration: Duration,
         delay: Duration,
     ) {
+        if self.output.active() {
+            return;
+        }
         let Some(stream) = &self.stream else { return };
         if self.voices.len() >= MAX_VOICES {
             return;
@@ -191,6 +215,10 @@ impl Audio {
             .transport
             .position
             .saturating_add(self.anchor.elapsed().as_micros() as u64);
+        if self.output.active() {
+            self.output.tick(position);
+            return;
+        }
         let horizon = position.saturating_add(LOOKAHEAD_US);
         while let Some(note) = self.song.notes.get(self.next) {
             if note.start_us > horizon {
@@ -214,8 +242,20 @@ impl Audio {
     }
     fn handle(&mut self, name: &str, value: &str) {
         match name {
+            "midi-output" => {
+                self.silence();
+                self.output.select(value);
+                self.transport.playing = false;
+            }
+            "midi-output-scan" => {
+                self.silence();
+                self.output.scan();
+                self.transport.playing = false;
+            }
+
             "song" => {
                 if let Ok(song) = serde_json::from_str::<Song>(value) {
+                    self.output.song(value);
                     self.song = song;
                     self.reset();
                 }
@@ -242,6 +282,10 @@ impl Audio {
                     if let Some(old) = self.voices.remove(id) {
                         old.stop();
                     }
+                    if self.output.active() {
+                        self.output.on(id, key as u8, velocity as u8);
+                        return;
+                    }
                     self.play_note(
                         id.into(),
                         key as u8,
@@ -252,6 +296,7 @@ impl Audio {
                 }
             }
             "off" => {
+                self.output.off(value);
                 if let Some(voice) = self.voices.remove(value) {
                     voice.stop();
                 }
@@ -549,6 +594,12 @@ fn backend(
         match rx.recv_timeout(Duration::from_millis(4)) {
             Ok((name, value)) => {
                 match name.as_str() {
+                    "shutdown" => {
+                        audio.silence();
+                        midi.clear();
+                        SHUTDOWN_DONE.store(true, Ordering::Release);
+                        break;
+                    }
                     "save-settings" => {
                         if let Some((conn, _)) = &db
                             && let Err(e) = save(conn, &value)
@@ -649,6 +700,7 @@ fn backend(
                         // Release exclusive OS ports before attempting to reopen them.
                         // Clear held keys because a note-off may be lost during rescan.
                         midi.clear();
+                        audio.handle("midi-output-scan", "");
                         audio.silence();
                         let _ = out.send(json!({"type":"pause"}));
                         midi = connect_midi(&out);
@@ -686,7 +738,10 @@ fn backend(
                 }
             }
             Err(mpsc::RecvTimeoutError::Timeout) => {}
-            Err(mpsc::RecvTimeoutError::Disconnected) => break,
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                audio.silence();
+                break;
+            }
         }
         audio.tick();
         // Keep the connections alive even when hardware is temporarily idle.

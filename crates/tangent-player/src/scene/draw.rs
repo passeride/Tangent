@@ -204,7 +204,7 @@ pub fn render(
         }
         keyboard(&mut d, &state, &l, t);
         if matches!(state.mode, Mode::Notes | Mode::Chords) {
-            super::menu::exercise(&mut d, &state, &l, t);
+            super::menu::exercise(&mut d, &mut state, &l, t);
         }
         if state.mode == Mode::Play {
             d.rect(
@@ -255,7 +255,7 @@ pub fn render(
                     .map(|r| serde_json::json!({"key":k.key,"x":r.x,"y":r.y,"w":r.w,"h":r.h}))
             })
             .collect();
-        platform::report(&serde_json::json!({"status":state.status,"title":state.song.title,"library_total":state.library.total,"library_items":state.library.items,"library_editing":state.library.edit.is_some(),"library_focus":state.library.focus.map(|f|match f {library::Field::Search=>"search",library::Field::Title=>"title",library::Field::Composer=>"composer"}),"library_query":state.library.query,"library_sort":library::SORTS[state.library.sort],"library_format":library::FORMATS[state.library.format],"library_status":state.library.status,"screen":format!("{:?}",state.screen),"mode":format!("{:?}",state.mode),"completed":state.practice.completed,"preferences":state.preferences(),"storage_status":state.storage_status,"target":state.practice.target(),"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())}).to_string());
+        platform::report(&serde_json::json!({"status":state.status,"title":state.song.title,"library_total":state.library.total,"library_items":state.library.items,"library_editing":state.library.edit.is_some(),"library_focus":state.library.focus.map(|f|match f {library::Field::Search=>"search",library::Field::Title=>"title",library::Field::Composer=>"composer"}),"library_query":state.library.query,"library_sort":library::SORTS[state.library.sort],"library_format":library::FORMATS[state.library.format],"library_status":state.library.status,"screen":format!("{:?}",state.screen),"mode":format!("{:?}",state.mode),"completed":state.practice.completed,"practice_waiting_release":state.practice.waiting_release,"practice_wrong":state.practice.wrong,"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output,"preferences":state.preferences(),"storage_status":state.storage_status,"target":state.practice.target(),"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())}).to_string());
     }
     apply(&mut commands, &mut pool, d, &music_font.0);
 }
@@ -388,7 +388,18 @@ fn settings(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
         ),
         ("Import score [Ctrl+O]".into(), Action::Import),
         ("XML demo [Ctrl+B]".into(), Action::Sample),
-        ("Connect MIDI [Ctrl+M]".into(), Action::Midi),
+        ("Rescan MIDI [Ctrl+M]".into(), Action::Midi),
+        (
+            format!(
+                "Output: {}",
+                state
+                    .midi_outputs
+                    .iter()
+                    .find(|p| p.id == state.midi_output)
+                    .map_or("Computer audio", |p| p.name.as_str())
+            ),
+            Action::MidiOutput,
+        ),
         ("Music credits".into(), Action::Credits),
         ("Full screen [F11]".into(), Action::Fullscreen),
         ("Return [Esc / F1]".into(), Action::Help),
@@ -462,7 +473,7 @@ fn settings(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
         10.,
         t.muted,
     );
-    let y = start + (20_usize.div_ceil(cols)) as f32 * row + 15.;
+    let y = start + (21_usize.div_ceil(cols)) as f32 * row + 15.;
     let line = ((l.height - y - 16.) / 8.).clamp(10., 23.);
     for (i, text) in [
         "Space: play / pause",
@@ -482,23 +493,30 @@ fn settings(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
         }
     }
 }
-fn keyboard(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
-    let mut active = BTreeMap::new();
-    let end = state
+fn expected_keys(state: &State) -> BTreeSet<u8> {
+    if matches!(state.mode, Mode::Notes | Mode::Chords) {
+        return if state.practice.hint {
+            state.practice.target().into_iter().collect()
+        } else {
+            BTreeSet::new()
+        };
+    }
+    if state.mode != Mode::Play {
+        return BTreeSet::new();
+    }
+    let now = state.transport.position_us;
+    state
         .song
         .notes
-        .partition_point(|n| n.start_us <= state.transport.position_us);
-    for n in &state.song.notes[..end] {
-        if state.mode == Mode::Play
-            && n.end_us > state.transport.position_us
-            && !state.song.parts[n.part].percussion
-        {
-            active.insert(n.key, t.colors[n.part % 4]);
-        }
-    }
-    for key in state.held.values() {
-        active.insert(*key, t.colors[0]);
-    }
+        .iter()
+        .take_while(|n| n.start_us <= now)
+        .filter(|n| n.end_us > now && !state.song.parts[n.part].percussion)
+        .map(|n| n.key)
+        .collect()
+}
+fn keyboard(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
+    let expected = expected_keys(state);
+    let played: BTreeSet<_> = state.held.values().copied().collect();
     for black in [false, true] {
         for k in state.piano.keys.iter().filter(|k| k.black == black) {
             let r = l.key(&state.piano, k.key).unwrap();
@@ -507,12 +525,31 @@ fn keyboard(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
                 r.y + 1.,
                 (r.w - 2.).max(1.),
                 r.h - 3.,
-                active
-                    .get(&k.key)
-                    .copied()
-                    .unwrap_or(if black { t.black } else { t.white }),
+                if played.contains(&k.key) {
+                    t.colors[0]
+                } else if black {
+                    t.black
+                } else {
+                    t.white
+                },
                 3.,
             );
+            if expected.contains(&k.key) {
+                // Inset feathered edges keep the key body unfilled and avoid
+                // painting neighbouring keys. Black keys remain above whites.
+                let max = (r.w * 0.22).clamp(1., 5.);
+                for i in 0..4 {
+                    let inset = 1. + i as f32 * max / 4.;
+                    let w = (r.w - 2. * inset).max(1.);
+                    let h = (r.h - 3. - 2. * inset).max(1.);
+                    let color = t.colors[0].with_alpha(0.8 - i as f32 * 0.17);
+                    let edge = (max / 4.).max(0.7);
+                    d.rect(r.x + inset, r.y + inset, w, edge, color, 1.);
+                    d.rect(r.x + inset, r.y + inset + h - edge, w, edge, color, 1.);
+                    d.rect(r.x + inset, r.y + inset, edge, h, color, 1.);
+                    d.rect(r.x + inset + w - edge, r.y + inset, edge, h, color, 1.);
+                }
+            }
             if k.key % 12 == 0 && !black {
                 d.text(
                     r.x + 3.,

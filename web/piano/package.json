@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node storage-schema.test.mjs && node fingerprint-schema.test.mjs && node library-schema.test.mjs && node smoke.mjs && node storage-smoke.mjs && node library-smoke.mjs",
+    "test": "node midi-output.test.mjs && node storage-schema.test.mjs && node fingerprint-schema.test.mjs && node library-schema.test.mjs && node smoke.mjs && node storage-smoke.mjs && node library-smoke.mjs && node practice-midi-smoke.mjs",
     "postinstall": "node prepare-sqlite.mjs"
   },
   "devDependencies": {

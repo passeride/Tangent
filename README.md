@@ -23,7 +23,7 @@ transport, volume, file import, fullscreen and every setting. Opening it stops
 playback and releases live notes; returning leaves playback paused until Resume.
 
 The app opens at a logo-first main menu: **Play**, **Library**, **Train**, **FreeForm**, and
-**Settings**. Train offers note reading and diatonic chord exercises; FreeForm
+**Settings**. Train offers treble/bass note reading with three levels, optional hints and diatonic chord exercises; FreeForm
 keeps song playback silent. Return home from the corner-gear pause screen.
 
 ## Screenshots
@@ -62,6 +62,13 @@ Choose **Library** to import several files, search title/composer, edit metadata
 sort/filter, reopen and remove saved pieces. Windows packages include a short
 [P-45 test](docs/test-p45.md) and PowerShell report starter.
 See [music library](docs/music-library.md) for limits and backup behavior.
+
+To hear playback through your piano, open **Settings → Rescan MIDI → Output**
+and cycle to its MIDI port (for example Digital Piano / P-45). The selected output
+replaces computer audio; leave the piano's Local Control On. Physical piano input
+is not echoed. **Solid keys mean played input; glowing edges mean expected song
+notes.** Train → Notes offers treble, bass or both clefs, three levels and Show hint.
+The answer stays visible until all keys are released. See [MIDI and practice details](docs/adr/0015-midi-output-and-reading-practice.md).
 
 ## Project status
 

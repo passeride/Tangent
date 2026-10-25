@@ -37,6 +37,10 @@ pub enum Action {
     Import,
     Sample,
     Midi,
+    MidiOutput,
+    PracticeClef,
+    PracticeLevel,
+    PracticeHint,
     Help,
     Credits,
     ExportDatabase,
@@ -81,6 +85,10 @@ impl Action {
             Self::Import => "import",
             Self::Sample => "sample",
             Self::Midi => "midi",
+            Self::MidiOutput => "midi-output",
+            Self::PracticeClef => "practice-clef",
+            Self::PracticeLevel => "practice-level",
+            Self::PracticeHint => "practice-hint",
             Self::Help => "help",
             Self::Credits => "credits",
             Self::ExportDatabase => "export-database",
@@ -287,7 +295,38 @@ fn activate(state: &mut State, action: Action, shift: bool) {
                 "",
             );
         }
-        Action::Midi => platform::action("midi", ""),
+        Action::PracticeClef | Action::PracticeLevel => {
+            let clef = if matches!(action, Action::PracticeClef) {
+                state.practice.clef.next()
+            } else {
+                state.practice.clef
+            };
+            let level = if matches!(action, Action::PracticeLevel) {
+                state.practice.level.next()
+            } else {
+                state.practice.level
+            };
+            state.panic();
+            state.practice.configure(clef, level);
+        }
+        Action::PracticeHint => state.practice.hint = !state.practice.hint,
+        Action::MidiOutput => {
+            let next = state
+                .midi_outputs
+                .iter()
+                .position(|p| p.id == state.midi_output)
+                .map_or(0, |i| i + 1);
+            let id = state
+                .midi_outputs
+                .get(next)
+                .map_or(String::new(), |p| p.id.clone());
+            state.panic();
+            platform::action("midi-output", &id);
+        }
+        Action::Midi => {
+            state.panic();
+            platform::action("midi", "");
+        }
         Action::Credits => platform::action("credits", ""),
         Action::ExportDatabase => platform::action("export-database", ""),
     }
@@ -333,6 +372,9 @@ pub fn input(
         );
     }
     if !window.focused {
+        if state.transport.playing || !state.held.is_empty() {
+            state.panic();
+        }
         state.library.clear_modifiers();
     }
     if state.screen == Screen::Library {

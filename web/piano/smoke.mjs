@@ -80,7 +80,7 @@ try {
   await click(page, "train-notes");
   await page.waitForFunction(() => tangentDiagnostics().screen === "Session");
   await page.keyboard.down("KeyA");
-  await page.waitForFunction(() => tangentDiagnostics().completed === 1);
+  await page.waitForFunction(() => tangentDiagnostics().practice_waiting_release === true);
   await page.keyboard.up("KeyA");
   await page.keyboard.press("Escape");
   await click(page, "main");
@@ -90,7 +90,7 @@ try {
   await page.keyboard.down("KeyA");
   await page.keyboard.down("KeyD");
   await page.keyboard.down("KeyG");
-  await page.waitForFunction(() => tangentDiagnostics().completed === 1);
+  await page.waitForFunction(() => tangentDiagnostics().practice_waiting_release === true);
   await page.keyboard.up("KeyA");
   await page.keyboard.up("KeyD");
   await page.keyboard.up("KeyG");
@@ -257,7 +257,7 @@ try {
   }
   await page.waitForFunction(() => tangentDiagnostics().screen === "Session");
   await page.keyboard.down("KeyA");
-  await page.waitForFunction(() => tangentDiagnostics().completed === 1);
+  await page.waitForFunction(() => tangentDiagnostics().practice_waiting_release === true);
   await page.keyboard.up("KeyA");
   const noGpu = await browser.newPage();
   await noGpu.addInitScript(() => {

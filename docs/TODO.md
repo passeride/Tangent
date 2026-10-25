@@ -31,6 +31,9 @@ this file tracks the remaining work, not an authorization gate.
 - Extend fingerprint search with polyphonic voices, multiple arrangements per work, calibrated match confidence and large-library performance.
 - Add managed desktop lifecycle/quit UI, signing and macOS notarization.
 
+- [x] Explicit MIDI output selection, no hardware echo, cancellation and seek-state reconstruction (ADR-0015). Verify output with physical P-45.
+- [x] Independent played solid fill and expected edge glow, including when particles are off.
+
 ## Reading views
 
 - Expand the initial MusicXML subset (see below). MIDI must continue to work
@@ -46,8 +49,8 @@ this file tracks the remaining work, not an authorization gate.
 ## Product layers
 
 - Main/Train menus, FreeForm and basic note/chord matching are delivered in
-  ADR-0008. Extend the fixed C-major exercises with bass-clef targets, curriculum
-  options and feedback. Timed scoring, progress persistence and adaptive exercise
+  ADR-0008. [x] Extend the fixed C-major exercises with bass-clef targets, curriculum
+  options and feedback (delivered in ADR-0015). Timed scoring, progress persistence and adaptive exercise
   selection remain future work in the domain layer.
 - Add full reduced-motion preferences, contrast checks and accessible Bevy UI semantics for
   note/event information. Effects can already be disabled manually.
