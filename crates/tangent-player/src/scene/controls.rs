@@ -264,6 +264,9 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         Action::Effects => {
             state.effects = !state.effects;
             state.particles.clear();
+            state.ripples.clear();
+            #[cfg(not(target_arch = "wasm32"))]
+            state.gpu_bursts.clear();
         }
         Action::Instrument => {
             state.instrument = (state.instrument + 1) % 2;
