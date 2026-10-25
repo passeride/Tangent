@@ -1,6 +1,6 @@
 # Tangent UI/UX v2 — screen, flow and interaction specification
 
-- **Status:** Design direction approved by the project owner (2026-10-25); **documentation only, not implemented**.
+- **Status:** Design direction approved 2026-10-25; **initial main/pause/settings implementation in progress on this branch**. Remaining HUD and features are not implemented.
 - **Scope:** Information architecture, menus, play HUD, practice, settings, library and responsive interaction.
 - **Applies to:** One shared Bevy/wgpu UI in native desktop and web builds.
 - **Visual reference:** Interactive HTML concept reviewed in the design conversation on 2026-10-25. It is a **mockup**, not a running Tangent build, test fixture or implementation asset.
@@ -214,7 +214,7 @@ Prefer subtle, short-lived particles away from notation and keys. Reduced-motion
 
 ## Implementation slices / acceptance criteria
 
-This brief authorizes a direction, **not an automatic implementation**. Preserve working playback, training and persistence while introducing the UI incrementally.
+The owner has authorized initial menu implementation. Preserve working playback, training and persistence while introducing the UI incrementally.
 
 ### Slice A — Structure and navigation
 
@@ -254,7 +254,7 @@ This brief authorizes a direction, **not an automatic implementation**. Preserve
 - No real-time device support or performance is certified by the interactive design prototype.
 - No copied third-party layout, music or assets are requested.
 - The design is approved as a **direction**, while exact spacing, typography and individual settings may still be adjusted during Bevy implementation after testing on a real piano and narrow screen.
-- No UI implementation is included in this documentation branch.
+- This branch now includes initial Bevy menu, pause and settings implementation; HUD presets, scoring, new effects and accessibility options remain proposals.
 
 ## Verification of documentation
 
