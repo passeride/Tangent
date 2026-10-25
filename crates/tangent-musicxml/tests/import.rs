@@ -77,10 +77,20 @@ fn parts_share_measure_offsets_and_conflicting_tempos_are_errors() {
 }
 #[test]
 fn truncations_fail_without_panics() {
-    for i in 0..PIANO.len() - 1 {
-        assert!(import(&PIANO[..i], "t".into()).is_err());
+    let lf = std::str::from_utf8(PIANO).unwrap().replace("\r\n", "\n");
+    for bytes in [
+        lf.as_bytes().to_vec(),
+        lf.replace('\n', "\r\n").into_bytes(),
+    ] {
+        // Cutting trailing whitespace leaves valid XML. Check every truncation
+        // of the actual document for both Unix and Windows checkout line endings.
+        let score = bytes.trim_ascii_end();
+        for i in 0..score.len() {
+            assert!(import(&score[..i], "t".into()).is_err());
+        }
     }
 }
+
 #[test]
 fn overlapping_unisons_in_separate_voices_have_independent_audio_routes() {
     use tangent_core::music::PerformanceEvent;
