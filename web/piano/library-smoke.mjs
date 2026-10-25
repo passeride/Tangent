@@ -19,12 +19,12 @@ try {
   await page.waitForFunction(()=>tangentDiagnostics().library_total===2 && !document.querySelector("#midi-file").value);
   await click(page,"library-sort");
   await page.waitForFunction(()=>tangentDiagnostics().library_items[0]?.title==="First light - Tangent piano study");
-  await click(page,"library-edit");await click(page,"library-title");
+  await click(page,"library-edit");await click(page,"library-title");await page.waitForFunction(()=>tangentDiagnostics().library_focus==="title");
   await page.keyboard.press("Control+A");await page.keyboard.type("Evening study");
-  await click(page,"library-composer");await page.keyboard.press("Control+A");await page.keyboard.type("Bach");
+  await click(page,"library-composer");await page.waitForFunction(()=>tangentDiagnostics().library_focus==="composer");await page.keyboard.press("Control+A");await page.keyboard.type("Bach");
   await click(page,"library-save-metadata");
   await page.waitForFunction(()=>!tangentDiagnostics().library_editing && tangentDiagnostics().library_items.some(s=>s.title==="Evening study"&&s.composer==="Bach"));
-  await click(page,"library-search");await page.keyboard.type("BACH");
+  await click(page,"library-search");await page.waitForFunction(()=>tangentDiagnostics().library_focus==="search");await page.keyboard.type("BACH");
   await page.waitForFunction(()=>tangentDiagnostics().library_total===1&&tangentDiagnostics().library_items[0]?.composer==="Bach");
   await click(page,"library-format"); // MIDI excludes our MusicXML sources.
   await page.waitForFunction(()=>tangentDiagnostics().library_total===0);
@@ -36,7 +36,7 @@ try {
   await context.close();context=await chromium.launchPersistentContext(profile,options);
   page=await context.newPage();await ready(page,server.url);await click(page,"library");
   await page.waitForFunction(()=>tangentDiagnostics().library_total===2);
-  await click(page,"library-search");await page.keyboard.type("bach");
+  await click(page,"library-search");await page.waitForFunction(()=>tangentDiagnostics().library_focus==="search");await page.keyboard.type("bach");
   await page.waitForFunction(()=>tangentDiagnostics().library_total===1&&tangentDiagnostics().library_items[0]?.title==="Evening study");
   await click(page,"library-open");
   await page.waitForFunction(()=>tangentDiagnostics().screen==="Session"&&tangentDiagnostics().title==="Evening study"&&tangentDiagnostics().status.includes("notes loaded"));

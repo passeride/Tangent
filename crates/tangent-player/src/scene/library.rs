@@ -214,7 +214,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         x,
         132.,
         width - 74.,
-        &clip(&label, width - 86., 12.),
+        clip(&label, width - 86., 12.),
         Action::LibrarySearch,
         t,
     );
@@ -238,7 +238,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         x,
         174.,
         width * 0.56 - 4.,
-        &format!("Sort: {sort}"),
+        format!("Sort: {sort}"),
         Action::LibrarySort,
         t,
     );
@@ -358,7 +358,7 @@ fn render_edit(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) 
         x,
         102.,
         width,
-        &clip(&label, width - 16., 13.),
+        clip(&label, width - 16., 13.),
         Action::LibraryTitle,
         t,
     );
@@ -377,7 +377,7 @@ fn render_edit(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) 
         x,
         176.,
         width,
-        &clip(&label, width - 16., 13.),
+        clip(&label, width - 16., 13.),
         Action::LibraryComposer,
         t,
     );
