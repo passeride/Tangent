@@ -142,7 +142,7 @@ impl Drawing {
         }
     }
 }
-fn time(us: u64) -> String {
+pub(super) fn time(us: u64) -> String {
     let s = us / 1_000_000;
     format!("{}:{:02}", s / 60, s % 60)
 }
@@ -265,7 +265,26 @@ pub fn render(
         // HUD goes above every musical layer, including moving ending brackets.
         gear(&mut d, &mut state, &l, t);
     } else {
-        settings(&mut d, &mut state, &l, t);
+        if state.screen == Screen::Session {
+            // Freeze a faint copy of the music beneath the modal. Only shape
+            // geometry is retained so old notation labels cannot float above
+            // the pause/settings panel (all Bevy text has a high text Z-index).
+            if state.mode == Mode::Play {
+                if state.view == View::Score {
+                    super::score::render(&mut d, &state, &l, t);
+                } else {
+                    falling(&mut d, &state, &l, t);
+                }
+            }
+            keyboard(&mut d, &state, &l, t);
+            d.labels.clear();
+            d.rect(0., 0., l.width, l.height, t.bg.with_alpha(0.82), 0.);
+        }
+        if state.settings_open {
+            super::settings::render(&mut d, &mut state, &l, t);
+        } else {
+            super::settings::pause(&mut d, &mut state, &l, t);
+        }
     }
     #[cfg(target_arch = "wasm32")]
     {
@@ -375,153 +394,6 @@ fn gear(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
         },
         Action::Help,
     ));
-}
-fn settings(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
-    d.text(
-        l.margin,
-        18.,
-        if state.screen == Screen::Session {
-            "Paused / Tangent"
-        } else {
-            "Settings / Tangent"
-        },
-        22.,
-        t.ink,
-    );
-    let items = [
-        ("Resume [Space]".into(), Action::Play),
-        ("Restart".into(), Action::Restart),
-        ("Seek -5s".into(), Action::Back),
-        ("Seek +5s".into(), Action::Forward),
-        (
-            format!("Volume - ({}%)", (state.volume * 100.).round()),
-            Action::Quieter,
-        ),
-        ("Volume +".into(), Action::Louder),
-        (format!("View: {} [V]", state.view.name()), Action::View),
-        (
-            format!("Theme: {} [B]", ["Aurora", "Ember", "Paper"][state.theme]),
-            Action::Theme,
-        ),
-        (format!("Hear song: {} [M]", state.hear), Action::Hear),
-        (format!("Sparkles: {} [P]", state.effects), Action::Effects),
-        (
-            format!(
-                "Piano: {} [X]",
-                ["Soft felt", "Bright keys"][state.instrument]
-            ),
-            Action::Instrument,
-        ),
-        (
-            format!("Keys: {} [R]", state.piano.keys.len()),
-            Action::Range,
-        ),
-        ("Import score [Ctrl+O]".into(), Action::Import),
-        ("XML demo [Ctrl+B]".into(), Action::Sample),
-        ("Rescan MIDI [Ctrl+M]".into(), Action::Midi),
-        (
-            format!(
-                "Output: {}",
-                state
-                    .midi_outputs
-                    .iter()
-                    .find(|p| p.id == state.midi_output)
-                    .map_or("Computer audio", |p| p.name.as_str())
-            ),
-            Action::MidiOutput,
-        ),
-        ("Music credits".into(), Action::Credits),
-        ("Full screen [F11]".into(), Action::Fullscreen),
-        ("Return [Esc / F1]".into(), Action::Help),
-        ("Main menu".into(), Action::Main),
-        ("Export database".into(), Action::ExportDatabase),
-    ];
-    let cols = if l.width > 700. { 3 } else { 2 };
-    let row = if l.height < 600. { 35. } else { 43. };
-    let start = if l.height < 600. { 50. } else { 65. };
-    let w = (l.width - 2. * l.margin - 12. * (cols - 1) as f32) / cols as f32;
-    let session = state.screen == Screen::Session;
-    let song_mode = state.mode == Mode::Play;
-    for (i, (label, action)) in items
-        .into_iter()
-        .filter(|(_, action)| {
-            (song_mode || !matches!(action, Action::Restart | Action::Back | Action::Forward))
-                && (session
-                    || !matches!(
-                        action,
-                        Action::Play
-                            | Action::Restart
-                            | Action::Back
-                            | Action::Forward
-                            | Action::Main
-                    ))
-        })
-        .enumerate()
-    {
-        let label = if w < 160. {
-            label
-                .replace("Falling blocks", "Blocks")
-                .replace("Staff blocks", "Staff")
-                .replace("Staff notes", "Notes")
-                .replace("Sheet & playhead", "Sheet")
-                .replace("Soft felt", "Felt")
-                .replace("Bright keys", "Bright")
-                .split(" [")
-                .next()
-                .unwrap_or("")
-                .to_string()
-        } else {
-            label
-        };
-        d.button(
-            state,
-            l.margin + (i % cols) as f32 * (w + 12.),
-            start + (i / cols) as f32 * row,
-            w,
-            label,
-            action,
-            t,
-        );
-    }
-    d.text(
-        l.margin,
-        l.height - 50.,
-        format!(
-            "{}  {} / {}",
-            state.song.title,
-            time(state.transport.position_us),
-            time(state.transport.duration_us)
-        ),
-        11.,
-        t.ink,
-    );
-    d.text(l.margin, l.height - 30., &state.status, 11., t.muted);
-    d.text(
-        l.margin,
-        l.height - 14.,
-        &state.storage_status,
-        10.,
-        t.muted,
-    );
-    let y = start + (21_usize.div_ceil(cols)) as f32 * row + 15.;
-    let line = ((l.height - y - 16.) / 8.).clamp(10., 23.);
-    for (i, text) in [
-        "Space: play / pause",
-        "Left / Right: seek 5 seconds (Shift: 15)",
-        "Up / Down: volume (5% per step)",
-        "Home: beginning    End: end",
-        "A W S E D F T G Y H U J K: C4 to C5",
-        "MIDI reading views use approximate notation.",
-        "First light: original MusicXML piano study",
-        "CC0 1.0. Music credits opens the provenance.",
-    ]
-    .iter()
-    .enumerate()
-    {
-        if y + i as f32 * line < l.height - 70. {
-            d.text(l.margin, y + i as f32 * line, *text, 12., t.muted);
-        }
-    }
 }
 fn expected_keys(state: &State) -> BTreeSet<u8> {
     if matches!(state.mode, Mode::Notes | Mode::Chords) {
