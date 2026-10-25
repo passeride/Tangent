@@ -39,3 +39,23 @@ in its theme module; the JS instrument profiles remain audio-only. Screenshots
 are recaptured from the Bevy/wgpu version. Bevy embeds Fira Mono's subset font:
 Mozilla Foundation and Telefonica S.A., SIL OFL 1.1; see
 [full font license](../../../licenses/FiraMono-OFL.txt).
+
+## Bravura music font — 2026-10-25
+
+- File: `crates/tangent-player/assets/Bravura.otf` (unmodified).
+- Source: Steinberg Media Technologies GmbH, SMuFL reference font.
+- Pinned commit: `37b194378b710cc40e406ab6c4b07608bb9548ae`.
+- URL: https://github.com/steinbergmedia/bravura/blob/37b194378b710cc40e406ab6c4b07608bb9548ae/redist/otf/Bravura.otf
+- Copyright and SIL OFL 1.1: `licenses/Bravura-OFL.txt`; reserved name Bravura.
+- Embedded directly in Bevy, no system-font fallback or remote font request.
+- Usage: true G/F clefs, transparent staff watermarks, accidentals/rests/whole heads.
+
+## First light MusicXML — 2026-10-25
+
+Original complete piano study authored here with AI assistance, CC0 1.0 for the
+music sample only. `scripts/generate_study.py` reproduces it. Source score and
+provenance/full dedication: `web/piano/samples`. No MIDI transcription is involved.
+The prior Mutopia MIDI was retired at the owner's request; its record is retained
+in `docs/retired-midi-sample.md` and git history.
+
+Bravura SHA-256: `cdf0f893ee1fdb64b7f6713d71ee0dcfc349c0ac01429a8e451b01a9e79f5f3b`.

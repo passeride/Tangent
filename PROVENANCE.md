@@ -103,3 +103,14 @@ using W3C MusicXML 4.0 as the public reference, without consulting excluded lega
 source. roxmltree 0.20.0 comes from crates.io (MIT OR Apache-2.0). The pause gear
 uses original Bevy geometry, no imported icon/font asset. Prior exposure above
 remains disclosed. ADR-0006 records the delivered subset and remaining work.
+
+## Authored measures and clefs — 2026-10-25
+
+The owner requests actual G/F clefs, watermarks, a MusicXML demo and visible
+measures/endings. New model/import/presentation code and an original piano study
+were authored using W3C MusicXML 4.0/SMuFL references; no excluded legacy source was
+consulted. The full unmodified Bravura font comes from Steinberg's independent
+repository at the pinned commit in the asset register, SIL OFL 1.1. It is embedded
+in Bevy. First light MusicXML is original synthetic demonstration music (CC0 1.0);
+it replaces, rather than transcribes, the Mutopia MIDI. The retired MIDI credit
+record remains in docs/retired-midi-sample.md. ADR-0007 records repeat/score mapping.

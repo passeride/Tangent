@@ -42,6 +42,8 @@ mod tests {
 pub struct NotatedScore {
     pub staves: Vec<NotatedStaff>,
     pub measures: Vec<NotatedMeasure>,
+    /// Written measure -> performance visits, including repeats and endings.
+    pub playback: Vec<MeasureVisit>,
 }
 #[derive(Debug, Clone, Serialize)]
 pub enum Clef {
@@ -65,6 +67,13 @@ pub struct NotatedMeasure {
     pub label: String,
     pub duration: QuarterFraction,
     pub notes: Vec<WrittenNote>,
+    pub meter: TimeSignature,
+    pub key_fifths: i8,
+    pub initial_quarter_bpm: f64,
+    pub tempos: Vec<TempoMark>,
+    pub repeat_start: bool,
+    pub repeat_end: Option<u8>,
+    pub ending: Option<Ending>,
 }
 #[derive(Debug, Clone, Serialize)]
 pub struct WrittenNote {
@@ -75,6 +84,98 @@ pub struct WrittenNote {
     pub duration: QuarterFraction,
     /// None denotes a rest. Simultaneous notes share an onset, not a block.
     pub pitch: Option<crate::music::WrittenPitch>,
+    pub value: Option<NoteValue>,
+    pub dots: u8,
     pub tie_from_previous: bool,
     pub tie_to_next: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct TimeSignature {
+    pub beats: u8,
+    pub beat_type: u16,
+}
+impl Default for TimeSignature {
+    fn default() -> Self {
+        Self {
+            beats: 4,
+            beat_type: 4,
+        }
+    }
+}
+#[derive(Debug, Clone, Serialize)]
+pub struct TempoMark {
+    pub onset: QuarterFraction,
+    pub quarter_bpm: f64,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Ending {
+    pub numbers: Vec<u8>,
+    pub start: bool,
+    pub end: bool,
+    pub open_end: bool,
+}
+#[derive(Debug, Clone, Serialize)]
+pub struct MeasureVisit {
+    pub measure: usize,
+    pub pass: u8,
+    pub start_us: u64,
+    pub end_us: u64,
+    pub timing: Vec<BeatTime>,
+}
+#[derive(Debug, Clone, Copy, Serialize)]
+pub enum NoteValue {
+    Whole,
+    Half,
+    Quarter,
+    Eighth,
+    Sixteenth,
+    ThirtySecond,
+    SixtyFourth,
+}
+impl QuarterFraction {
+    pub fn quarters(self) -> f64 {
+        self.numerator as f64 / self.denominator.get() as f64
+    }
+}
+
+/// Piecewise linear timing within one performance visit, after tempo integration.
+#[derive(Debug, Clone, Serialize)]
+pub struct BeatTime {
+    pub quarter: QuarterFraction,
+    pub offset_us: u64,
+}
+impl MeasureVisit {
+    pub fn quarter_at_time(&self, offset_us: u64) -> f64 {
+        let end = self.timing.partition_point(|p| p.offset_us <= offset_us);
+        if end == 0 {
+            return 0.;
+        }
+        if end >= self.timing.len() {
+            return self.timing.last().map_or(0., |p| p.quarter.quarters());
+        }
+        let a = &self.timing[end - 1];
+        let b = &self.timing[end];
+        let fraction = (offset_us - a.offset_us) as f64 / (b.offset_us - a.offset_us).max(1) as f64;
+        a.quarter.quarters() + (b.quarter.quarters() - a.quarter.quarters()) * fraction
+    }
+    pub fn time_at_quarter(&self, quarter: f64) -> u64 {
+        if !quarter.is_finite() || quarter <= 0. {
+            return 0;
+        }
+        let end = self
+            .timing
+            .partition_point(|p| p.quarter.quarters() <= quarter);
+        if end == 0 {
+            return 0;
+        }
+        if end >= self.timing.len() {
+            return self.timing.last().map_or(0, |p| p.offset_us);
+        }
+        let a = &self.timing[end - 1];
+        let b = &self.timing[end];
+        let fraction =
+            (quarter - a.quarter.quarters()) / (b.quarter.quarters() - a.quarter.quarters());
+        a.offset_us + ((b.offset_us - a.offset_us) as f64 * fraction).round() as u64
+    }
 }

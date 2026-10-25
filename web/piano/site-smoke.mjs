@@ -9,15 +9,16 @@ try {
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await ready(page, server.url);
-  await click(page, "help");
-  await click(page, "sample");
-  await page.waitForFunction(() => tangentDiagnostics().notes === 228);
+  const sample = await page.request.get(server.url + "samples/first-light.musicxml");
+  assert.equal(sample.ok(),true);
+  assert((await sample.text()).includes("<ending"));
+  await page.waitForFunction(() => tangentDiagnostics().notes === 130);
   await page.keyboard.press("Space");
   await page.waitForFunction(() => tangentDiagnostics().position > 300_000);
   await page.waitForFunction(() => tangentDiagnostics().energy > 0.0001);
   assert.deepEqual(errors, []);
   console.log(
-    "Packaged Bevy Pages site passed: /Tangent/ paths, GPU UI, real WASM, CC MIDI and sound.",
+    "Packaged Bevy Pages site passed: /Tangent/ paths, GPU UI, real WASM, MusicXML and sound.",
   );
 } finally {
   await browser?.close();

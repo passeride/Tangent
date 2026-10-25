@@ -13,9 +13,10 @@ without importing Neothesia or code from its forks.
 [Run/build guide](docs/distribution.md)
 
 The browser link becomes available after the first successful Pages deployment.
-Open the corner gear, choose **Try Bach**, then **Resume**, to test the included Prelude BWV 924a.
-MIDI typesetting by **jeff covey / Mutopia**, **CC BY-SA 3.0**;
-[source, attribution and license](web/piano/samples/ATTRIBUTION.md).
+The bundled **First light** MusicXML piano study includes bass/treble staves,
+16 written measures, first/second endings, repeats, meter and tempo changes.
+Press **Space** to play, **V** for the note views, or choose **XML demo** in the
+corner-gear pause screen. The original demo is [CC0 1.0](web/piano/samples/ATTRIBUTION.md).
 
 During play, only the corner gear and timeline remain; the pause screen contains
 transport, volume, file import, fullscreen and every setting. Opening it stops
@@ -33,6 +34,8 @@ original demonstration study. These are app screenshots, not design mockups.
 | ![Staff lanes](docs/screenshots/piano-staff.png) | ![Falling notes](docs/screenshots/piano-notes.png) |
 
 ![Stationary sheet reading view with a moving playhead](docs/screenshots/piano-score.png)
+
+![MusicXML first and second endings](docs/screenshots/piano-endings.png)
 
 ![Pause menu with all settings](docs/screenshots/piano-pause.png)
 
@@ -146,7 +149,13 @@ require their own records when introduced.
 | Pause menu and settings | Corner gear, Esc or F1; Space resumes |
 | View / theme / piano / range | V / B / X / R |
 | Song audio / particles | M / P |
-| Import / Bach sample / MIDI | Ctrl+O / Ctrl+B / Ctrl+M |
+| Import / MusicXML demo / MIDI | Ctrl+O / Ctrl+B / Ctrl+M |
 
 Staff notes and staff blocks both include five-line bass and treble staves,
 with ledger strokes outside them. All menus are inside the GPU canvas.
+
+
+MusicXML's sheet view now uses written measures, real Bravura G/F clefs, meter,
+tempo, key signatures, repeat signs and first/second-ending brackets. The playhead
+follows repeat visits. Falling staff/notes show faint clef watermarks plus moving
+measure/beat guides and endings. MIDI remains an approximate reading view.

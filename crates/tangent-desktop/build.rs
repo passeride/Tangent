@@ -27,7 +27,7 @@ fn main() {
         for required in [
             "index.html",
             "pkg/tangent_player_bg.wasm",
-            "samples/bach-prelude-bwv924a.mid",
+            "samples/first-light.musicxml",
             "samples/ATTRIBUTION.md",
         ] {
             assert!(

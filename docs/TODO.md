@@ -45,7 +45,10 @@ this file tracks the remaining work, not an authorization gate.
 
 - [x] Uncompressed partwise adapter, rational rhythm, voices/staves, sound ties/tempo.
 - [ ] Bounded compressed MXL support through META-INF/container.xml.
-- [ ] Retain key/time/clef changes, written rhythm types/dots/tuplets and engraving detail.
-- [ ] Full authored score layout, rests/tie graphics and score-position mapping.
-- [ ] Repeat/navigation expansion and dynamics/pedal/articulation playback.
+- [x] Retain inherited key/time, written rhythm values/dots and tempo; initial clefs.
+- [ ] Full clef/attribute changes, tuplets/beams and engraving detail.
+- [x] Authored measure layout, clefs/rests, barlines/houses and repeat-visit mapping.
+- [ ] Refined engraving collisions, ties/beam layout and full score pagination.
+- [x] Bounded sequential repeats and numbered endings.
+- [ ] Nested repeats/D.C./D.S./coda and dynamics/pedal/articulation playback.
 - [ ] Broader exporter fixtures/interoperability.

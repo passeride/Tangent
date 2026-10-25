@@ -83,60 +83,11 @@ pub fn midi(bytes: &[u8], title: String) -> Result<Song, String> {
     })
 }
 pub fn study() -> Song {
-    let mut notes = Vec::new();
-    let mut events = Vec::new();
-    for bar in 0..4 {
-        for (beat, key) in [60, 64, 67, 72, 71, 67, 64, 62].into_iter().enumerate() {
-            let start_us = 2_000_000 + (bar * 8 + beat) as u64 * 420_000;
-            for (part, key, duration) in [(0, key, 330_000), (1, [48, 53, 55, 48][bar], 1_500_000)]
-            {
-                if part == 1 && beat % 4 != 0 {
-                    continue;
-                }
-                notes.push(PerformanceNote {
-                    id: notes.len(),
-                    part,
-                    key,
-                    velocity: 85,
-                    start_us,
-                    end_us: start_us + duration,
-                    written: None,
-                });
-                events.push(TimedEvent {
-                    time_us: start_us,
-                    port: 0,
-                    channel: part as u8,
-                    message: PerformanceEvent::On { key, velocity: 85 },
-                });
-                events.push(TimedEvent {
-                    time_us: start_us + duration,
-                    port: 0,
-                    channel: part as u8,
-                    message: PerformanceEvent::Off { key },
-                });
-            }
-        }
-    }
-    notes.sort_by_key(|n| (n.start_us, n.id));
-    events.sort_by_key(|e| e.time_us);
-    Song {
-        title: "First light · original study".into(),
-        duration_us: 16_000_000,
-        parts: vec![
-            Part {
-                name: "Melody".into(),
-                percussion: false,
-            },
-            Part {
-                name: "Foundation".into(),
-                percussion: false,
-            },
-        ],
-        notes,
-        events,
-        notation: None,
-        warnings: vec![],
-    }
+    tangent_musicxml::import(
+        include_bytes!("../../../web/piano/samples/first-light.musicxml"),
+        "First light".into(),
+    )
+    .expect("bundled MusicXML study must be valid")
 }
 
 #[cfg(test)]

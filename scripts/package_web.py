@@ -11,7 +11,7 @@ output = Path(args.output).resolve()
 source = root / 'web/piano'
 if not output.is_relative_to(root / "dist") or output == root / "dist":
     raise SystemExit("Output must be a subdirectory of this repository's dist/")
-required = ['pkg/tangent_player.js', 'pkg/tangent_player_bg.wasm', 'samples/bach-prelude-bwv924a.mid', 'samples/ATTRIBUTION.md']
+required = ['pkg/tangent_player.js', 'pkg/tangent_player_bg.wasm', 'samples/first-light.musicxml', 'samples/ATTRIBUTION.md']
 for path in required:
     if not (source / path).is_file():
         raise SystemExit(f'Missing {path}. Build the WASM package first.')

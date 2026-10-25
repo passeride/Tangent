@@ -13,6 +13,8 @@ tradeoffs and evidence. It is not a task checklist or proof of implementation.
 
 | [0006](0006-musicxml-import-and-authored-notation.md) | MusicXML adapter and authored notation | Accepted | Initial uncompressed partwise subset |
 
+| [0007](0007-authored-measures-repeats-and-music-glyphs.md) | Authored measures, repeat visits and music glyphs | Accepted | MusicXML demo, Bravura clefs and measure/volta display |
+
 ## Create an ADR
 
 1. Copy [the template](template.md) to `NNNN-short-title.md`, using the next unused

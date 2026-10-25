@@ -8,18 +8,36 @@ pub(super) fn song(
     measures: Vec<Measure>,
     mut warnings: Vec<String>,
 ) -> Result<Song> {
-    let mut offsets = Vec::new();
-    let mut total = 0u64;
-    let mut tempos = BTreeMap::new();
+    let order = structure::order(&measures)?;
+    // Establish written tempo context; repeat jumps restore the tempo at their target.
+    let mut context = Vec::new();
+    let mut bpm = 120.;
     for m in &measures {
-        offsets.push(total);
-        for &(at, bpm) in &m.tempos {
-            let pos = total.checked_add(at).ok_or("Tempo position overflow")?;
-            if let Some(previous) = tempos.insert(pos, bpm)
-                && previous != bpm
+        context.push(bpm);
+        let mut marks = BTreeMap::new();
+        for &(at, tempo) in &m.tempos {
+            if let Some(previous) = marks.insert(at, tempo)
+                && previous != tempo
             {
                 return Err("Conflicting tempos at the same score position".into());
             }
+        }
+        for tempo in marks.values() {
+            bpm = *tempo;
+        }
+    }
+    let mut offsets = Vec::new();
+    let mut total = 0u64;
+    let mut tempos = BTreeMap::new();
+    for &(index, _) in &order {
+        let m = &measures[index];
+        offsets.push(total);
+        tempos.insert(total, context[index]);
+        for &(at, tempo) in &m.tempos {
+            if at > m.length {
+                return Err("Tempo offset exceeds measure duration".into());
+            }
+            tempos.insert(total + at, tempo);
         }
         total = total
             .checked_add(m.length)
@@ -48,14 +66,65 @@ pub(super) fn song(
         }
         Ok(us.round() as u64)
     };
+    let mut written_measures = Vec::new();
+    for (index, m) in measures.iter().enumerate() {
+        written_measures.push(NotatedMeasure {
+            label: m.label.clone(),
+            duration: fraction(m.length, grid)?,
+            notes: m.entries.iter().map(|e| e.note.clone()).collect(),
+            meter: m.meter,
+            key_fifths: m.key_fifths,
+            initial_quarter_bpm: m
+                .tempos
+                .iter()
+                .rfind(|(at, _)| *at == 0)
+                .map_or(context[index], |(_, bpm)| *bpm),
+            tempos: m
+                .tempos
+                .iter()
+                .map(|&(at, bpm)| {
+                    Ok(TempoMark {
+                        onset: fraction(at, grid)?,
+                        quarter_bpm: bpm,
+                    })
+                })
+                .collect::<Result<_>>()?,
+            repeat_start: m.repeat_start,
+            repeat_end: m.repeat_end,
+            ending: m.ending.clone(),
+        });
+    }
     let mut notes: Vec<PerformanceNote> = Vec::new();
     let mut voice_routes = BTreeMap::new();
     let mut routes = Vec::new();
     let mut pending = BTreeMap::<(usize, u16, String, u8), (usize, u64)>::new();
-    let mut written_measures = Vec::new();
-    for (offset, m) in offsets.into_iter().zip(measures) {
-        let mut written = Vec::new();
-        for mut e in m.entries {
+    let mut visits = Vec::new();
+    let mut previous_measure = None;
+    for ((index, pass), offset) in order.into_iter().zip(offsets) {
+        if previous_measure.is_some_and(|prev| index != prev + 1) {
+            pending.clear();
+        }
+        previous_measure = Some(index);
+        let m = &measures[index];
+        let mut timing_ticks = std::collections::BTreeSet::from([0, m.length]);
+        timing_ticks.extend(m.tempos.iter().map(|(at, _)| *at));
+        let timing = timing_ticks
+            .into_iter()
+            .map(|at| {
+                Ok(BeatTime {
+                    quarter: fraction(at, grid)?,
+                    offset_us: time(offset + at)? - time(offset)?,
+                })
+            })
+            .collect::<Result<_>>()?;
+        visits.push(MeasureVisit {
+            measure: index,
+            pass,
+            start_us: time(offset)?,
+            end_us: time(offset + m.length)?,
+            timing,
+        });
+        for (written_index, e) in m.entries.iter().enumerate() {
             if let Some(key) = e.key {
                 let lane = (e.part, e.note.staff, e.note.voice.clone(), key);
                 let start = offset + e.start;
@@ -77,6 +146,9 @@ pub(super) fn song(
                             "Tie stop without adjacent matching start; played as a new note."
                                 .into(),
                         );
+                    }
+                    if notes.len() >= LIMIT {
+                        return Err("Expanded MusicXML note limit exceeded".into());
                     }
                     let next_route = voice_routes.len();
                     let route = *voice_routes
@@ -101,15 +173,11 @@ pub(super) fn song(
                 if e.note.tie_to_next {
                     pending.insert(lane, (id, end));
                 }
-                e.note.performance_note = Some(id);
+                written_measures[index].notes[written_index]
+                    .performance_note
+                    .get_or_insert(id);
             }
-            written.push(e.note);
         }
-        written_measures.push(NotatedMeasure {
-            label: m.label,
-            duration: fraction(m.length, grid)?,
-            notes: written,
-        });
     }
     if !pending.is_empty() {
         warnings.push("Unclosed ties end at their last written duration.".into());
@@ -135,7 +203,6 @@ pub(super) fn song(
             message: PerformanceEvent::Off { key: n.key },
         });
     }
-    // Releases precede new attacks at boundaries, preserving repeated keys.
     events.sort_by_key(|e| {
         (
             e.time_us,
@@ -145,16 +212,16 @@ pub(super) fn song(
     notes.sort_by_key(|n| (n.start_us, n.id));
     warnings.sort();
     warnings.dedup();
-    let duration_us = time(total)?.max(notes.iter().map(|n| n.end_us).max().unwrap_or(0));
     Ok(Song {
         title,
-        duration_us,
+        duration_us: time(total)?.max(notes.iter().map(|n| n.end_us).max().unwrap_or(0)),
         parts,
         notes,
         events,
         notation: Some(NotatedScore {
             staves,
             measures: written_measures,
+            playback: visits,
         }),
         warnings,
     })

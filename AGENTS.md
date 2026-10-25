@@ -88,4 +88,5 @@ a planned feature, prototype or accepted sketch as a finished implementation.
 When changing web files or samples, run `scripts/package_web.py`, the packaged
 site smoke under `/Tangent/`, and a launcher smoke with embedded assets. Screenshot
 updates must show the real app and remain reproducible via `web/piano/capture.mjs`.
-Preserve the sample MIDI attribution, full license and byte hash when packaging.
+Preserve the bundled MusicXML sample provenance/license and the Bravura font
+license when packaging. The prior MIDI sample was replaced at the owner's request.

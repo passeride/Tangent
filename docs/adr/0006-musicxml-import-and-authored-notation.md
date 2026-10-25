@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Decision date: 2026-10-25
-- Delivery: Initial uncompressed partwise subset implemented
+- Delivery: Initial subset implemented; ADR-0007 adds authored attributes, repeat visits and measure rendering
 - Related: ADR-0003 and ADR-0005
 
 ## Context
@@ -57,3 +57,8 @@ Reference: W3C MusicXML 4.0 reference and MIDI-compatible tutorial:
 https://www.w3.org/2021/06/musicxml40/
 https://www.w3.org/2021/06/musicxml40/tutorial/midi-compatible-part/
 https://github.com/RazrFalcon/roxmltree/tree/v0.20.0
+
+[ADR-0007](0007-authored-measures-repeats-and-music-glyphs.md) extends this initial
+subset with meter/key/tempo metadata, note values, bounded repeats/endings and
+authored measure display. Its decisions replace the written-order-only policy
+for supported sequential repeats; D.C./D.S./coda remain warnings.

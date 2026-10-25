@@ -174,14 +174,14 @@ export function installPlatform() {
           case "sample": {
             const ticket = ++generation;
             fetch(
-              new URL("./samples/bach-prelude-bwv924a.mid", import.meta.url),
+              new URL("./samples/first-light.musicxml", import.meta.url),
             )
               .then((r) => {
-                if (!r.ok) throw Error("Could not load Bach sample.");
+                if (!r.ok) throw Error("Could not load MusicXML study.");
                 return r.arrayBuffer();
               })
               .then((b) =>
-                load(new Uint8Array(b), "Bach · Prelude BWV 924a", ticket),
+                load(new Uint8Array(b), "First light — Tangent piano study", ticket),
               )
               .catch(fail);
             break;

@@ -39,11 +39,13 @@ SHA-256 checksum files accompany every archive.
 
 ## Included music
 
-Click **Try Bach**, then Play. The bundled Prelude BWV 924a has 228 notes and lasts
-about 47 seconds. MIDI typesetting by jeff covey, via Mutopia, **CC BY-SA 3.0**.
-The original bytes, attribution and full license travel with Pages and desktop
-packages. The download link in the player lets you test file import too.
-Source: https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1028.
+The player starts with **First light**, a complete MusicXML piano study. Press
+Space or choose **XML demo** in the pause screen to reload it. It has 16 written
+measures, 23 visits with first/second endings, 130 performed notes and lasts about
+52 seconds. The score includes two staves, meter and tempo changes. The original
+study is CC0 1.0; provenance and the full dedication ship in `samples/`. Bravura's
+SIL OFL font notice is embedded in the distribution. The prior MIDI sample has
+been retired (historical record: `docs/retired-midi-sample.md`).
 
 ## Build the same package locally
 

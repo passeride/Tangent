@@ -1,6 +1,8 @@
 #![allow(clippy::too_many_arguments)]
 use super::{controls::Action, layout::Rect, *};
-use bevy::text::FontSize;
+use bevy::text::{FontSize, LineHeight};
+#[derive(Resource)]
+pub struct MusicFont(pub Handle<Font>);
 use tangent_core::notation::{ledger_steps, reading_pitch};
 #[derive(Resource, Default)]
 pub struct Pool {
@@ -12,20 +14,22 @@ struct Shape {
     color: Color,
     radius: f32,
 }
-struct Label {
+pub(super) struct Label {
     x: f32,
     y: f32,
     text: String,
     size: f32,
     color: Color,
+    music: bool,
 }
 #[derive(Default)]
-struct Drawing {
+pub(super) struct Drawing {
     shapes: Vec<Shape>,
     labels: Vec<Label>,
+    background: Color,
 }
 impl Drawing {
-    fn rect(&mut self, x: f32, y: f32, w: f32, h: f32, color: Color, radius: f32) {
+    pub(super) fn rect(&mut self, x: f32, y: f32, w: f32, h: f32, color: Color, radius: f32) {
         if w > 0. && h > 0. {
             self.shapes.push(Shape {
                 r: Rect { x, y, w, h },
@@ -34,17 +38,37 @@ impl Drawing {
             });
         }
     }
-    fn text(&mut self, x: f32, y: f32, text: impl Into<String>, size: f32, color: Color) {
+    pub(super) fn text(
+        &mut self,
+        x: f32,
+        y: f32,
+        text: impl Into<String>,
+        size: f32,
+        color: Color,
+    ) {
         self.labels.push(Label {
             x,
             y,
             text: text.into(),
             size,
             color,
+            music: false,
         });
     }
-    fn line(&mut self, x: f32, y: f32, w: f32, h: f32, color: Color) {
+    pub(super) fn line(&mut self, x: f32, y: f32, w: f32, h: f32, color: Color) {
         self.rect(x, y, w.max(1.), h.max(1.), color, 0.);
+    }
+    /// Bravura has symmetric ascent/descent; an explicit line height anchors its
+    /// SMuFL baseline at y, independent of the font's extreme glyph repertoire.
+    pub(super) fn glyph(&mut self, x: f32, baseline: f32, glyph: char, size: f32, color: Color) {
+        self.labels.push(Label {
+            x,
+            y: baseline - size * 0.5,
+            text: glyph.to_string(),
+            size,
+            color,
+            music: true,
+        });
     }
     fn button(
         &mut self,
@@ -64,7 +88,15 @@ impl Drawing {
         self.text(x + 9., y + 7., label, size, t.ink);
         state.buttons.push((Rect { x, y, w, h: 30. }, action));
     }
-    fn note(&mut self, x: f32, y: f32, size: f32, color: Color, hollow: bool, flag: bool) {
+    pub(super) fn note(
+        &mut self,
+        x: f32,
+        y: f32,
+        size: f32,
+        color: Color,
+        hollow: bool,
+        flag: bool,
+    ) {
         self.rect(x - size, y - size * 0.6, size * 2., size * 1.2, color, size);
         if hollow {
             self.rect(
@@ -72,7 +104,7 @@ impl Drawing {
                 y - size * 0.6 + 2.,
                 size * 2. - 4.,
                 size * 1.2 - 4.,
-                Color::srgb(0.06, 0.12, 0.15),
+                self.background,
                 size,
             );
         }
@@ -91,20 +123,22 @@ pub fn render(
     mut state: ResMut<State>,
     mut pool: ResMut<Pool>,
     windows: Query<&Window>,
+    music_font: Res<MusicFont>,
 ) {
     let Ok(window) = windows.single() else {
         return;
     };
     let l = Layout::new(window.width(), window.height(), &state.piano);
     let t = theme::palette(state.theme);
-    let mut d = Drawing::default();
+    let mut d = Drawing {
+        background: t.bg,
+        ..Drawing::default()
+    };
     state.buttons.clear();
     d.rect(0., 0., l.width, l.height, t.bg, 0.);
     if !state.help {
-        // A single gear is the only persistent application control.
-        gear(&mut d, &mut state, &l, t);
         if state.view == View::Score {
-            score(&mut d, &state, &l, t);
+            super::score::render(&mut d, &state, &l, t);
         } else {
             falling(&mut d, &state, &l, t);
         }
@@ -180,6 +214,8 @@ pub fn render(
             t.colors[0],
             5.,
         );
+        // HUD goes above every musical layer, including moving ending brackets.
+        gear(&mut d, &mut state, &l, t);
     } else {
         settings(&mut d, &mut state, &l, t);
     }
@@ -197,10 +233,10 @@ pub fn render(
                 .map(|r| serde_json::json!({"key":k.key,"x":r.x,"y":r.y,"w":r.w,"h":r.h}))
         })
         .collect();
-    platform::report(&serde_json::json!({"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help}).to_string());
-    apply(&mut commands, &mut pool, d);
+    platform::report(&serde_json::json!({"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())}).to_string());
+    apply(&mut commands, &mut pool, d, &music_font.0);
 }
-fn apply(commands: &mut Commands, pool: &mut Pool, d: Drawing) {
+fn apply(commands: &mut Commands, pool: &mut Pool, d: Drawing, music_font: &Handle<Font>) {
     while pool.shapes.len() < d.shapes.len() {
         pool.shapes.push(commands.spawn_empty().id());
     }
@@ -237,9 +273,18 @@ fn apply(commands: &mut Commands, pool: &mut Pool, d: Drawing) {
                     ..default()
                 },
                 Text::new(&s.text),
-                TextFont {
-                    font_size: FontSize::Px(s.size),
-                    ..default()
+                if s.music {
+                    TextFont::from_font_size(s.size).with_font(music_font.clone())
+                } else {
+                    TextFont {
+                        font_size: FontSize::Px(s.size),
+                        ..default()
+                    }
+                },
+                if s.music {
+                    LineHeight::Px(s.size)
+                } else {
+                    LineHeight::default()
                 },
                 TextColor(s.color),
                 GlobalZIndex(100_000 + i as i32),
@@ -309,7 +354,7 @@ fn settings(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
             Action::Range,
         ),
         ("Import score [Ctrl+O]".into(), Action::Import),
-        ("Try Bach [Ctrl+B]".into(), Action::Sample),
+        ("XML demo [Ctrl+B]".into(), Action::Sample),
         ("Connect MIDI [Ctrl+M]".into(), Action::Midi),
         ("Music credits".into(), Action::Credits),
         ("Full screen [F11]".into(), Action::Fullscreen),
@@ -367,8 +412,8 @@ fn settings(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
         "Home: beginning    End: end",
         "A W S E D F T G Y H U J K: C4 to C5",
         "MIDI reading views use approximate notation.",
-        "Bach BWV 924a: jeff covey / Mutopia",
-        "CC BY-SA 3.0. Music credits opens the license.",
+        "First light: original MusicXML piano study",
+        "CC0 1.0. Music credits opens the provenance.",
     ]
     .iter()
     .enumerate()
@@ -425,16 +470,24 @@ fn staff(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
             d.line(x, l.top, 1., l.strike - l.top, t.staff);
         }
     }
-    if let Some(x) = l.center(&state.piano, 50) {
-        d.text(x - 20., l.top + 8., "F / bass", 11., t.muted);
-    }
-    if let Some(x) = l.center(&state.piano, 71) {
-        d.text(x - 23., l.top + 8., "G / treble", 11., t.muted);
+    // Real clefs as subtle, upright watermarks inside each rotated staff band.
+    for (key, glyph) in [(50, '\u{e062}'), (71, '\u{e050}')] {
+        if let Some(x) = l.center(&state.piano, key) {
+            let size = (l.unit * 6.).clamp(48., 100.);
+            d.glyph(
+                x - size * 0.35,
+                (l.top + l.strike) * 0.5,
+                glyph,
+                size,
+                t.ink.with_alpha(0.085),
+            );
+        }
     }
 }
 fn falling(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
     if matches!(state.view, View::Staff | View::Notes) {
         staff(d, state, l, t);
+        super::score::falling_structure(d, state, l, t);
     }
     let pps = (l.strike - l.top) / 5.5;
     let now = state.transport.position_us;
@@ -502,127 +555,4 @@ fn falling(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
             );
         }
     }
-}
-fn score_pitch(
-    n: &tangent_core::music::PerformanceNote,
-    bass: Option<bool>,
-) -> tangent_core::notation::ReadingPitch {
-    use tangent_core::music::PitchLetter::*;
-    let mut p = reading_pitch(n.key);
-    if let Some(w) = &n.written {
-        p.step = i16::from(w.octave) * 7
-            + match w.letter {
-                C => 0,
-                D => 1,
-                E => 2,
-                F => 3,
-                G => 4,
-                A => 5,
-                B => 6,
-            };
-        p.bass = bass.unwrap_or(p.bass);
-    }
-    p
-}
-fn score(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
-    let gap = ((l.strike - l.top) / 22.).clamp(5., 12.);
-    let treble = l.top + gap * 7.;
-    let bass = treble + gap * 10.;
-    let left = l.margin + 38.;
-    let right = l.width - l.margin;
-    let span = 8_000_000;
-    let start = state.transport.position_us / span * span;
-    for bottom in [treble, bass] {
-        for i in 0..5 {
-            d.line(
-                l.margin,
-                bottom - i as f32 * gap,
-                l.width - 2. * l.margin,
-                1.,
-                t.staff,
-            );
-        }
-    }
-    d.text(l.margin, treble - 3. * gap, "G", 20., t.ink);
-    d.text(l.margin, bass - 3. * gap, "F", 20., t.ink);
-    let py = |p: tangent_core::notation::ReadingPitch| {
-        if p.bass {
-            bass - (p.step - 18) as f32 * gap / 2.
-        } else {
-            treble - (p.step - 30) as f32 * gap / 2.
-        }
-    };
-    let mut clefs = BTreeMap::new();
-    if let Some(score) = &state.song.notation {
-        let staff_clefs: BTreeMap<_, _> = score
-            .staves
-            .iter()
-            .map(|s| (s.id, matches!(s.clef, tangent_core::notation::Clef::Bass)))
-            .collect();
-        for note in score.measures.iter().flat_map(|m| &m.notes) {
-            if let Some(id) = note.performance_note
-                && let Some(bass) = staff_clefs.get(&note.staff)
-            {
-                clefs.entry(id).or_insert(*bass);
-            }
-        }
-    }
-    for n in &state.song.notes {
-        if n.start_us < start || n.start_us >= start + span || state.song.parts[n.part].percussion {
-            continue;
-        }
-        let p = score_pitch(n, clefs.get(&n.id).copied());
-        let x = left + (right - left) * (n.start_us - start) as f32 / span as f32;
-        let y = py(p);
-        let color = t.colors[n.part % 4];
-        if y < l.top + 10. || y > l.strike - 25. {
-            continue;
-        }
-        for step in ledger_steps(p.step, if p.bass { 18 } else { 30 }) {
-            d.line(
-                x - 9.,
-                py(tangent_core::notation::ReadingPitch { step, ..p }),
-                18.,
-                1.,
-                color,
-            );
-        }
-        let accidental = n
-            .written
-            .as_ref()
-            .map(|p| match p.alteration {
-                -2 => "bb",
-                -1 => "b",
-                1 => "#",
-                2 => "x",
-                _ => "",
-            })
-            .unwrap_or(if p.sharp { "#" } else { "" });
-        if !accidental.is_empty() {
-            d.text(x - 20., y - 11., accidental, 14., color);
-        }
-        d.note(
-            x,
-            y,
-            5.,
-            color,
-            n.end_us - n.start_us >= 800_000,
-            n.end_us - n.start_us < 300_000,
-        );
-        d.line(
-            x,
-            y + 9.,
-            ((right - left) * (n.end_us - n.start_us) as f32 / span as f32).min(right - x),
-            2.,
-            color.with_alpha(0.3),
-        );
-    }
-    let x = left + (right - left) * (state.transport.position_us - start) as f32 / span as f32;
-    d.line(
-        x,
-        l.top + 8.,
-        2.,
-        (bass + gap * 2. - l.top).min(l.strike - l.top),
-        t.colors[0],
-    );
 }

@@ -14,7 +14,7 @@ try {
   assert.equal(await page.locator("canvas").count(), 1);
   assert.equal(await page.locator("button,select").count(), 0);
   assert.equal(await page.locator("#startup").isHidden(), true);
-  assert.equal((await page.evaluate(() => tangentDiagnostics())).notes, 40);
+  assert.equal((await page.evaluate(() => tangentDiagnostics())).notes, 130);
   await page.keyboard.down("KeyA");
   await page.waitForFunction(() => tangentDiagnostics().live.includes(60));
   await page.waitForFunction(() => tangentDiagnostics().energy > 0.0001);
@@ -36,7 +36,7 @@ try {
   await page.waitForFunction(() => tangentDiagnostics().position === 5_000_000);
   await page.keyboard.press("Shift+ArrowRight");
   await page.waitForFunction(
-    () => tangentDiagnostics().position === 16_000_000,
+    () => tangentDiagnostics().position === 20_000_000,
   );
   await page.keyboard.press("Home");
   await page.waitForFunction(() => tangentDiagnostics().position === 0);
@@ -46,11 +46,20 @@ try {
       (view) => tangentDiagnostics().view === view,
       view,
     );
-    assert.equal(
-      (await page.evaluate(() => tangentDiagnostics())).staff_lines,
-      10,
-    );
+    const notation = await page.evaluate(() => tangentDiagnostics());
+    assert.equal(notation.staff_lines,10);
+    assert.equal(notation.music_clefs,2);
+    assert.equal(notation.written_measures,16);
+    assert.equal(notation.measure_visits,23);
+    assert.equal(notation.ending_measures,6);
   }
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(() => tangentDiagnostics().position === 5_000_000);
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(() => tangentDiagnostics().position === 10_000_000);
+  await page.waitForFunction(() => tangentDiagnostics().ending_labels === 2);
+  await page.keyboard.press("Home");
+  await page.waitForFunction(() => tangentDiagnostics().position === 0);
   await page.keyboard.press("Space");
   await page.waitForFunction(() => tangentDiagnostics().playing);
   await page.waitForFunction(() => tangentDiagnostics().position > 500_000);
@@ -91,13 +100,7 @@ try {
     buffer: Buffer.from("not midi"),
   });
   await page.waitForTimeout(150);
-  assert.equal((await page.evaluate(() => tangentDiagnostics())).notes, 40);
-  await click(page, "sample");
-  await page.waitForFunction(() => tangentDiagnostics().notes === 228);
-  await page.keyboard.press("Space");
-  await page.waitForFunction(() => tangentDiagnostics().energy > 0.0001);
-  await page.keyboard.press("Space");
-  await page.keyboard.press("F1");
+  assert.equal((await page.evaluate(() => tangentDiagnostics())).notes, 130);
   const xmlPickerPromise = page.waitForEvent("filechooser");
   await click(page, "import");
   await (await xmlPickerPromise).setFiles(new URL("../../crates/tangent-musicxml/tests/fixtures/piano.musicxml", import.meta.url).pathname);
@@ -105,6 +108,12 @@ try {
   await page.keyboard.press("Space");
   await page.waitForFunction(() => tangentDiagnostics().playing && !tangentDiagnostics().help);
   await page.waitForFunction(() => tangentDiagnostics().energy > 0.0001);
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => tangentDiagnostics().help && !tangentDiagnostics().playing);
+  await click(page, "sample");
+  await page.waitForFunction(() => tangentDiagnostics().notes === 130);
+  await page.keyboard.press("Space");
+  await page.waitForFunction(() => tangentDiagnostics().playing && tangentDiagnostics().energy > 0.0001);
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => tangentDiagnostics().help && !tangentDiagnostics().playing);
   await page.keyboard.press("Escape");
@@ -150,7 +159,7 @@ try {
   await noGpu.close();
   assert.deepEqual(errors, []);
   console.log(
-    "Bevy GPU browser passed: one canvas, in-GPU controls, staff notes, sound, transport/volume shortcuts, fullscreen, settings, CC MIDI and responsive viewport.",
+    "Bevy GPU browser passed: one canvas, in-GPU controls, staff notes, sound, transport/volume shortcuts, fullscreen, settings, MusicXML measures/endings, repeats and responsive viewport.",
   );
 } finally {
   await browser?.close();

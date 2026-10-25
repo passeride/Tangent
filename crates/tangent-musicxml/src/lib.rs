@@ -1,5 +1,6 @@
 //! Bounded MusicXML partwise adapter. No renderer, I/O, XML entity expansion or MIDI dependency.
 mod parse;
+mod structure;
 mod timeline;
 use roxmltree::{Document, Node};
 use tangent_core::{music::*, notation::*};
@@ -45,6 +46,11 @@ struct Measure {
     length: u64,
     entries: Vec<Entry>,
     tempos: Vec<(u64, f64)>,
+    meter: TimeSignature,
+    key_fifths: i8,
+    repeat_start: bool,
+    repeat_end: Option<u8>,
+    ending: Option<Ending>,
 }
 /// Supports UTF-8 score-partwise .musicxml/.xml. Compressed .mxl is explicitly rejected.
 pub fn import(bytes: &[u8], fallback_title: String) -> Result<Song> {

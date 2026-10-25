@@ -67,7 +67,7 @@ been tested. See [follow-up tasks](../TODO.md).
 
 The supplied sketch informed the hierarchy; its photo is not bundled. The small
 gear and note shapes are original Bevy geometry. Bevy's Fira Mono font and the
-Mutopia MIDI sample have separate license records; no recording or SoundFont is bundled.
+original CC0 MusicXML study have separate license records; no recording or SoundFont is bundled.
 
 ## In-engine surface update — 2026-10-24
 
@@ -75,3 +75,10 @@ Per the owner clarification, the page is one Bevy instance/camera/canvas, sized 
 its viewport. All application menus, controls, settings and shortcut help render
 with Bevy UI through wgpu. Native file/permission dialogs are capability boundaries.
 The former HTML/Canvas UI is removed. See ADR-0005 and the README shortcut table.
+
+
+ADR-0007 adds measure-based MusicXML layout with real Bravura clefs, meter/key,
+tempo, repeats and first/second-ending brackets. The MIDI eight-second reading aid
+remains a separate fallback. Rotated staff views show faint upright G/F watermarks
+and moving measure/beat/ending guides. The clefs are licensed font outlines, not
+newly hand-drawn approximations.

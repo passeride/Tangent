@@ -47,13 +47,15 @@ fn invalid_inputs_are_rejected_without_panics_or_external_resolution() {
     }
 }
 #[test]
-fn unsupported_repeat_is_visible_as_a_warning() {
+fn backward_repeat_without_forward_repeats_from_the_beginning() {
     let s = import(
         &wrap("<measure><barline><repeat direction='backward'/></barline></measure>"),
         "t".into(),
     )
     .unwrap();
-    assert!(s.warnings[0].contains("written order"));
+    assert!(s.warnings.is_empty());
+    assert_eq!(s.notation.unwrap().playback.len(), 2);
+    assert_eq!(s.duration_us, 4_000_000);
 }
 #[test]
 fn parts_share_measure_offsets_and_conflicting_tempos_are_errors() {
@@ -109,7 +111,7 @@ fn overlapping_unisons_in_separate_voices_have_independent_audio_routes() {
     );
 }
 #[test]
-fn node_and_resolution_bounds_are_enforced_early() {
+fn input_size_and_resolution_bounds_are_enforced_early() {
     let excessive =
         wrap("<measure><attributes><divisions>1000000001</divisions></attributes></measure>");
     assert!(
@@ -123,4 +125,77 @@ fn node_and_resolution_bounds_are_enforced_early() {
             .unwrap_err()
             .contains("16 MiB")
     );
+}
+
+#[test]
+fn complete_piano_demo_has_measures_endings_meter_tempo_and_correct_repeat_order() {
+    let song = import(
+        include_bytes!("../../../web/piano/samples/first-light.musicxml"),
+        "demo".into(),
+    )
+    .unwrap();
+    assert_eq!(song.notes.len(), 130);
+    assert_eq!(song.duration_us, 52_222_222);
+    assert!(song.warnings.is_empty());
+    let score = song.notation.unwrap();
+    assert_eq!(score.measures.len(), 16);
+    assert_eq!(score.measures[11].meter.beats, 3);
+    assert_eq!(score.measures[8].tempos[0].quarter_bpm, 108.);
+    assert_eq!(
+        score
+            .playback
+            .iter()
+            .map(|v| v.measure + 1)
+            .collect::<Vec<_>>(),
+        vec![
+            1, 2, 3, 4, 5, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 7, 8, 9, 12, 13, 14, 15, 16
+        ]
+    );
+    assert_eq!(score.measures[4].ending.as_ref().unwrap().numbers, vec![1]);
+    assert_eq!(score.measures[5].ending.as_ref().unwrap().numbers, vec![2]);
+    // Jumping back restores the earlier tempo, rather than carrying the faster section.
+    let repeat = &score.playback[15];
+    assert_eq!(repeat.end_us - repeat.start_us, 2_500_000);
+}
+#[test]
+fn malformed_and_excessive_repeat_structures_are_explicit_errors() {
+    for measures in [
+        "<measure><barline><repeat direction='forward'/></barline></measure>",
+        "<measure><barline><repeat direction='forward'/></barline></measure><measure><barline><repeat direction='forward'/></barline></measure>",
+        "<measure><barline><repeat direction='backward' times='100'/></barline></measure>",
+        "<measure><barline><ending number='1' type='stop'/></barline></measure>",
+    ] {
+        assert!(import(&wrap(measures), "bad".into()).is_err());
+    }
+}
+
+#[test]
+fn tempo_change_inside_measure_maps_beats_and_time_both_ways() {
+    let xml = wrap(
+        "<measure><attributes><divisions>1</divisions></attributes><direction><sound tempo='60'/></direction><forward><duration>2</duration></forward><direction><sound tempo='120'/></direction><forward><duration>2</duration></forward></measure>",
+    );
+    let song = import(&xml, "tempo".into()).unwrap();
+    assert_eq!(song.duration_us, 3_000_000);
+    let score = song.notation.unwrap();
+    let v = &score.playback[0];
+    assert_eq!(v.time_at_quarter(1.), 1_000_000);
+    assert_eq!(v.time_at_quarter(3.), 2_500_000);
+    assert_eq!(v.quarter_at_time(2_500_000), 3.);
+    assert_eq!(v.quarter_at_time(99_000_000), 4.);
+}
+
+#[test]
+fn visual_metronome_beat_units_and_dots_set_quarter_tempo_without_sound() {
+    for (unit, dots, bpm, duration) in [
+        ("half", "", 120., 2_000_000),
+        ("quarter", "<beat-unit-dot/>", 90., 2_666_667),
+    ] {
+        let xml = wrap(&format!(
+            "<measure><direction><direction-type><metronome><beat-unit>{unit}</beat-unit>{dots}<per-minute>60</per-minute></metronome></direction-type></direction></measure>"
+        ));
+        let song = import(&xml, "metronome".into()).unwrap();
+        assert_eq!(song.duration_us, duration);
+        assert_eq!(song.notation.unwrap().measures[0].initial_quarter_bpm, bpm);
+        assert!(song.warnings.is_empty());
+    }
 }

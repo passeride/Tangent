@@ -3,6 +3,7 @@ mod controls;
 mod draw;
 mod layout;
 mod platform;
+mod score;
 mod theme;
 use super::import;
 use bevy::{prelude::*, window::WindowResolution};
@@ -129,9 +130,15 @@ pub fn run() {
             ..default()
         }))
         .insert_resource(ClearColor(Color::srgb(0.03, 0.06, 0.08)))
-        .add_systems(Startup, |mut commands: Commands| {
-            commands.spawn(Camera2d);
-        })
+        .add_systems(
+            Startup,
+            |mut commands: Commands, mut fonts: ResMut<Assets<Font>>| {
+                commands.spawn(Camera2d);
+                commands.insert_resource(draw::MusicFont(fonts.add(Font::from_bytes(
+                    include_bytes!("../../assets/Bravura.otf").to_vec(),
+                ))));
+            },
+        )
         .add_systems(Update, (update, controls::input, draw::render).chain())
         .run();
 }

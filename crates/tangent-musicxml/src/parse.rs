@@ -4,6 +4,9 @@ struct Context {
     divisions: u64,
     nominal: u64,
     staff_ids: BTreeMap<u64, u16>,
+    meter: TimeSignature,
+    key_fifths: i8,
+    ending: Option<Ending>,
 }
 impl Context {
     fn duration(&self, n: Node<'_, '_>, grid: u64) -> Result<u64> {
@@ -47,6 +50,9 @@ pub(super) fn part(
         divisions: 0,
         nominal: grid * 4,
         staff_ids: BTreeMap::new(),
+        meter: TimeSignature::default(),
+        key_fifths: 0,
+        ending: None,
     };
     for (index, m) in p
         .children()
@@ -63,6 +69,13 @@ pub(super) fn part(
             });
         }
         let target = &mut measures[index];
+        if part == 0 {
+            target.ending = ctx.ending.clone().map(|mut e| {
+                e.start = false;
+                e.end = false;
+                e
+            });
+        }
         let mut cursor = 0u64;
         let mut extent = 0u64;
         let mut anchor = None;
@@ -78,6 +91,9 @@ pub(super) fn part(
                         ctx.divisions = d.parse().map_err(|_| "Invalid divisions")?;
                     }
                     if let Some(t) = child(n, "time") {
+                        if cursor != 0 {
+                            return Err("Mid-measure time signatures are not supported yet".into());
+                        }
                         let beats = number(t, "beats")?;
                         let unit = number(t, "beat-type")?;
                         if unit == 0
@@ -89,6 +105,23 @@ pub(super) fn part(
                             return Err("Unsupported time signature".into());
                         }
                         ctx.nominal = grid * beats * 4 / unit;
+                        ctx.meter = TimeSignature {
+                            beats: beats as u8,
+                            beat_type: unit as u16,
+                        };
+                    }
+                    if let Some(key) = child(n, "key") {
+                        if cursor != 0 {
+                            return Err("Mid-measure key signatures are not supported yet".into());
+                        }
+                        let fifths: i8 = text(key, "fifths")
+                            .ok_or("Only standard key signatures are supported")?
+                            .parse()
+                            .map_err(|_| "Invalid key signature")?;
+                        if !(-7..=7).contains(&fifths) {
+                            return Err("Key signature outside -7..7 fifths".into());
+                        }
+                        ctx.key_fifths = fifths;
                     }
                     for c in n.children().filter(|n| n.has_tag_name("clef")) {
                         let staff = c
@@ -183,6 +216,21 @@ pub(super) fn part(
                             onset: fraction(start, grid)?,
                             duration: fraction(duration, grid)?,
                             pitch,
+                            value: match text(n, "type") {
+                                Some("whole") => Some(NoteValue::Whole),
+                                Some("half") => Some(NoteValue::Half),
+                                Some("quarter") => Some(NoteValue::Quarter),
+                                Some("eighth") => Some(NoteValue::Eighth),
+                                Some("16th") => Some(NoteValue::Sixteenth),
+                                Some("32nd") => Some(NoteValue::ThirtySecond),
+                                Some("64th") => Some(NoteValue::SixtyFourth),
+                                _ => None,
+                            },
+                            dots: n
+                                .children()
+                                .filter(|c| c.has_tag_name("dot"))
+                                .count()
+                                .min(3) as u8,
                             tie_from_previous: tie("stop"),
                             tie_to_next: tie("start"),
                         },
@@ -214,22 +262,52 @@ pub(super) fn part(
                             );
                         }
                     }
-                    if n.descendants().any(|s| s.has_tag_name("metronome"))
-                        && !n
-                            .descendants()
-                            .any(|s| s.has_tag_name("sound") && s.attribute("tempo").is_some())
+                    if !n
+                        .descendants()
+                        .any(|s| s.has_tag_name("sound") && s.attribute("tempo").is_some())
                     {
-                        warnings.insert("Visual metronome without sound tempo is not interpreted; default is 120 BPM.".into());
+                        for met in n.descendants().filter(|s| s.has_tag_name("metronome")) {
+                            let unit = match text(met, "beat-unit") {
+                                Some("whole") => 4.,
+                                Some("half") => 2.,
+                                Some("quarter") => 1.,
+                                Some("eighth") => 0.5,
+                                Some("16th") => 0.25,
+                                _ => 0.,
+                            };
+                            let per = text(met, "per-minute").and_then(|s| s.parse::<f64>().ok());
+                            let dots = met
+                                .children()
+                                .filter(|s| s.has_tag_name("beat-unit-dot"))
+                                .count();
+                            let factor = if dots <= 3 {
+                                2. - 2f64.powi(-(dots as i32))
+                            } else {
+                                0.
+                            };
+                            if let Some(per) = per
+                                && unit > 0.
+                                && factor > 0.
+                                && (1.0..=1000.0).contains(&(per * unit * factor))
+                            {
+                                target.tempos.push((at as u64, per * unit * factor));
+                            } else {
+                                warnings.insert("Unsupported metronome relationship; current playback tempo retained.".into());
+                            }
+                        }
                     }
                 }
-                "barline"
-                    if n.descendants()
-                        .any(|n| n.has_tag_name("repeat") || n.has_tag_name("ending")) =>
-                {
-                    warnings.insert("Navigation/repeats are played once in written order.".into());
+                "barline" => {
+                    structure::barline(n, target, &mut ctx.ending, part == 0)?;
                 }
                 _ => {}
             }
+        }
+        if part == 0 {
+            target.meter = ctx.meter;
+            target.key_fifths = ctx.key_fifths;
+        } else if target.meter != ctx.meter {
+            return Err("Polymeter between parts is not supported yet".into());
         }
         // Pickups/cadenzas marked implicit use their actual duration. Other parts
         // share the maximum measure length, so sparse voices stay synchronized.
@@ -239,6 +317,9 @@ pub(super) fn part(
             extent.max(ctx.nominal)
         };
         target.length = target.length.max(length);
+    }
+    if ctx.ending.is_some() {
+        return Err("Ending has no stop or discontinue".into());
     }
     Ok(())
 }

@@ -24,7 +24,7 @@ static app and generated WASM; serve it over HTTP rather than opening file URLs.
 ## Scope
 
 - 49/61/88 keys; pointer, touch, keyboard and optional Web MIDI note input.
-- Original demonstration study and local MIDI type 0/1 import.
+- Original MusicXML piano study and local MIDI type 0/1 or MusicXML import.
 - Audio-clock transport, play/pause/restart/seek and optional song sound.
 - Falling blocks, rotated staff blocks with ledger lines, held falling noteheads,
   stationary grand-staff reading view with paged playhead. Staff lines are also
@@ -80,7 +80,7 @@ The renderer uses wgpu with WebGL2; unsupported GPUs/browsers show a startup err
 
 Space plays/pauses; Left/Right seek 5s (Shift 15s); Up/Down adjust volume 5%;
 Home/End; F11 fullscreen; F1 settings; Esc closes settings; V view; B theme;
-M song sound; P sparkles; X piano; R range; Ctrl+O import; Ctrl+B Bach; Ctrl+M MIDI.
+M song sound; P sparkles; X piano; R range; Ctrl+O import; Ctrl+B XML demo; Ctrl+M MIDI.
 A W S E D F T G Y H U J K remain the piano keys.
 
 `npm test --prefix web/piano` now loads the actual Bevy GPU application and tests
@@ -105,3 +105,9 @@ All settings, import/sample, transport, volume, fullscreen and MIDI controls are
 inside that screen. Space resumes and closes it; Return/Esc/F1 closes it while
 remaining paused. Playing shows only a gear and the timeline, with shortcuts
 available. See [MusicXML import](musicxml-import.md) for the new authored subset.
+
+
+The MusicXML demo and note display are described in ADR-0007: real Bravura G/F
+clefs, translucent clef watermarks on rotated staves, measure/beat guides,
+barlines, meter, tempo, repeat signs and first/second houses. The score playhead
+uses explicit performance visits when returning to a repeated written measure.
