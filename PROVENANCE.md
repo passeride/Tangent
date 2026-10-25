@@ -162,3 +162,15 @@ P-45 test of the previous build. The earlier requirements were retrieved; no
 excluded legacy source/assets were opened. Existing midir/Web MIDI, Bravura and
 original music are reused, with no new dependency. ADR-0015 records boundaries;
 physical output is not established by simulated-device tests.
+
+## Hanabi and UI/practice integration — 2026-10-25
+
+At the owner's request, native particles use independently published bevy_hanabi
+at d277555d4a2350da6787245d15c56c62c739594d (0.20.0-dev, MIT OR Apache-2.0).
+The upstream Cargo manifest and original LICENSE-MIT/LICENSE-APACHE2 were checked
+in Cargo's source checkout; these notices and resolved transitive dependencies
+are included by scripts/update_licenses.py. Bevy 0.20 compatibility is verified
+by native compilation; WebGL2 uses independently authored bounded UI particles.
+No upstream example art, legacy Neothesia material or external music was copied.
+Practice pointer/reference behavior and UI refinements are newly authored for
+Tangent. Earlier source exposure remains as recorded above.

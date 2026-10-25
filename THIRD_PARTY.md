@@ -2,10 +2,12 @@
 
 Generated from Cargo metadata/lockfiles on 2026-10-25. Includes resolved target/build dependencies; this is not a claim that each is linked into every target. The project-wide license remains unselected.
 
-The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web Audio. Native launchers embed that same web distribution. The pure music/import crates remain independent of rendering. Bevy renderer dependencies are scoped to wasm32.
+The shared Bevy 0.20 UI uses WebGL2/Web Audio in the browser and native wgpu/audio/MIDI on desktop. Native GPU effects use the pinned bevy_hanabi source commit in Cargo.lock; web uses bounded Bevy UI effects. The pure music/import crates remain independent of rendering.
 
 | Package | Version | Declared license | Original source |
 | --- | --- | --- | --- |
+| ab_glyph | 0.2.32 | Apache-2.0 | https://github.com/alexheretic/ab-glyph |
+| ab_glyph_rasterizer | 0.1.10 | Apache-2.0 | https://github.com/alexheretic/ab-glyph |
 | accesskit | 0.24.1 | MIT OR Apache-2.0 | https://github.com/AccessKit/accesskit |
 | accesskit_consumer | 0.38.0 | MIT OR Apache-2.0 | https://github.com/AccessKit/accesskit |
 | accesskit_ios | 0.1.2 | MIT OR Apache-2.0 | https://github.com/AccessKit/accesskit |
@@ -13,11 +15,13 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | accesskit_windows | 0.34.0 | MIT OR Apache-2.0 | https://github.com/AccessKit/accesskit |
 | accesskit_winit | 0.33.2 | Apache-2.0 | https://github.com/AccessKit/accesskit |
 | adler2 | 2.0.1 | 0BSD OR MIT OR Apache-2.0 | https://github.com/oyvindln/adler2 |
+| ahash | 0.8.12 | MIT OR Apache-2.0 | https://github.com/tkaitchuck/ahash |
 | aho-corasick | 1.1.5 | Unlicense OR MIT | https://github.com/BurntSushi/aho-corasick |
 | allocator-api2 | 0.2.21 | MIT OR Apache-2.0 | https://github.com/zakarumych/allocator-api2 |
 | alsa | 0.11.0 | Apache-2.0/MIT | https://github.com/diwic/alsa-rs |
 | alsa-sys | 0.4.0 | MIT | https://github.com/diwic/alsa-sys |
 | android-activity | 0.6.1 | MIT OR Apache-2.0 | https://github.com/rust-mobile/android-activity |
+| android-build | 0.1.4 | MIT | https://github.com/project-robius/android-build |
 | android-properties | 0.2.2 | MIT | https://github.com/miklelappo/android-properties |
 | android_log-sys | 0.3.2 | MIT OR Apache-2.0 | https://github.com/rust-mobile/android_log-sys-rs |
 | android_system_properties | 0.1.6 | MIT OR Apache-2.0 | https://github.com/nical/android_system_properties |
@@ -27,8 +31,12 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | anstyle-parse | 1.0.0 | MIT OR Apache-2.0 | https://github.com/rust-cli/anstyle.git |
 | anstyle-query | 1.1.5 | MIT OR Apache-2.0 | https://github.com/rust-cli/anstyle.git |
 | anstyle-wincon | 3.0.11 | MIT OR Apache-2.0 | https://github.com/rust-cli/anstyle.git |
+| anyhow | 1.0.104 | MIT OR Apache-2.0 | https://github.com/dtolnay/anyhow |
 | approx | 0.5.1 | Apache-2.0 | https://github.com/brendanzab/approx |
+| arboard | 3.7.0 | MIT OR Apache-2.0 | https://github.com/1Password/arboard |
+| arrayref | 0.3.9 | BSD-2-Clause | https://github.com/droundy/arrayref |
 | arrayvec | 0.7.8 | MIT OR Apache-2.0 | https://github.com/bluss/arrayvec |
+| as-raw-xcb-connection | 1.0.1 | MIT OR Apache-2.0 | https://github.com/psychon/as-raw-xcb-connection |
 | ash | 0.38.0+1.3.281 | MIT OR Apache-2.0 | https://github.com/ash-rs/ash |
 | assert_type_match | 0.1.1 | MIT OR Apache-2.0 | https://github.com/MrGVSV/assert_type_match |
 | async-broadcast | 0.7.2 | MIT OR Apache-2.0 | https://github.com/smol-rs/async-broadcast |
@@ -69,6 +77,7 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | bevy_gizmos | 0.20.0 | MIT OR Apache-2.0 | https://github.com/bevyengine/bevy |
 | bevy_gizmos_macros | 0.20.0 | MIT OR Apache-2.0 | https://github.com/bevyengine/bevy |
 | bevy_gizmos_render | 0.20.0 | MIT OR Apache-2.0 | https://github.com/bevyengine/bevy |
+| bevy_hanabi | 0.20.0-dev | MIT OR Apache-2.0 | https://github.com/djeedai/bevy_hanabi |
 | bevy_image | 0.20.0 | MIT OR Apache-2.0 | https://github.com/bevyengine/bevy |
 | bevy_input | 0.20.0 | MIT OR Apache-2.0 | https://github.com/bevyengine/bevy |
 | bevy_input_focus | 0.20.0 | MIT OR Apache-2.0 | https://github.com/bevyengine/bevy |
@@ -125,10 +134,13 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | byteorder-lite | 0.1.0 | Unlicense OR MIT | https://github.com/image-rs/byteorder-lite |
 | bytes | 1.12.1 | MIT | https://github.com/tokio-rs/bytes |
 | calloop | 0.13.0 | MIT | https://github.com/Smithay/calloop |
+| calloop-wayland-source | 0.3.0 | MIT | https://github.com/smithay/calloop-wayland-source |
 | cc | 1.10.0 | MIT OR Apache-2.0 | https://github.com/rust-lang/cc-rs |
 | cesu8 | 1.1.0 | Apache-2.0/MIT | https://github.com/emk/cesu8-rs |
 | cfg-if | 1.0.5 | MIT OR Apache-2.0 | https://github.com/rust-lang/cfg-if |
 | cfg_aliases | 0.2.2 | MIT | https://github.com/katharostech/cfg_aliases |
+| chacha20 | 0.10.2 | MIT OR Apache-2.0 | https://github.com/RustCrypto/stream-ciphers |
+| clipboard-win | 5.4.3 | BSL-1.0 | https://github.com/DoumanAsh/clipboard-win |
 | codespan-reporting | 0.13.1 | Apache-2.0 | https://github.com/brendanzab/codespan |
 | colorchoice | 1.0.5 | MIT OR Apache-2.0 | https://github.com/rust-cli/anstyle.git |
 | combine | 4.6.9 | MIT | https://github.com/Marwes/combine |
@@ -140,11 +152,14 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | constant_time_eq | 0.4.2 | CC0-1.0 OR MIT-0 OR Apache-2.0 | https://github.com/cesarb/constant_time_eq |
 | constgebra | 0.1.4 | MIT OR Apache-2.0 | https://github.com/knickish/constgebra |
 | convert_case | 0.10.0 | MIT | https://github.com/rutrum/convert-case |
+| core-foundation | 0.10.1 | MIT OR Apache-2.0 | https://github.com/servo/core-foundation-rs |
 | core-foundation | 0.9.4 | MIT OR Apache-2.0 | https://github.com/servo/core-foundation-rs |
 | core-foundation-sys | 0.8.7 | MIT OR Apache-2.0 | https://github.com/servo/core-foundation-rs |
 | core-graphics | 0.23.2 | MIT OR Apache-2.0 | https://github.com/servo/core-foundation-rs |
 | core-graphics-types | 0.1.3 | MIT OR Apache-2.0 | https://github.com/servo/core-foundation-rs |
 | coreaudio-rs | 0.14.2 | MIT/Apache-2.0 | https://github.com/RustAudio/coreaudio-rs.git |
+| coremidi | 0.9.2 | MIT | https://github.com/chris-zen/coremidi |
+| coremidi-sys | 3.2.1 | MIT | https://github.com/jonas-k/coremidi-sys |
 | cpal | 0.17.3 | Apache-2.0 | https://github.com/RustAudio/cpal |
 | cpufeatures | 0.3.1 | MIT OR Apache-2.0 | https://github.com/RustCrypto/utils |
 | crc32fast | 1.5.3 | MIT OR Apache-2.0 | https://github.com/srijs/rust-crc32fast |
@@ -163,7 +178,9 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | displaydoc | 0.2.7 | MIT OR Apache-2.0 | https://github.com/yaahc/displaydoc |
 | disqualified | 1.1.0 | MIT OR Apache-2.0 | https://github.com/bevyengine/disqualified |
 | dlib | 0.5.3 | MIT | https://github.com/elinorbgr/dlib |
+| dlopen2 | 0.9.0 | MIT | https://github.com/OpenByteDev/dlopen2 |
 | document-features | 0.2.12 | MIT OR Apache-2.0 | https://github.com/slint-ui/document-features |
+| downcast-rs | 1.2.1 | MIT/Apache-2.0 | https://github.com/marcianx/downcast-rs |
 | downcast-rs | 2.0.2 | MIT OR Apache-2.0 | https://github.com/marcianx/downcast-rs |
 | dpi | 0.1.2 | Apache-2.0 AND MIT | https://github.com/rust-windowing/winit |
 | either | 1.19.0 | MIT OR Apache-2.0 | https://github.com/rayon-rs/either |
@@ -171,11 +188,14 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | encase_derive | 0.12.1 | MIT-0 | https://github.com/teoxoy/encase |
 | encase_derive_impl | 0.12.1 | MIT-0 | https://github.com/teoxoy/encase |
 | equivalent | 1.0.3 | Apache-2.0 OR MIT | https://github.com/indexmap-rs/equivalent |
-| erased-serde | 0.4.10 | MIT OR Apache-2.0 | https://github.com/dtolnay/erased-serde |
+| erased-serde | 0.4.11 | MIT OR Apache-2.0 | https://github.com/dtolnay/erased-serde |
 | errno | 0.3.14 | MIT OR Apache-2.0 | https://github.com/lambda-fairy/rust-errno |
+| error-code | 3.4.0 | BSL-1.0 | https://github.com/DoumanAsh/error-code |
 | euclid | 0.22.14 | MIT OR Apache-2.0 | https://github.com/servo/euclid |
 | event-listener | 5.4.2 | Apache-2.0 OR MIT | https://github.com/smol-rs/event-listener |
 | event-listener-strategy | 0.5.4 | Apache-2.0 OR MIT | https://github.com/smol-rs/event-listener-strategy |
+| fallible-iterator | 0.3.0 | MIT/Apache-2.0 | https://github.com/sfackler/rust-fallible-iterator |
+| fallible-streaming-iterator | 0.1.9 | MIT/Apache-2.0 | https://github.com/sfackler/fallible-streaming-iterator |
 | fastrand | 2.5.0 | Apache-2.0 OR MIT | https://github.com/smol-rs/fastrand |
 | fdeflate | 0.3.7 | MIT OR Apache-2.0 | https://github.com/image-rs/fdeflate |
 | find-msvc-tools | 0.1.15 | MIT OR Apache-2.0 | https://github.com/rust-lang/cc-rs |
@@ -197,6 +217,8 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | futures-macro | 0.3.34 | MIT OR Apache-2.0 | https://github.com/rust-lang/futures-rs |
 | futures-task | 0.3.34 | MIT OR Apache-2.0 | https://github.com/rust-lang/futures-rs |
 | futures-util | 0.3.34 | MIT OR Apache-2.0 | https://github.com/rust-lang/futures-rs |
+| gethostname | 1.1.0 | Apache-2.0 | https://codeberg.org/swsnr/gethostname.rs.git |
+| getrandom | 0.3.4 | MIT OR Apache-2.0 | https://github.com/rust-random/getrandom |
 | getrandom | 0.4.3 | MIT OR Apache-2.0 | https://github.com/rust-random/getrandom |
 | gl_generator | 0.14.0 | Apache-2.0 | https://github.com/brendanzab/gl-rs/ |
 | glam | 0.33.12 | MIT OR Apache-2.0 | https://github.com/bitshifter/glam-rs |
@@ -211,6 +233,7 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | hashbrown | 0.15.5 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown |
 | hashbrown | 0.16.1 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown |
 | hashbrown | 0.17.1 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown |
+| hashlink | 0.12.2 | MIT OR Apache-2.0 | https://github.com/djc/hashlink |
 | heapless | 0.9.3 | MIT OR Apache-2.0 | https://github.com/rust-embedded/heapless |
 | hermit-abi | 0.5.3 | MIT OR Apache-2.0 | https://github.com/hermit-os/hermit-rs |
 | hexasphere | 19.0.0 | MIT OR Apache-2.0 | https://github.com/OptimisticPeach/hexasphere.git |
@@ -232,9 +255,11 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | itertools | 0.14.0 | MIT OR Apache-2.0 | https://github.com/rust-itertools/itertools |
 | itertools | 0.15.0 | MIT OR Apache-2.0 | https://github.com/rust-itertools/itertools |
 | itoa | 1.0.18 | MIT OR Apache-2.0 | https://github.com/dtolnay/itoa |
+| java-locator | 0.1.9 | MIT/Apache-2.0 | https://github.com/astonbitecode/java-locator |
 | jni | 0.21.1 | MIT/Apache-2.0 | https://github.com/jni-rs/jni-rs |
 | jni | 0.22.4 | MIT OR Apache-2.0 | https://github.com/jni-rs/jni-rs |
 | jni-macros | 0.22.4 | MIT OR Apache-2.0 | https://github.com/jni-rs/jni-rs |
+| jni-min-helper | 0.3.4 | MIT OR Apache-2.0 | https://github.com/wuwbobo2021/jni-min-helper |
 | jni-sys | 0.3.1 | MIT OR Apache-2.0 | https://github.com/jni-rs/jni-sys |
 | jni-sys | 0.4.1 | MIT OR Apache-2.0 | https://github.com/jni-rs/jni-sys |
 | jni-sys-macros | 0.4.1 | MIT OR Apache-2.0 | https://github.com/jni-rs/jni-sys |
@@ -252,9 +277,11 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | lexical-write-float | 1.0.6 | MIT/Apache-2.0 | https://github.com/Alexhuszagh/rust-lexical |
 | lexical-write-integer | 1.0.6 | MIT/Apache-2.0 | https://github.com/Alexhuszagh/rust-lexical |
 | libc | 0.2.191 | MIT OR Apache-2.0 | https://github.com/rust-lang/libc |
+| libloading | 0.7.4 | ISC | https://github.com/nagisa/rust_libloading/ |
 | libloading | 0.8.9 | ISC | https://github.com/nagisa/rust_libloading/ |
 | libm | 0.2.16 | MIT | https://github.com/rust-lang/compiler-builtins |
 | libredox | 0.1.25 | MIT | https://gitlab.redox-os.org/redox-os/libredox.git |
+| libsqlite3-sys | 0.38.2 | MIT | https://github.com/rusqlite/rusqlite |
 | linebender_resource_handle | 0.1.1 | Apache-2.0 OR MIT | https://github.com/linebender/raw_resource_handle |
 | linux-raw-sys | 0.12.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/sunfishcode/linux-raw-sys |
 | linux-raw-sys | 0.4.15 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/sunfishcode/linux-raw-sys |
@@ -269,6 +296,7 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | matchers | 0.2.0 | MIT | https://github.com/hawkw/matchers |
 | memchr | 2.8.3 | Unlicense OR MIT | https://github.com/BurntSushi/memchr |
 | memmap2 | 0.9.12 | MIT OR Apache-2.0 | https://github.com/RazrFalcon/memmap2-rs |
+| midir | 0.11.0 | MIT | https://github.com/Boddlnagg/midir |
 | midly | 0.5.3 | Unlicense | https://github.com/negamartin/midly |
 | miniz_oxide | 0.8.9 | MIT OR Zlib OR Apache-2.0 | https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide |
 | miniz_oxide | 0.9.1 | MIT OR Zlib OR Apache-2.0 | https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide |
@@ -280,6 +308,7 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | ndk-context | 0.1.1 | MIT OR Apache-2.0 | https://github.com/rust-windowing/android-ndk-rs |
 | ndk-sys | 0.6.0+11769913 | MIT OR Apache-2.0 | https://github.com/rust-mobile/ndk |
 | nix | 0.31.3 | MIT | https://github.com/nix-rust/nix |
+| nom | 8.0.0 | MIT | https://github.com/rust-bakery/nom |
 | nonmax | 0.5.5 | MIT OR Apache-2.0 | https://github.com/LPGhatguy/nonmax |
 | nu-ansi-term | 0.50.3 | MIT | https://github.com/nushell/nu-ansi-term |
 | num-bigint | 0.4.8 | MIT OR Apache-2.0 | https://github.com/rust-num/num-bigint |
@@ -293,6 +322,7 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | objc2 | 0.5.3 | MIT | https://github.com/madsmtm/objc2 |
 | objc2 | 0.6.5 | MIT | https://github.com/madsmtm/objc2 |
 | objc2-app-kit | 0.2.2 | MIT | https://github.com/madsmtm/objc2 |
+| objc2-app-kit | 0.3.2 | Zlib OR Apache-2.0 OR MIT | https://github.com/madsmtm/objc2 |
 | objc2-audio-toolbox | 0.3.2 | Zlib OR Apache-2.0 OR MIT | https://github.com/madsmtm/objc2 |
 | objc2-avf-audio | 0.3.2 | Zlib OR Apache-2.0 OR MIT | https://github.com/madsmtm/objc2 |
 | objc2-cloud-kit | 0.2.2 | MIT | https://github.com/madsmtm/objc2 |
@@ -322,12 +352,15 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | once_cell_polyfill | 1.70.2 | MIT OR Apache-2.0 | https://github.com/polyfill-rs/once_cell_polyfill |
 | orbclient | 0.3.55 | MIT | https://gitlab.redox-os.org/redox-os/orbclient |
 | ordered-float | 5.5.0 | MIT | https://github.com/reem/rust-ordered-float |
+| os_pipe | 1.2.3 | MIT | https://github.com/oconnor663/os_pipe.rs |
+| owned_ttf_parser | 0.25.1 | Apache-2.0 | https://github.com/alexheretic/owned-ttf-parser |
 | parking | 2.2.1 | Apache-2.0 OR MIT | https://github.com/smol-rs/parking |
 | parking_lot | 0.12.5 | MIT OR Apache-2.0 | https://github.com/Amanieu/parking_lot |
 | parking_lot_core | 0.9.12 | MIT OR Apache-2.0 | https://github.com/Amanieu/parking_lot |
 | parlance | 0.1.1 | Apache-2.0 OR MIT | https://github.com/linebender/parley |
 | parley | 0.11.1 | Apache-2.0 OR MIT | https://github.com/linebender/parley |
 | parley_data | 0.11.1 | Apache-2.0 OR MIT | https://github.com/linebender/parley |
+| percent-encoding | 2.3.2 | MIT OR Apache-2.0 | https://github.com/servo/rust-url/ |
 | petgraph | 0.8.3 | MIT OR Apache-2.0 | https://github.com/petgraph/petgraph |
 | pin-project | 1.1.13 | Apache-2.0 OR MIT | https://github.com/taiki-e/pin-project |
 | pin-project-internal | 1.1.13 | Apache-2.0 OR MIT | https://github.com/taiki-e/pin-project |
@@ -343,15 +376,19 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | presser | 0.3.1 | MIT OR Apache-2.0 | https://github.com/EmbarkStudios/presser |
 | proc-macro-crate | 3.5.0 | MIT OR Apache-2.0 | https://github.com/bkchr/proc-macro-crate |
 | proc-macro2 | 1.0.107 | MIT OR Apache-2.0 | https://github.com/dtolnay/proc-macro2 |
+| process_path | 0.1.4 | MIT/Apache-2.0 | https://github.com/wesleywiser/process_path |
 | profiling | 1.0.18 | MIT OR Apache-2.0 | https://github.com/aclysma/profiling |
 | pxfm | 0.1.30 | BSD-3-Clause OR Apache-2.0 | https://github.com/awxkee/pxfm |
+| quick-xml | 0.41.0 | MIT | https://github.com/tafia/quick-xml |
 | quote | 1.0.47 | MIT OR Apache-2.0 | https://github.com/dtolnay/quote |
+| r-efi | 5.3.0 | MIT OR Apache-2.0 OR LGPL-2.1-or-later | https://github.com/r-efi/r-efi |
 | r-efi | 6.0.0 | MIT OR Apache-2.0 OR LGPL-2.1-or-later | https://github.com/r-efi/r-efi |
 | radium | 0.7.0 | MIT | https://github.com/bitvecto-rs/radium |
 | radsort | 0.1.1 | MIT OR Apache-2.0 | https://github.com/jakubvaltar/radsort |
 | rand | 0.10.3 | MIT OR Apache-2.0 | https://github.com/rust-random/rand |
 | rand_core | 0.10.1 | MIT OR Apache-2.0 | https://github.com/rust-random/rand_core |
 | rand_distr | 0.6.0 | MIT OR Apache-2.0 | https://github.com/rust-random/rand_distr |
+| rand_pcg | 0.10.2 | MIT OR Apache-2.0 | https://github.com/rust-random/rngs |
 | range-alloc | 0.1.5 | MIT OR Apache-2.0 | https://github.com/gfx-rs/range-alloc |
 | raw-window-handle | 0.6.2 | MIT OR Apache-2.0 OR Zlib | https://github.com/rust-windowing/raw-window-handle |
 | raw-window-metal | 1.1.0 | MIT OR Apache-2.0 | https://github.com/rust-windowing/raw-window-metal |
@@ -366,6 +403,8 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | rodio | 0.22.2 | MIT OR Apache-2.0 | https://github.com/RustAudio/rodio |
 | ron | 0.12.2 | MIT OR Apache-2.0 | https://github.com/ron-rs/ron |
 | roxmltree | 0.20.0 | MIT OR Apache-2.0 | https://github.com/RazrFalcon/roxmltree |
+| rsqlite-vfs | 0.1.1 | MIT | https://crates.io/crates/rsqlite-vfs |
+| rusqlite | 0.40.2 | MIT | https://github.com/rusqlite/rusqlite |
 | rustc-hash | 1.1.0 | Apache-2.0/MIT | https://github.com/rust-lang-nursery/rustc-hash |
 | rustc-hash | 2.1.3 | Apache-2.0 OR MIT | https://github.com/rust-lang/rustc-hash |
 | rustc_version | 0.4.1 | MIT OR Apache-2.0 | https://github.com/djc/rustc-version-rs |
@@ -373,7 +412,9 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | rustix | 1.1.5 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/rustix |
 | rustversion | 1.0.23 | MIT OR Apache-2.0 | https://github.com/dtolnay/rustversion |
 | same-file | 1.0.6 | Unlicense/MIT | https://github.com/BurntSushi/same-file |
+| scoped-tls | 1.0.1 | MIT/Apache-2.0 | https://github.com/alexcrichton/scoped-tls |
 | scopeguard | 1.2.0 | MIT OR Apache-2.0 | https://github.com/bluss/scopeguard |
+| sctk-adwaita | 0.10.1 | MIT | https://github.com/PolyMeilex/sctk-adwaita |
 | semver | 1.0.28 | MIT OR Apache-2.0 | https://github.com/dtolnay/semver |
 | send_wrapper | 0.6.0 | MIT/Apache-2.0 | https://github.com/thk1/send_wrapper |
 | serde | 1.0.229 | MIT OR Apache-2.0 | https://github.com/serde-rs/serde |
@@ -390,12 +431,15 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | slab | 0.4.12 | MIT | https://github.com/tokio-rs/slab |
 | slotmap | 1.1.1 | Zlib | https://github.com/orlp/slotmap |
 | smallvec | 1.16.4 | MIT OR Apache-2.0 | https://github.com/servo/rust-smallvec |
+| smithay-client-toolkit | 0.19.2 | MIT | https://github.com/smithay/client-toolkit |
 | smol_str | 0.2.2 | MIT OR Apache-2.0 | https://github.com/rust-analyzer/smol_str |
 | spin | 0.12.3 | MIT | https://codeberg.org/zesterer/spin |
 | spirv | 0.4.0+sdk-1.4.341.0 | Apache-2.0 | https://github.com/gfx-rs/rspirv |
+| sqlite-wasm-rs | 0.5.5 | MIT | https://github.com/Spxg/sqlite-wasm-rs |
 | stable_deref_trait | 1.2.1 | MIT OR Apache-2.0 | https://github.com/storyyeller/stable_deref_trait |
 | stackfuture | 0.3.1 | MIT | https://github.com/microsoft/stackfuture |
 | static_assertions | 1.1.0 | MIT OR Apache-2.0 | https://github.com/nvzqz/static-assertions-rs |
+| strict-num | 0.1.1 | MIT | https://github.com/RazrFalcon/strict-num |
 | swash | 0.2.10 | Apache-2.0 OR MIT | https://github.com/dfrg/swash |
 | syn | 2.0.119 | MIT OR Apache-2.0 | https://github.com/dtolnay/syn |
 | syn | 3.0.9 | MIT OR Apache-2.0 | https://github.com/dtolnay/syn |
@@ -408,6 +452,8 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | thiserror-impl | 1.0.69 | MIT OR Apache-2.0 | https://github.com/dtolnay/thiserror |
 | thiserror-impl | 2.0.21 | MIT OR Apache-2.0 | https://github.com/dtolnay/thiserror |
 | thread_local | 1.1.10 | MIT OR Apache-2.0 | https://github.com/Amanieu/thread_local-rs |
+| tiny-skia | 0.11.4 | BSD-3-Clause | https://github.com/RazrFalcon/tiny-skia |
+| tiny-skia-path | 0.11.4 | BSD-3-Clause | https://github.com/RazrFalcon/tiny-skia/tree/master/path |
 | tinystr | 0.8.5 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | tinyvec | 1.13.3 | Zlib OR Apache-2.0 OR MIT | https://github.com/Lokathor/tinyvec |
 | tokio | 1.54.1 | MIT | https://github.com/tokio-rs/tokio |
@@ -423,6 +469,8 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | tracing-oslog | 0.3.0 | Zlib | https://github.com/Absolucy/tracing-oslog |
 | tracing-subscriber | 0.3.23 | MIT | https://github.com/tokio-rs/tracing |
 | tracing-wasm | 0.2.1 | MIT OR Apache-2.0 | https://github.com/storyai/tracing-wasm |
+| tree_magic_mini | 3.2.2 | MIT | https://github.com/mbrubeck/tree_magic/ |
+| ttf-parser | 0.25.1 | MIT OR Apache-2.0 | https://github.com/harfbuzz/ttf-parser |
 | typeid | 1.0.3 | MIT OR Apache-2.0 | https://github.com/dtolnay/typeid |
 | typewit | 1.15.2 | Zlib | https://github.com/rodrimati1992/typewit/ |
 | unicode-ident | 1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 | https://github.com/dtolnay/unicode-ident |
@@ -435,13 +483,23 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | uuid | 1.29.0 | Apache-2.0 OR MIT | https://github.com/uuid-rs/uuid |
 | valuable | 0.1.1 | MIT | https://github.com/tokio-rs/valuable |
 | variadics_please | 2.0.0 | MIT OR Apache-2.0 | https://github.com/bevyengine/variadics_please |
+| vcpkg | 0.2.15 | MIT/Apache-2.0 | https://github.com/mcgoo/vcpkg-rs |
 | version_check | 0.9.5 | MIT/Apache-2.0 | https://github.com/SergioBenitez/version_check |
 | walkdir | 2.5.0 | Unlicense/MIT | https://github.com/BurntSushi/walkdir |
+| wasip2 | 1.0.4+wasi-0.2.12 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/wasi-rs |
 | wasm-bindgen | 0.2.129 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen |
 | wasm-bindgen-futures | 0.4.79 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/futures |
 | wasm-bindgen-macro | 0.2.129 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro |
 | wasm-bindgen-macro-support | 0.2.129 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen/tree/main/crates/macro-support |
 | wasm-bindgen-shared | 0.2.129 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/shared |
+| wayland-backend | 0.3.17 | MIT | https://github.com/smithay/wayland-rs |
+| wayland-client | 0.31.15 | MIT | https://github.com/smithay/wayland-rs |
+| wayland-csd-frame | 0.3.0 | MIT | https://github.com/rust-windowing/wayland-csd-frame |
+| wayland-cursor | 0.31.14 | MIT | https://github.com/smithay/wayland-rs |
+| wayland-protocols | 0.32.13 | MIT | https://github.com/smithay/wayland-rs |
+| wayland-protocols-plasma | 0.3.12 | MIT | https://github.com/smithay/wayland-rs |
+| wayland-protocols-wlr | 0.3.12 | MIT | https://github.com/smithay/wayland-rs |
+| wayland-scanner | 0.31.11 | MIT | https://github.com/smithay/wayland-rs |
 | wayland-sys | 0.31.11 | MIT | https://github.com/smithay/wayland-rs |
 | weak-table | 0.4.0 | MIT | https://github.com/tov/weak-table-rs |
 | web-sys | 0.3.106 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/web-sys |
@@ -460,7 +518,10 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | wgpu-types | 30.0.1 | MIT OR Apache-2.0 | https://github.com/gfx-rs/wgpu |
 | wgsl-parse | 0.6.0 | MIT OR Apache-2.0 | https://github.com/webgpu-tools/wesl-rs |
 | wgsl-types | 0.6.0 | MIT OR Apache-2.0 | https://github.com/webgpu-tools/wesl-rs |
+| winapi | 0.3.9 | MIT/Apache-2.0 | https://github.com/retep998/winapi-rs |
+| winapi-i686-pc-windows-gnu | 0.4.0 | MIT/Apache-2.0 | https://github.com/retep998/winapi-rs |
 | winapi-util | 0.1.11 | Unlicense OR MIT | https://github.com/BurntSushi/winapi-util |
+| winapi-x86_64-pc-windows-gnu | 0.4.0 | MIT/Apache-2.0 | https://github.com/retep998/winapi-rs |
 | windows | 0.62.2 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | windows-collections | 0.3.2 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | windows-core | 0.62.2 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
@@ -495,8 +556,14 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | windows_x86_64_msvc | 0.52.6 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | winit | 0.30.13 | Apache-2.0 | https://github.com/rust-windowing/winit |
 | winnow | 1.0.4 | MIT | https://github.com/winnow-rs/winnow |
+| wit-bindgen | 0.57.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/wit-bindgen |
+| wl-clipboard-rs | 0.9.4 | MIT OR Apache-2.0 | https://github.com/YaLTeR/wl-clipboard-rs |
 | writeable | 0.6.4 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | wyz | 0.5.1 | MIT | https://github.com/myrrlyn/wyz |
+| x11-dl | 2.21.0 | MIT | https://github.com/AltF02/x11-rs.git |
+| x11rb | 0.13.2 | MIT OR Apache-2.0 | https://github.com/psychon/x11rb |
+| x11rb-protocol | 0.13.2 | MIT OR Apache-2.0 | https://github.com/psychon/x11rb |
+| xcursor | 0.3.11 | MIT | https://github.com/esposm03/xcursor-rs |
 | xkbcommon-dl | 0.4.2 | MIT | https://github.com/rust-windowing/xkbcommon-dl |
 | xkeysym | 0.2.1 | MIT OR Apache-2.0 OR Zlib | https://github.com/notgull/xkeysym |
 | xml-rs | 0.8.29 | MIT | https://github.com/kornelski/xml-rs |
@@ -527,15 +594,18 @@ Checksums: Cargo.lock. License texts: [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTI
 - bevy_scene_macros 0.20.0: MIT OR Apache-2.0 (manifest declaration; no standalone license file found).
 - block2 0.5.1: MIT (manifest declaration; no standalone license file found).
 - block2 0.6.2: MIT (manifest declaration; no standalone license file found).
+- clipboard-win 5.4.3: BSL-1.0 (manifest declaration; no standalone license file found).
 - constgebra 0.1.4: MIT OR Apache-2.0 (manifest declaration; no standalone license file found).
 - dasp_sample 0.11.0: MIT OR Apache-2.0 (manifest declaration; no standalone license file found).
 - dispatch 0.2.0: MIT (manifest declaration; no standalone license file found).
 - dispatch2 0.3.1: Zlib OR Apache-2.0 OR MIT (manifest declaration; no standalone license file found).
+- dlopen2 0.9.0: MIT (manifest declaration; no standalone license file found).
 - encase_derive 0.12.1: MIT-0 (manifest declaration; no standalone license file found).
 - encase_derive_impl 0.12.1: MIT-0 (manifest declaration; no standalone license file found).
 - gl_generator 0.14.0: Apache-2.0 (manifest declaration; no standalone license file found).
 - jni 0.22.4: MIT OR Apache-2.0 (manifest declaration; no standalone license file found).
 - jni-macros 0.22.4: MIT OR Apache-2.0 (manifest declaration; no standalone license file found).
+- jni-min-helper 0.3.4: MIT OR Apache-2.0 (manifest declaration; no standalone license file found).
 - jni-sys-macros 0.4.1: MIT OR Apache-2.0 (manifest declaration; no standalone license file found).
 - khronos_api 3.1.0: Apache-2.0 (manifest declaration; no standalone license file found).
 - midly 0.5.3: Unlicense (manifest declaration; no standalone license file found).
@@ -547,6 +617,7 @@ Checksums: Cargo.lock. License texts: [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTI
 - objc2 0.5.3: MIT (manifest declaration; no standalone license file found).
 - objc2 0.6.5: MIT (manifest declaration; no standalone license file found).
 - objc2-app-kit 0.2.2: MIT (manifest declaration; no standalone license file found).
+- objc2-app-kit 0.3.2: Zlib OR Apache-2.0 OR MIT (manifest declaration; no standalone license file found).
 - objc2-audio-toolbox 0.3.2: Zlib OR Apache-2.0 OR MIT (manifest declaration; no standalone license file found).
 - objc2-avf-audio 0.3.2: Zlib OR Apache-2.0 OR MIT (manifest declaration; no standalone license file found).
 - objc2-cloud-kit 0.2.2: MIT (manifest declaration; no standalone license file found).
@@ -570,7 +641,9 @@ Checksums: Cargo.lock. License texts: [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTI
 - objc2-uniform-type-identifiers 0.2.2: MIT (manifest declaration; no standalone license file found).
 - objc2-user-notifications 0.2.2: MIT (manifest declaration; no standalone license file found).
 - profiling 1.0.18: MIT OR Apache-2.0 (manifest declaration; no standalone license file found).
+- r-efi 5.3.0: MIT OR Apache-2.0 OR LGPL-2.1-or-later (manifest declaration; no standalone license file found).
 - r-efi 6.0.0: MIT OR Apache-2.0 OR LGPL-2.1-or-later (manifest declaration; no standalone license file found).
+- rsqlite-vfs 0.1.1: MIT (manifest declaration; no standalone license file found).
 - spirv 0.4.0+sdk-1.4.341.0: Apache-2.0 (manifest declaration; no standalone license file found).
 - taffy 0.14.0: MIT (manifest declaration; no standalone license file found).
 - valuable 0.1.1: MIT (manifest declaration; no standalone license file found).
@@ -579,6 +652,8 @@ Checksums: Cargo.lock. License texts: [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTI
 - wesl-macros 0.6.0: MIT OR Apache-2.0 (manifest declaration; no standalone license file found).
 - wgsl-parse 0.6.0: MIT OR Apache-2.0 (manifest declaration; no standalone license file found).
 - wgsl-types 0.6.0: MIT OR Apache-2.0 (manifest declaration; no standalone license file found).
+- winapi-i686-pc-windows-gnu 0.4.0: MIT/Apache-2.0 (manifest declaration; no standalone license file found).
+- winapi-x86_64-pc-windows-gnu 0.4.0: MIT/Apache-2.0 (manifest declaration; no standalone license file found).
 
 ## Font and music assets
 

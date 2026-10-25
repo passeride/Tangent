@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Regenerate notices from original registry packages, never from another app."""
+"""Regenerate notices from original dependency packages, never from another app."""
 import json
 import pathlib
 import subprocess
 root = pathlib.Path(__file__).resolve().parents[1]
 metadata = json.loads(subprocess.check_output(['cargo', 'metadata', '--format-version', '1', '--locked'], cwd=root))
 packages = sorted((p for p in metadata['packages'] if p['source']), key=lambda p:(p['name'],p['version']))
-lines = ['# Third-party dependencies', '', 'Generated from Cargo metadata/lockfiles on 2026-10-25. Includes resolved target/build dependencies; this is not a claim that each is linked into every target. The project-wide license remains unselected.', '', 'The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web Audio. Native launchers embed that same web distribution. The pure music/import crates remain independent of rendering. Bevy renderer dependencies are scoped to wasm32.', '', '| Package | Version | Declared license | Original source |', '| --- | --- | --- | --- |']
+lines = ['# Third-party dependencies', '', 'Generated from Cargo metadata/lockfiles on 2026-10-25. Includes resolved target/build dependencies; this is not a claim that each is linked into every target. The project-wide license remains unselected.', '', 'The shared Bevy 0.20 UI uses WebGL2/Web Audio in the browser and native wgpu/audio/MIDI on desktop. Native GPU effects use the pinned bevy_hanabi source commit in Cargo.lock; web uses bounded Bevy UI effects. The pure music/import crates remain independent of rendering.', '', '| Package | Version | Declared license | Original source |', '| --- | --- | --- | --- |']
 groups = {}
 missing = []
 for p in packages:
@@ -20,7 +20,7 @@ for p in packages:
         try: text=path.read_text()
         except UnicodeDecodeError: continue
         groups.setdefault(text, []).append(f"{p['name']} {p['version']} — {path.relative_to(directory)} ({license})")
-notices = ['Third-party registry license texts. Identical texts are deduplicated with all applicable packages listed.\n']
+notices = ['Third-party dependency license texts. Identical texts are deduplicated with all applicable packages listed.\n']
 for text, credits in groups.items():
     notices.append('\n'+'='*72+'\nApplies to:\n'+'\n'.join(credits)+'\n'+'='*72+'\n'+text+'\n')
 notices.append('\nBevy embedded Fira Mono subset: digitized data copyright © 2012–2015 The Mozilla Foundation and Telefonica S.A. SIL Open Font License 1.1. Full font license follows.\n'+(root/'licenses/FiraMono-OFL.txt').read_text())

@@ -22,7 +22,7 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
             inner,
             y + 50.,
             format!(
-                "{}  ·  {} / {}",
+                "{} / {} / {}",
                 title,
                 super::draw::time(state.transport.position_us),
                 super::draw::time(state.transport.duration_us)
@@ -125,7 +125,7 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
         d.text(
             inner,
             y + 320.,
-            "Space resumes  ·  Esc closes while staying paused",
+            "Space resumes / Esc closes while staying paused",
             11.,
             t.muted,
         );
