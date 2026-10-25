@@ -10,7 +10,7 @@ use super::{import, preferences::Preferences};
 use bevy::{prelude::*, window::WindowResolution};
 use layout::Layout;
 use std::collections::{BTreeMap, BTreeSet};
-use tangent_core::{music::Song, piano::PianoLayout, transport::Transport};
+use tangent_core::{fingerprint, music::Song, piano::PianoLayout, transport::Transport};
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum View {
     Blocks,
@@ -61,6 +61,9 @@ pub struct State {
     held: BTreeMap<String, u8>,
     previous: BTreeSet<usize>,
     live_bursts: Vec<u8>,
+    recognition_notes: Vec<(u64, u8)>,
+    recognition_ticket: u64,
+    last_recognition_query: u64,
     particles: Vec<Particle>,
     buttons: Vec<(layout::Rect, controls::Action)>,
     arrow_repeat: f32,
@@ -103,6 +106,9 @@ impl State {
             held: BTreeMap::new(),
             previous: BTreeSet::new(),
             live_bursts: vec![],
+            recognition_notes: vec![],
+            recognition_ticket: 0,
+            last_recognition_query: 0,
             particles: vec![],
             buttons: vec![],
             arrow_repeat: 0.,
@@ -160,6 +166,7 @@ impl State {
             }
             self.held.insert(id.clone(), key);
             self.live_bursts.push(key);
+            self.capture_for_recognition(key);
             if matches!(self.mode, Mode::Notes | Mode::Chords) {
                 let held: Vec<_> = self.held.values().copied().collect();
                 self.practice.answer(&held);
@@ -170,10 +177,46 @@ impl State {
             );
         }
     }
+    /// Feed a rolling monophonic MIDI query. Simultaneous chord onsets within
+    /// 40 ms contribute their highest key. The SQL shortlist is asynchronous.
+    fn capture_for_recognition(&mut self, key: u8) {
+        if self.mode != Mode::FreeForm {
+            return;
+        }
+        let now = platform::clock_us().max(0.) as u64;
+        if let Some((at, top)) = self.recognition_notes.last_mut() {
+            if now.saturating_sub(*at) <= 40_000 {
+                *top = (*top).max(key);
+            } else {
+                self.recognition_notes.push((now, key));
+            }
+        } else {
+            self.recognition_notes.push((now, key));
+        }
+        if self.recognition_notes.len() > 24 {
+            self.recognition_notes.remove(0);
+        }
+        if self.recognition_notes.len() < fingerprint::MIN_QUERY_NOTES
+            || now.saturating_sub(self.last_recognition_query) < 250_000
+        {
+            return;
+        }
+        self.last_recognition_query = now;
+        self.recognition_ticket += 1;
+        let keys: Vec<u8> = self.recognition_notes.iter().map(|(_, key)| *key).collect();
+        let request = serde_json::json!({
+            "ticket": self.recognition_ticket,
+            "keys": keys,
+            "signatures": fingerprint::signatures(&keys),
+        });
+        platform::action("fingerprint-query", &request.to_string());
+    }
     fn panic(&mut self) {
         self.held.clear();
         self.practice.answer(&[]);
         self.live_bursts.clear();
+        self.recognition_notes.clear();
+        self.recognition_ticket += 1;
         self.transport.playing = false;
         platform::action("panic", "");
         self.sync();
@@ -182,6 +225,7 @@ impl State {
 pub fn run() {
     let state = State::new();
     platform::action("song", &serde_json::to_string(&state.song).unwrap());
+    platform::action("fingerprint-index", &serde_json::to_string(&fingerprint::index_song(&state.song)).unwrap());
     App::new()
         .insert_resource(state)
         .insert_resource(draw::Pool::default())
@@ -264,11 +308,35 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
                         );
                         state.song = song;
                         platform::action("song", &serde_json::to_string(&state.song).unwrap());
+                        platform::action("fingerprint-index", &serde_json::to_string(&fingerprint::index_song(&state.song)).unwrap());
                         state.previous.clear();
                         state.particles.clear();
                         state.sync();
                     }
                     Err(e) => state.status = e,
+                }
+            }
+            "fingerprint-candidates" => {
+                if state.mode != Mode::FreeForm || state.screen != Screen::Session
+                    || m["ticket"].as_u64() != Some(state.recognition_ticket)
+                {
+                    continue;
+                }
+                let keys: Vec<u8> = m["keys"].as_array().map(|values| {
+                    values.iter().filter_map(|v| v.as_u64().and_then(|k| u8::try_from(k).ok())).collect()
+                }).unwrap_or_default();
+                let candidates: Vec<fingerprint::Candidate> =
+                    serde_json::from_value(m["candidates"].clone()).unwrap_or_default();
+                let matches = fingerprint::rank_matches(&keys, &candidates, 2);
+                if let Some(best) = matches.first() {
+                    let ambiguous = matches.get(1).is_some_and(|next|
+                        (best.similarity - next.similarity) < 0.08
+                        && best.song_id != next.song_id);
+                    state.status = format!(
+                        "{}: {} · {:.0}% interval similarity · note {}",
+                        if ambiguous { "Possible match" } else { "Recognized" },
+                        best.title, best.similarity * 100., best.note_index + 1
+                    );
                 }
             }
             "note" => {
