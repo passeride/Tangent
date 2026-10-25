@@ -51,29 +51,30 @@ Reproduce with `node web/piano/capture.mjs` after building the WASM package.
 
 ## Platform builds
 
-Every push to main builds the web player and downloadable Windows x64/ARM64,
-Linux x64/ARM64 and macOS Intel/Apple Silicon packages. Desktop packages contain
-a self-contained launcher that serves the same player on localhost and opens
-your browser. They do not require Rust, Node or Python installed. See the
-[distribution guide](docs/distribution.md) for downloads, starting/stopping,
-checksums and unsigned-build limitations. Android/iOS use the web version.
+The web player remains available through Pages. A separate **native Bevy desktop
+binary** now targets Windows x64/ARM64, Linux x64/ARM64 and macOS Intel/Apple
+Silicon. It uses the OS GPU backend through wgpu and opens its own window,
+not a browser wrapper. Desktop MIDI (midir), audio (rodio) and SQLite
+(rusqlite with bundled SQLite) run natively. See
+[desktop builds and limitations](docs/distribution.md). Android/iOS use the web version.
 
 ## Project status
 
-**Playable web piano and MIDI playback.** The Rust workspace has a format-neutral
+**Playable web player and native desktop implementation (pending hardware validation).** The Rust workspace has a format-neutral
 music/piano model, one Bevy application with in-engine UI/wgpu rendering and a Web Audio adapter.
 Play with keyboard, pointer or touch; import MIDI, switch between four note
 views, choose a theme/piano profile and enable or disable sparkles and song audio.
 
 See [piano build/run/test instructions](docs/piano-player.md) and the
-[MIDI support contract](docs/midi-import.md). Hardware Web MIDI is optional and
-has not been verified with a physical device. Desktop launchers package this
-browser player. All player controls and visualizations render inside the Bevy GPU
-canvas.
-Uncompressed partwise MusicXML import is available as an [explicit subset](docs/musicxml-import.md).
-Settings now persist in a local SQLite database; Export database in Settings
-downloads a `.sqlite` backup. Scores/session tables are prepared for future use.
-Native OS windows/audio and persistent music library remain future work.
+[MIDI support contract](docs/midi-import.md). The web version has Web MIDI/Web
+Audio and browser-local SQLite. The desktop branch uses the same Bevy GPU UI and
+musical core with native keyboard/pointer, multidevice MIDI input, a separate
+audio scheduler thread, a local SQLite file and OS file dialogs.
+Uncompressed partwise MusicXML import is an [explicit subset](docs/musicxml-import.md).
+Desktop build and MIDI/audio behavior require physical machine verification,
+especially low-latency playing. The native instrument is currently an efficient
+harmonic voice, not the same timbre as the browser synthesizer. The persistent
+music library and recording meaningful scores remain future work.
 
 The implementation is not certified as a completed clean room process. Prior
 source exposure remains documented in [PROVENANCE.md](PROVENANCE.md).

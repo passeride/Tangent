@@ -7,7 +7,7 @@ this file tracks the remaining work, not an authorization gate.
 
 - Profile the delivered Bevy UI/wgpu surface on real desktop/mobile GPUs.
   WebGL2 is the current backend; evaluate WebGPU separately when justified.
-- Move audio lookahead off the rendering/main thread where profiling justifies it;
+- [x] Move native audio lookahead off the render thread;
   add output/display latency calibration and stress cases with dense piano files.
 - Extract controller/voice-state reconstruction into a shared, testable reducer
   when native audio is added; currently owned by the browser sound adapter.
@@ -19,8 +19,11 @@ this file tracks the remaining work, not an authorization gate.
   are prototype boundaries and need dense/long-song profiling.
 - [x] Save user settings in local SQLite; export a portable database (ADR-0009).
 - Add music-library persistence, database backup restore and meaningful score/session recording.
-- Add true native input, audio and renderer adapters. Desktop downloads now use
-  browser-backed launchers; they do not implement a native Bevy/audio view.
+- [x] Add a true native renderer, audio mixer, MIDI inputs and SQLite adapter
+  without browser or localhost server (ADR-0010). Validate release binaries on
+  physical Windows/macOS/Linux machines and profile voice/audio latency.
+- Add OS-integrated drag/drop and robust cross-platform native file picker
+  (currently PowerShell, AppleScript and optional Zenity).
 - Add managed desktop lifecycle/quit UI, signing and macOS notarization.
 
 ## Reading views

@@ -36,3 +36,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0008: Navigation and practice](0008-navigation-and-practice.md) — accepted; main menu, mode routing and independent exercise rules.
 
 - [ADR-0009: Local SQLite persistence](0009-local-sqlite-storage.md) — accepted; settings, export and future score schema.
+
+- [ADR-0010: Native desktop runtime](0010-native-desktop-runtime.md) — accepted; shared Bevy/wgpu scene, MIDI, audio worker and SQLite on desktop.
