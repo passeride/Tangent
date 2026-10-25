@@ -80,6 +80,7 @@ pub struct State {
     recognition_ticket: u64,
     last_recognition_query: u64,
     particles: Vec<Particle>,
+    ripples: Vec<Ripple>,
     buttons: Vec<(layout::Rect, controls::Action)>,
     arrow_repeat: f32,
     viewport_set: bool,
@@ -93,7 +94,16 @@ struct Particle {
     vx: f32,
     vy: f32,
     life: f32,
+    duration: f32,
+    size: f32,
     color: Color,
+}
+struct Ripple {
+    x: f32,
+    y: f32,
+    age: f32,
+    scale: f32,
+    preset: effects::Preset,
 }
 impl State {
     fn new() -> Self {
@@ -132,6 +142,7 @@ impl State {
             recognition_ticket: 0,
             last_recognition_query: 0,
             particles: vec![],
+            ripples: vec![],
             buttons: vec![],
             arrow_repeat: 0.,
             viewport_set: false,
@@ -259,6 +270,7 @@ impl State {
         self.held.clear();
         self.practice.answer(&[]);
         self.live_bursts.clear();
+        self.ripples.clear();
         #[cfg(not(target_arch = "wasm32"))]
         self.gpu_bursts.clear();
         self.feedback.reset();
@@ -466,6 +478,10 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
     }
     let dt = time.delta_secs().min(0.05);
     state.particles.retain(|p| p.life > 0.);
+    state.ripples.retain(|r| r.age < r.preset.lifetime() * 0.8);
+    for ripple in &mut state.ripples {
+        ripple.age += dt;
+    }
     for p in &mut state.particles {
         p.life -= dt;
         p.x += p.vx * dt;
@@ -496,6 +512,7 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
             platform::action("song", &serde_json::to_string(&state.song).unwrap());
             state.previous.clear();
             state.particles.clear();
+            state.ripples.clear();
             #[cfg(not(target_arch = "wasm32"))]
             state.gpu_bursts.clear();
             state.feedback.reset();
