@@ -209,6 +209,9 @@ fn put32(out: &mut Vec<u8>, n: u32) {
     out.extend_from_slice(&n.to_le_bytes());
 }
 fn mxl_zip(files: &[(&str, &[u8], bool)]) -> Vec<u8> {
+    mxl_zip_with_descriptor(files, false)
+}
+fn mxl_zip_with_descriptor(files: &[(&str, &[u8], bool)], descriptor: bool) -> Vec<u8> {
     let mut out = Vec::new();
     let mut directory = Vec::new();
     for &(name, data, deflate) in files {
@@ -222,22 +225,28 @@ fn mxl_zip(files: &[(&str, &[u8], bool)]) -> Vec<u8> {
         let crc = crc32fast::hash(data);
         put32(&mut out, 0x04034b50);
         put16(&mut out, 20);
-        put16(&mut out, 0);
+        put16(&mut out, if descriptor { 8 } else { 0 });
         put16(&mut out, method);
         put16(&mut out, 0);
         put16(&mut out, 0);
-        put32(&mut out, crc);
-        put32(&mut out, packed.len() as u32);
-        put32(&mut out, data.len() as u32);
+        put32(&mut out, if descriptor { 0 } else { crc });
+        put32(&mut out, if descriptor { 0 } else { packed.len() as u32 });
+        put32(&mut out, if descriptor { 0 } else { data.len() as u32 });
         put16(&mut out, name.len() as u16);
         put16(&mut out, 0);
         out.extend_from_slice(name.as_bytes());
         out.extend_from_slice(&packed);
+        if descriptor {
+            put32(&mut out, 0x08074b50);
+            put32(&mut out, crc);
+            put32(&mut out, packed.len() as u32);
+            put32(&mut out, data.len() as u32);
+        }
 
         put32(&mut directory, 0x02014b50);
         put16(&mut directory, 20);
         put16(&mut directory, 20);
-        put16(&mut directory, 0);
+        put16(&mut directory, if descriptor { 8 } else { 0 });
         put16(&mut directory, method);
         put16(&mut directory, 0);
         put16(&mut directory, 0);
@@ -381,4 +390,48 @@ fn mxl_uncompressed_size_limit_is_enforced_before_decompression() {
     zip[score_directory + 24..score_directory + 28]
         .copy_from_slice(&(16_u32 * 1024 * 1024 + 1).to_le_bytes());
     assert!(import(&zip, "x".into()).unwrap_err().contains("size limit"));
+}
+
+#[test]
+fn mxl_rejects_conflicting_local_sizes_and_directory_payloads() {
+    let valid = mxl_zip(&[
+        ("META-INF/container.xml", ROOT.as_bytes(), false),
+        ("scores/piano.musicxml", PIANO, false),
+    ]);
+    for field in [14, 18, 22] {
+        let mut zip = valid.clone();
+        zip[field] ^= 1;
+        assert!(import(&zip, "x".into()).unwrap_err().contains("local/central"));
+    }
+    let directory = valid
+        .windows(4)
+        .position(|w| w == b"PK\x01\x02")
+        .unwrap();
+    let mut zip = valid.clone();
+    // Consistent local/central lengths still must not include directory bytes.
+    let oversized = directory as u32;
+    for field in [18, 22] {
+        zip[field..field + 4].copy_from_slice(&oversized.to_le_bytes());
+    }
+    for field in [20, 24] {
+        zip[directory + field..directory + field + 4]
+            .copy_from_slice(&oversized.to_le_bytes());
+    }
+    assert!(
+        import(&zip, "x".into())
+            .unwrap_err()
+            .contains("overlaps central directory")
+    );
+}
+
+#[test]
+fn mxl_accepts_streaming_zip_data_descriptors() {
+    let zip = mxl_zip_with_descriptor(
+        &[
+            ("META-INF/container.xml", ROOT.as_bytes(), false),
+            ("scores/piano.musicxml", PIANO, true),
+        ],
+        true,
+    );
+    assert!(import(&zip, "x".into()).is_ok());
 }

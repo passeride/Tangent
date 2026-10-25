@@ -15,6 +15,7 @@ struct Entry<'a> {
     size: usize,
     packed: usize,
     offset: usize,
+    data_end: usize,
 }
 
 fn u16_at(data: &[u8], at: usize) -> Result<u16, String> {
@@ -117,6 +118,7 @@ fn entries(bytes: &[u8]) -> Result<Vec<Entry<'_>>, String> {
             size,
             packed,
             offset,
+            data_end: dir_start,
         });
         pos = next;
     }
@@ -132,6 +134,14 @@ fn read_entry(bytes: &[u8], entry: &Entry<'_>, limit: usize) -> Result<Vec<u8>, 
     if entry.size > limit {
         return Err("MXL decompressed entry exceeds size limit".into());
     }
+    // All local-header fields and payloads must precede the central directory.
+    let local_end = entry
+        .offset
+        .checked_add(30)
+        .ok_or("Invalid MXL ZIP offset")?;
+    if local_end > entry.data_end {
+        return Err("MXL ZIP local header overlaps central directory".into());
+    }
     if u32_at(bytes, entry.offset)? != 0x04034b50 {
         return Err("Invalid MXL ZIP local header".into());
     }
@@ -139,6 +149,17 @@ fn read_entry(bytes: &[u8], entry: &Entry<'_>, limit: usize) -> Result<Vec<u8>, 
         || u16_at(bytes, entry.offset + 8)? != entry.method
     {
         return Err("MXL ZIP local/central header mismatch".into());
+    }
+    // Bit 3 permits a trailing data descriptor instead of local CRC/sizes.
+    if entry.flags & 8 == 0
+        && (u32_at(bytes, entry.offset + 14)? != entry.crc
+            || u32_at(bytes, entry.offset + 18)? as usize != entry.packed
+            || u32_at(bytes, entry.offset + 22)? as usize != entry.size)
+    {
+        return Err("MXL ZIP local/central size or CRC mismatch".into());
+    }
+    if entry.method == 0 && entry.packed != entry.size {
+        return Err("MXL stored entry size mismatch".into());
     }
     let name_len = u16_at(bytes, entry.offset + 26)? as usize;
     let extra_len = u16_at(bytes, entry.offset + 28)? as usize;
@@ -153,6 +174,12 @@ fn read_entry(bytes: &[u8], entry: &Entry<'_>, limit: usize) -> Result<Vec<u8>, 
         .checked_add(name_len)
         .and_then(|p| p.checked_add(extra_len))
         .ok_or("Invalid MXL ZIP data offset")?;
+    if at
+        .checked_add(entry.packed)
+        .is_none_or(|end| end > entry.data_end)
+    {
+        return Err("MXL ZIP payload overlaps central directory".into());
+    }
     let packed = field(bytes, at, entry.packed)?;
     let data = match entry.method {
         0 => packed.to_vec(),
