@@ -6,12 +6,7 @@ use super::*;
 pub(super) fn viewport_scale(width: f32, height: f32) -> f32 {
     (width / 1280.0).min(height / 800.0).clamp(0.65, 3.5)
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Grade {
-    Correct,
-    Wrong,
-    Neutral,
-}
+pub(super) use tangent_core::practice::Grade;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(usize)]
 pub(super) enum Preset {
@@ -132,18 +127,6 @@ impl Feedback {
         }
     }
 }
-/// A generous hit window for live MIDI; a held note may also be hit mid-note.
-/// Percussion tracks never count as piano targets.
-pub(super) fn expected_song_hit(song: &Song, position_us: u64, key: u8) -> bool {
-    const EARLY_US: u64 = 180_000;
-    const LATE_US: u64 = 180_000;
-    song.notes.iter().any(|n| {
-        n.key == key
-            && !song.parts[n.part].percussion
-            && n.start_us <= position_us.saturating_add(EARLY_US)
-            && n.end_us.saturating_add(LATE_US) >= position_us
-    })
-}
 /// Exact octave in note mode; any inversion of a chord is valid.
 pub(super) fn belongs_to_target(practice: &tangent_core::practice::Practice, key: u8) -> bool {
     practice.target().iter().any(|&target| {
@@ -200,21 +183,6 @@ mod tests {
         let note = tangent_core::practice::Practice::new(false);
         assert!(belongs_to_target(&note, 60));
         assert!(!belongs_to_target(&note, 48));
-    }
-    #[test]
-    fn song_matches_only_within_timing_window() {
-        let song = import::study();
-        let n = song
-            .notes
-            .iter()
-            .find(|n| !song.parts[n.part].percussion)
-            .unwrap();
-        assert!(expected_song_hit(&song, n.start_us, n.key));
-        assert!(expected_song_hit(
-            &song,
-            n.start_us.saturating_sub(100_000),
-            n.key
-        ));
     }
 }
 #[cfg(not(target_arch = "wasm32"))]

@@ -118,6 +118,7 @@ pub struct State {
     #[cfg(not(target_arch = "wasm32"))]
     gpu_bursts: Vec<effects::ScreenBurst>,
     feedback: effects::Feedback,
+    song_hits: tangent_core::practice::SongHits,
     recognition_notes: Vec<(u64, u8)>,
     recognition_status: String,
     recognition_ticket: u64,
@@ -191,6 +192,7 @@ impl State {
             #[cfg(not(target_arch = "wasm32"))]
             gpu_bursts: vec![],
             feedback: effects::Feedback::default(),
+            song_hits: tangent_core::practice::SongHits::default(),
             recognition_notes: vec![],
             recognition_status: String::new(),
             recognition_ticket: 0,
@@ -308,13 +310,11 @@ impl State {
             // Never judge backing-track playback as a player hit. A partial
             // chord is not wrong merely because the other fingers are pending.
             let grade = match self.mode {
-                Mode::Play if self.transport.playing => Some(
-                    if effects::expected_song_hit(&self.song, self.transport.position_us, key) {
-                        effects::Grade::Correct
-                    } else {
-                        effects::Grade::Wrong
-                    },
-                ),
+                Mode::Play if self.transport.playing => Some(self.song_hits.judge(
+                    &self.song,
+                    self.transport.position_us,
+                    key,
+                )),
                 Mode::Play | Mode::FreeForm => Some(effects::Grade::Neutral),
                 Mode::Notes | Mode::Chords => {
                     let target_member = effects::belongs_to_target(&self.practice, key);
@@ -409,6 +409,7 @@ impl State {
         #[cfg(not(target_arch = "wasm32"))]
         self.gpu_bursts.clear();
         self.feedback.reset();
+        self.song_hits.reset();
         self.recognition_notes.clear();
         self.recognition_status.clear();
         self.recognition_ticket += 1;

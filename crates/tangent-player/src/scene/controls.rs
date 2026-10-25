@@ -258,15 +258,21 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.sync();
         }
         Action::Restart => {
+            state.song_hits.reset();
+            state.feedback.reset();
             state.transport.seek(0);
             state.sync();
         }
         Action::Back => {
+            state.song_hits.reset();
+            state.feedback.reset();
             let pos = state.transport.position_us.saturating_sub(step);
             state.transport.seek(pos);
             state.sync();
         }
         Action::Forward => {
+            state.song_hits.reset();
+            state.feedback.reset();
             let pos = state.transport.position_us.saturating_add(step);
             state.transport.seek(pos);
             state.sync();

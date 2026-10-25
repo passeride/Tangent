@@ -30,6 +30,10 @@ input, pause, navigation, configuration changes and focus loss cancel them.
 Hardware input retains Local Control/no-echo behavior from ADR-0015. The reference
 is optional and does not reveal the written answer as a hint or advance targets.
 
+The core owns song-hit timing and target identity: reattacking the same target
+is neutral, so repeated presses cannot inflate a streak. Seek/restart clears hit
+identity. This remains cosmetic feedback, not calibrated timing scores.
+
 Effects retain shared grades and bounded emitters. Directional UI sparks, bright
 cores, fading trails and fast-expanding arcs strengthen attacks without camera
 movement. Native Hanabi retains matching colours and a brief white attack.
