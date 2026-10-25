@@ -32,6 +32,11 @@ export async function installPlatform() {
     storageStatus("Local saving unavailable; existing data preserved.");
     console.warn("Tangent storage:", error);
   }
+  async function fingerprintId(song) {
+    const bytes = new TextEncoder().encode(JSON.stringify(song));
+    const hash = await crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(hash)].map(n => n.toString(16).padStart(2, "0")).join("");
+  }
   function reset() {
     audio.stopSong();
     if (!song) return;
@@ -68,7 +73,7 @@ export async function installPlatform() {
         throw Error("Music files must be 16 MiB or smaller.");
       await load(
         new Uint8Array(await selected.arrayBuffer()),
-        selected.name.replace(/\.(midi?|musicxml|xml)$/i, ""),
+        selected.name.replace(/\.(midi?|musicxml|xml|mxl)$/i, ""),
         ticket,
       );
     } catch (e) {
@@ -166,6 +171,27 @@ export async function installPlatform() {
               link.href = url; link.download = "tangent.sqlite"; link.click();
               setTimeout(() => URL.revokeObjectURL(url), 30_000);
             }).catch(() => storageStatus("Could not export database."));
+            break;
+          case "fingerprint-index":
+            if (storage) {
+              const indexed = JSON.parse(data);
+              fingerprintId(indexed)
+                .then(id => storage.saveFingerprintSong({ ...indexed, id }))
+                .catch(error => { console.warn("Fingerprint indexing:", error); storageStatus("Could not index imported music."); });
+            }
+            break;
+          case "fingerprint-query":
+            if (storage) {
+              const request = JSON.parse(data);
+              storage.findFingerprintCandidates(request.signatures)
+                .then(candidates => queue.push({
+                  type: "fingerprint-candidates",
+                  ticket: request.ticket,
+                  keys: request.keys,
+                  candidates,
+                }))
+                .catch(error => { console.warn("Fingerprint search:", error); });
+            }
             break;
           case "song":
             song = JSON.parse(data);

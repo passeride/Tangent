@@ -129,3 +129,12 @@ SQLite request. Primary sql.js documentation was consulted; sql.js 1.15.1 is
 npm-locked, MIT, with its unchanged complete upstream license recorded. SQLite
 is public domain. No excluded legacy source/assets were consulted. ADR-0009
 records actual browser backing, schema and boundaries; prior exposure remains.
+
+## Compressed MusicXML import — 2026-10-25
+
+An original bounded MXL container reader was authored for Tangent using the public
+MusicXML 4.0 ZIP-container reference. No excluded fork implementation or assets
+were consulted. It reuses already locked and inventoried miniz_oxide 0.9.1 and
+crc32fast 1.5.3, with no new registry packages or externally sourced fixtures.
+Synthetic ZIP test inputs are generated within repository tests. ADR-0010 records
+the container boundary, security limits and remaining unsupported ZIP features.

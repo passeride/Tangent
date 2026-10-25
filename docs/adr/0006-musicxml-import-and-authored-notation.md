@@ -62,3 +62,6 @@ https://github.com/RazrFalcon/roxmltree/tree/v0.20.0
 subset with meter/key/tempo metadata, note values, bounded repeats/endings and
 authored measure display. Its decisions replace the written-order-only policy
 for supported sequential repeats; D.C./D.S./coda remain warnings.
+
+Later delivery: [ADR-0010](0010-bounded-mxl-container-import.md) adds bounded
+compressed MXL support without changing the initial parser or Song contract.

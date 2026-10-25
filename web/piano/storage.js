@@ -1,5 +1,5 @@
 // Genuine SQLite bytes persisted atomically in IndexedDB. No UI or scoring rules.
-import { migrate, readSettings, writeSettings, schemaVersion } from "./storage-schema.js";
+import { migrate, readSettings, writeSettings, writeFingerprintedSong, findFingerprintCandidates, schemaVersion } from "./storage-schema.js";
 const filename = "tangent.sqlite";
 export async function openStorage() {
   const SQL = await globalThis.initSqlJs({ locateFile: name => new URL(`./vendor/${name}`, import.meta.url).href });
@@ -11,7 +11,7 @@ export async function openStorage() {
     request.onblocked = () => reject(Error("Local database is blocked by another tab."));
   });
   files.onversionchange = () => files.close();
-  const diagnostics = { ready: false, pending: 0, revision: 0, schemaVersion, error: null };
+  const diagnostics = { ready: false, pending: 0, revision: 0, fingerprintRevision: 0, schemaVersion, error: null };
   // SQLite work is synchronous inside get.onsuccess: the IDB transaction remains
   // active, serializes competing tabs, and commits the new complete image atomically.
   function transaction(edit, write = true) {
@@ -50,6 +50,18 @@ export async function openStorage() {
   }
   return {
     settings, diagnostics, saveSettings,
+    saveFingerprintSong(song) {
+      diagnostics.pending++;
+      const result = tail.then(() => transaction(db => writeFingerprintedSong(db, song)));
+      tail = result.catch(() => {});
+      return result.then(() => { diagnostics.fingerprintRevision++; diagnostics.error = null; })
+        .catch(error => { diagnostics.error = String(error.message ?? error); throw error; })
+        .finally(() => { diagnostics.pending--; });
+    },
+    async findFingerprintCandidates(signatures) {
+      await tail;
+      return transaction(db => findFingerprintCandidates(db, signatures), false);
+    },
     async exportDatabase() { await tail; return transaction(db => db.export(), false); },
     close: () => files.close(),
   };

@@ -70,7 +70,7 @@ See [piano build/run/test instructions](docs/piano-player.md) and the
 Audio and browser-local SQLite. The desktop branch uses the same Bevy GPU UI and
 musical core with native keyboard/pointer, multidevice MIDI input, a separate
 audio scheduler thread, a local SQLite file and OS file dialogs.
-Uncompressed partwise MusicXML import is an [explicit subset](docs/musicxml-import.md).
+Partwise MusicXML (.xml/.musicxml/.mxl) import is an [explicit subset](docs/musicxml-import.md).
 Desktop build and MIDI/audio behavior require physical machine verification,
 especially low-latency playing. The native instrument is currently an efficient
 harmonic voice, not the same timbre as the browser synthesizer. The persistent

@@ -1,5 +1,6 @@
 //! Desktop capability adapter. No browser, loopback HTTP or webview.
 //! The Bevy/render thread never opens devices, blocks on SQLite, or parses files.
+mod fingerprints;
 use std::{
     collections::HashMap,
     env, fs,
@@ -177,7 +178,7 @@ fn data_dir() -> Result<PathBuf, String> {
 fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch("PRAGMA foreign_keys = ON;")?;
     let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-    if version > 1 {
+    if version > 2 {
         return Err(rusqlite::Error::InvalidQuery);
     }
     if version == 0 {
@@ -191,6 +192,32 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
                 metric TEXT NOT NULL, value REAL NOT NULL, created_at TEXT NOT NULL);
             CREATE INDEX scores_by_session ON scores(session_id);
             PRAGMA user_version = 1; COMMIT;")?;
+    }
+    if version < 2 {
+        conn.execute_batch("BEGIN;
+      CREATE TABLE fingerprint_songs (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        indexed_at TEXT NOT NULL
+      );
+      CREATE TABLE fingerprint_melodies (
+        song_id TEXT NOT NULL REFERENCES fingerprint_songs(id) ON DELETE CASCADE,
+        part INTEGER NOT NULL,
+        keys_json TEXT NOT NULL,
+        onsets_json TEXT NOT NULL,
+        PRIMARY KEY(song_id, part)
+      );
+      CREATE TABLE fingerprint_ngrams (
+        signature TEXT NOT NULL,
+        song_id TEXT NOT NULL,
+        part INTEGER NOT NULL,
+        position INTEGER NOT NULL,
+        FOREIGN KEY(song_id, part) REFERENCES fingerprint_melodies(song_id, part) ON DELETE CASCADE,
+        PRIMARY KEY(signature, song_id, part, position)
+      );
+      CREATE INDEX fingerprint_signature_lookup ON fingerprint_ngrams(signature);
+      PRAGMA user_version = 2;
+      COMMIT;")?;
     }
     Ok(())
 }
@@ -333,6 +360,20 @@ fn backend(rx: Receiver<(String,String)>, out: Sender<Value>, files: Sender<(Vec
                     };
                     let _ = out.send(json!({"type":"storage-status","text":info}));
                 },
+                "fingerprint-index" => if let Some((conn,_)) = &db {
+                    if let Err(e) = fingerprints::index(conn, &value) {
+                        let _ = out.send(json!({"type":"storage-status","text":format!("Index failed: {e}")}));
+                    }
+                },
+                "fingerprint-query" => if let Some((conn,_)) = &db {
+                    if let Ok(request) = serde_json::from_str::<Value>(&value) {
+                        match fingerprints::candidates(conn, &request["signatures"]) {
+                            Ok(candidates) => { let _ = out.send(json!({"type":"fingerprint-candidates",
+                                "ticket":request["ticket"],"keys":request["keys"],"candidates":candidates})); },
+                            Err(e) => { let _ = out.send(json!({"type":"status","text":format!("Search failed: {e}")})); },
+                        }
+                    }
+                },
                 "midi" => {
                     // Release exclusive OS ports before attempting to reopen them.
                     // Clear held keys because a note-off may be lost during rescan.
@@ -378,7 +419,7 @@ mod tests {
         let value: String = db.query_row("SELECT payload FROM settings",[],|r|r.get(0)).unwrap();
         assert_eq!(serde_json::from_str::<Value>(&value).unwrap()["version"], 1);
         let version: i64 = db.query_row("PRAGMA user_version",[],|r|r.get(0)).unwrap();
-        assert_eq!(version, 1);
+        assert_eq!(version, 2);
         let rows: i64 = db.query_row("SELECT count(*) FROM scores",[],|r|r.get(0)).unwrap();
         assert_eq!(rows,0);
     }

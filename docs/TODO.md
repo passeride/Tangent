@@ -18,12 +18,14 @@ this file tracks the remaining work, not an authorization gate.
 - Index long sustained notes and visible windows; frame JSON and prefix scanning
   are prototype boundaries and need dense/long-song profiling.
 - [x] Save user settings in local SQLite; export a portable database (ADR-0009).
+- [x] Add a local SQLite symbolic fingerprint index and FreeForm MIDI identification (ADR-0011); original score files still are not persisted.
 - Add music-library persistence, database backup restore and meaningful score/session recording.
 - [x] Add a true native renderer, audio mixer, MIDI inputs and SQLite adapter
-  without browser or localhost server (ADR-0010). Validate release binaries on
+  without browser or localhost server (ADR-0012). Validate release binaries on
   physical Windows/macOS/Linux machines and profile voice/audio latency.
 - Add OS-integrated drag/drop and robust cross-platform native file picker
   (currently PowerShell, AppleScript and optional Zenity).
+- Extend fingerprint search with polyphonic voices, multiple arrangements per work, calibrated match confidence and large-library performance.
 - Add managed desktop lifecycle/quit UI, signing and macOS notarization.
 
 ## Reading views
@@ -50,7 +52,7 @@ this file tracks the remaining work, not an authorization gate.
 ## MusicXML follow-up (ADR-0006)
 
 - [x] Uncompressed partwise adapter, rational rhythm, voices/staves, sound ties/tempo.
-- [ ] Bounded compressed MXL support through META-INF/container.xml.
+- [x] Bounded compressed MXL support through META-INF/container.xml (ADR-0010).
 - [x] Retain inherited key/time, written rhythm values/dots and tempo; initial clefs.
 - [ ] Full clef/attribute changes, tuplets/beams and engraving detail.
 - [x] Authored measure layout, clefs/rests, barlines/houses and repeat-visit mapping.

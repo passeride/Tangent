@@ -1,4 +1,4 @@
-# ADR-0010: Native desktop without a browser runtime
+# ADR-0012: Native desktop without a browser runtime
 
 - Status: Accepted
 - Decision date: 2026-10-25
@@ -33,7 +33,7 @@ The existing score/notation GPU entity pool and piano/practice domains remain
 shared. Avoid serializing binary files into large JSON arrays for desktop
 imports; transfer actual bytes on an in-process channel. Native preferences
 and future scores use an independently opened SQLite file with the same schema
-version 1 as ADR-0009. The native database is not the browser's IndexedDB
+version 2, including the fingerprint tables in ADR-0011, based on ADR-0009. The native database is not the browser's IndexedDB
 image; migrations must stay compatible at the SQLite schema level.
 
 Native dependencies: Bevy 0.20, rodio 0.22.2, midir 0.11 and rusqlite 0.40.2
@@ -58,3 +58,11 @@ a headless CLI smoke check; that does not verify physical GPU/audio/MIDI.
 Dependencies are independently published crates; the older Neothesia fork
 and its implementation code/assets are excluded. Previously disclosed source
 exposure remains documented in PROVENANCE.md.
+
+## Integration with symbolic recognition
+
+The native SQLite adapter persists the same portable melodic lanes and n-grams
+as the browser schema v2 and returns at most 30 candidates to the Rust matcher.
+Native content identifiers use the already inventoried BLAKE3 crate; browser
+identifiers use SHA-256. Identifiers are local to each independent catalog, not
+composition identities. Backup restore across adapters is not implemented.
