@@ -199,3 +199,189 @@ fn visual_metronome_beat_units_and_dots_set_quarter_tempo_without_sound() {
         assert!(song.warnings.is_empty());
     }
 }
+
+
+// Construct synthetic ZIP archives here instead of importing a fixture from
+// another project or depending on browser-only decompression behavior.
+fn put16(out: &mut Vec<u8>, n: u16) {
+    out.extend_from_slice(&n.to_le_bytes());
+}
+fn put32(out: &mut Vec<u8>, n: u32) {
+    out.extend_from_slice(&n.to_le_bytes());
+}
+fn mxl_zip(files: &[(&str, &[u8], bool)]) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut directory = Vec::new();
+    for &(name, data, deflate) in files {
+        let method = if deflate { 8 } else { 0 };
+        let packed = if deflate {
+            miniz_oxide::deflate::compress_to_vec(data, 6)
+        } else {
+            data.to_vec()
+        };
+        let offset = out.len() as u32;
+        let crc = crc32fast::hash(data);
+        put32(&mut out, 0x04034b50);
+        put16(&mut out, 20);
+        put16(&mut out, 0);
+        put16(&mut out, method);
+        put16(&mut out, 0);
+        put16(&mut out, 0);
+        put32(&mut out, crc);
+        put32(&mut out, packed.len() as u32);
+        put32(&mut out, data.len() as u32);
+        put16(&mut out, name.len() as u16);
+        put16(&mut out, 0);
+        out.extend_from_slice(name.as_bytes());
+        out.extend_from_slice(&packed);
+
+        put32(&mut directory, 0x02014b50);
+        put16(&mut directory, 20);
+        put16(&mut directory, 20);
+        put16(&mut directory, 0);
+        put16(&mut directory, method);
+        put16(&mut directory, 0);
+        put16(&mut directory, 0);
+        put32(&mut directory, crc);
+        put32(&mut directory, packed.len() as u32);
+        put32(&mut directory, data.len() as u32);
+        put16(&mut directory, name.len() as u16);
+        put16(&mut directory, 0);
+        put16(&mut directory, 0);
+        put16(&mut directory, 0);
+        put16(&mut directory, 0);
+        put32(&mut directory, 0);
+        put32(&mut directory, offset);
+        directory.extend_from_slice(name.as_bytes());
+    }
+    let dir_offset = out.len() as u32;
+    out.extend_from_slice(&directory);
+    put32(&mut out, 0x06054b50);
+    put16(&mut out, 0);
+    put16(&mut out, 0);
+    put16(&mut out, files.len() as u16);
+    put16(&mut out, files.len() as u16);
+    put32(&mut out, directory.len() as u32);
+    put32(&mut out, dir_offset);
+    put16(&mut out, 0);
+    out
+}
+
+const ROOT: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<container><rootfiles><rootfile full-path="scores/piano.musicxml"
+media-type="application/vnd.recordare.musicxml+xml"/></rootfiles></container>"#;
+
+#[test]
+fn compressed_and_stored_mxl_import_through_the_normal_musicxml_adapter() {
+    for deflate in [false, true] {
+        let archive = mxl_zip(&[
+            ("mimetype", b"application/vnd.recordare.musicxml", false),
+            ("META-INF/container.xml", ROOT.as_bytes(), deflate),
+            ("scores/piano.musicxml", PIANO, deflate),
+            ("images/ignored.png", b"non-XML resource is never extracted", true),
+        ]);
+        let compressed = import(&archive, "fallback".into()).unwrap();
+        let plain = import(PIANO, "fallback".into()).unwrap();
+        assert_eq!(compressed.title, plain.title);
+        assert_eq!(compressed.duration_us, plain.duration_us);
+        assert_eq!(compressed.notes.len(), plain.notes.len());
+        assert_eq!(
+            compressed.notation.unwrap().measures.len(),
+            plain.notation.unwrap().measures.len()
+        );
+    }
+}
+
+#[test]
+fn old_mxl_without_mimetype_or_media_type_is_supported() {
+    let manifest = "<container><rootfiles><rootfile full-path='p.xml'/></rootfiles></container>";
+    let zip = mxl_zip(&[
+        ("META-INF/container.xml", manifest.as_bytes(), false),
+        ("p.xml", PIANO, true),
+    ]);
+    assert_eq!(import(&zip, "fallback".into()).unwrap().notes.len(), 5);
+}
+
+#[test]
+fn malformed_and_unsafe_mxl_files_are_rejected() {
+    let missing_manifest = mxl_zip(&[("p.xml", PIANO, false)]);
+    assert!(import(&missing_manifest, "x".into()).is_err());
+
+    for root in [
+        "/absolute.xml",
+        "../outside.xml",
+        "sub/../outside.xml",
+        "C:/windows.xml",
+        "sub\\outside.xml",
+    ] {
+        let manifest = format!(
+            "<container><rootfiles><rootfile full-path='{root}'/></rootfiles></container>"
+        );
+        let zip = mxl_zip(&[
+            ("META-INF/container.xml", manifest.as_bytes(), false),
+            ("p.xml", PIANO, false),
+        ]);
+        assert!(import(&zip, "x".into()).is_err(), "{root}");
+    }
+
+    let alternate = ROOT.replace(
+        "application/vnd.recordare.musicxml+xml",
+        "application/pdf",
+    );
+    let wrong_type = mxl_zip(&[
+        ("META-INF/container.xml", alternate.as_bytes(), false),
+        ("scores/piano.musicxml", PIANO, false),
+    ]);
+    assert!(import(&wrong_type, "x".into()).is_err());
+
+    let missing_root = mxl_zip(&[("META-INF/container.xml", ROOT.as_bytes(), false)]);
+    assert!(import(&missing_root, "x".into()).is_err());
+
+    let duplicate = mxl_zip(&[
+        ("META-INF/container.xml", ROOT.as_bytes(), false),
+        ("META-INF/container.xml", ROOT.as_bytes(), false),
+        ("scores/piano.musicxml", PIANO, false),
+    ]);
+    assert!(import(&duplicate, "x".into()).is_err());
+
+    let mut broken_crc = mxl_zip(&[
+        ("META-INF/container.xml", ROOT.as_bytes(), false),
+        ("scores/piano.musicxml", PIANO, false),
+    ]);
+    let position = broken_crc
+        .windows(PIANO.len())
+        .position(|w| w == PIANO)
+        .unwrap();
+    broken_crc[position] ^= 1;
+    assert!(import(&broken_crc, "x".into()).is_err());
+
+    let valid = mxl_zip(&[
+        ("META-INF/container.xml", ROOT.as_bytes(), false),
+        ("scores/piano.musicxml", PIANO, true),
+    ]);
+    for end in 0..valid.len() {
+        if end % 37 == 0 {
+            assert!(import(&valid[..end], "x".into()).is_err());
+        }
+    }
+}
+
+#[test]
+fn mxl_uncompressed_size_limit_is_enforced_before_decompression() {
+    let mut zip = mxl_zip(&[
+        ("META-INF/container.xml", ROOT.as_bytes(), false),
+        ("scores/piano.musicxml", PIANO, true),
+    ]);
+    let score_directory = zip
+        .windows(4)
+        .enumerate()
+        .filter(|(_, w)| *w == b"PK\x01\x02")
+        .map(|(i, _)| i)
+        .last()
+        .unwrap();
+    zip[score_directory + 24..score_directory + 28]
+        .copy_from_slice(&(16_u32 * 1024 * 1024 + 1).to_le_bytes());
+    assert!(import(&zip, "x".into())
+        .unwrap_err()
+        .contains("size limit"));
+}
