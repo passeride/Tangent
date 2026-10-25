@@ -14,12 +14,24 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     let center_y = title_y + 18.;
     for i in 0..28 {
         let a = i as f32 * std::f32::consts::TAU / 28.;
-        d.rect(center_x + a.cos() * 14., center_y + a.sin() * 14.,
-            3., 3., t.colors[0], 2.);
+        d.rect(
+            center_x + a.cos() * 14.,
+            center_y + a.sin() * 14.,
+            3.,
+            3.,
+            t.colors[0],
+            2.,
+        );
     }
     for i in 0..11 {
-        d.rect(pad + 3. + i as f32 * 3., title_y + 32. - i as f32 * 3.,
-            4., 3., t.ink, 1.);
+        d.rect(
+            pad + 3. + i as f32 * 3.,
+            title_y + 32. - i as f32 * 3.,
+            4.,
+            3.,
+            t.ink,
+            1.,
+        );
     }
     d.text(pad + 54., title_y + 3., "TANGENT", 27., t.ink);
 
@@ -76,20 +88,47 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         d.text(pad, hero_y, "MAKE TIME FOR MUSIC", 12., t.colors[0]);
         d.text(pad, hero_y + 39., "Practice with", 40., t.ink);
         d.text(pad, hero_y + 86., "purpose.", 48., t.colors[0]);
-        d.text(pad, hero_y + 150., "Play favourites. Read notes. Explore freely.", 12., t.muted);
+        d.text(
+            pad,
+            hero_y + 150.,
+            "Play favourites. Read notes. Explore freely.",
+            12.,
+            t.muted,
+        );
 
         let card_y = hero_y + 202.;
         let card_w = (tile_x - pad - 34.).min(490.);
         d.rect(pad, card_y, card_w, 152., t.panel, 12.);
-        d.text(pad + 18., card_y + 16., "CURRENTLY LOADED", 11., t.colors[0]);
+        d.text(
+            pad + 18.,
+            card_y + 16.,
+            "CURRENTLY LOADED",
+            11.,
+            t.colors[0],
+        );
         let max_title = ((card_w - 36.) / 11.).max(8.) as usize;
         let title: String = state.song.title.chars().take(max_title).collect();
         d.text(pad + 18., card_y + 46., title, 19., t.ink);
-        d.text(pad + 18., card_y + 78.,
-            if state.midi_output.is_empty() { "Computer audio" }
-            else { "External MIDI output selected" }, 11., t.muted);
-        d.button(state, pad + 18., card_y + 108., 145., "Play loaded piece",
-            Action::StartPlay, t);
+        d.text(
+            pad + 18.,
+            card_y + 78.,
+            if state.midi_output.is_empty() {
+                "Computer audio"
+            } else {
+                "External MIDI output selected"
+            },
+            11.,
+            t.muted,
+        );
+        d.button(
+            state,
+            pad + 18.,
+            card_y + 108.,
+            145.,
+            "Play loaded piece",
+            Action::StartPlay,
+            t,
+        );
 
         let tile_y = hero_y + 9.;
         for (i, (title, subtitle, action)) in [
@@ -97,13 +136,23 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             ("Train", "Notes & chords", Action::Train),
             ("FreeForm", "Explore freely", Action::FreeForm),
             ("Library", "Find your music", Action::Library),
-        ].into_iter().enumerate() {
+        ]
+        .into_iter()
+        .enumerate()
+        {
             let x = tile_x + (i % 2) as f32 * (tile_w + gap);
             let y = tile_y + (i / 2) as f32 * (tile_h + gap);
             d.menu_tile(state, x, y, tile_w, tile_h, title, subtitle, action, t);
         }
-        d.button(state, l.width - pad - 118., title_y + 4., 118.,
-            "Settings", Action::Settings, t);
+        d.button(
+            state,
+            l.width - pad - 118.,
+            title_y + 4.,
+            118.,
+            "Settings",
+            Action::Settings,
+            t,
+        );
         return;
     }
 
