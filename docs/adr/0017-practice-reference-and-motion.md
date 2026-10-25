@@ -36,7 +36,10 @@ movement. Native Hanabi retains matching colours and a brief white attack.
 Soft/Full/Punchy scales size and reach; reduced motion suppresses bursts and rings
 on both targets while preserving static key/notation feedback. These additive
 v1 JSON preferences have explicit legacy defaults and validation tests; no SQLite
-schema migration is needed. Defaults preserve full effects and normal motion.
+schema migration is needed. Defaults preserve full effects and normal motion. Reading clef and difficulty
+are also additive preferences: starting another session preserves them while
+resetting answer/progress state. Previously those Settings controls were lost
+when entering Train. Hint visibility remains per-answer and is not saved.
 
 ## Consequences and validation
 

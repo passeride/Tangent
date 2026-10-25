@@ -246,7 +246,7 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForFunction(() => tangentDiagnostics().width === 390);
   const ui = await page.evaluate(() => tangentDiagnostics());
-  assert.equal(ui.vfx_scale, 0.65, "Mobile viewport has a bounded effect scale");
+  assert.ok(Math.abs(ui.vfx_scale - 0.65) < 1e-6, "Mobile viewport has a bounded effect scale");
   assert(
     ui.buttons.every(
       (b) =>

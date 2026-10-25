@@ -219,6 +219,8 @@ impl State {
             effects: self.effects,
             reduced_motion: self.reduced_motion,
             effect_strength: self.effect_strength,
+            practice_clef: self.practice.clef as u8,
+            practice_level: self.practice.level as u8,
             volume: self.volume,
             instrument: self.instrument,
             hear: self.hear,
@@ -233,6 +235,11 @@ impl State {
         self.effects = p.effects;
         self.reduced_motion = p.reduced_motion;
         self.effect_strength = p.effect_strength;
+        use tangent_core::practice::{Level, ReadingClef};
+        self.practice.configure(
+            [ReadingClef::Treble, ReadingClef::Bass, ReadingClef::Mixed][p.practice_clef as usize],
+            [Level::Stepwise, Level::Mixed, Level::Chromatic][p.practice_level as usize],
+        );
         self.volume = p.volume;
         self.instrument = p.instrument;
         self.hear = p.hear;
@@ -280,6 +287,15 @@ impl State {
             platform::action("off", &id);
             if self.held.is_empty() {
                 self.practice.answer(&[]);
+            } else if key.is_none() && matches!(self.mode, Mode::Notes | Mode::Chords) {
+                let held: Vec<_> = self.held.values().copied().collect();
+                if self.practice.answer(&held) {
+                    let preset = self.feedback.register(effects::Grade::Correct);
+                    self.live_bursts.push(effects::Burst {
+                        key: held[0],
+                        preset,
+                    });
+                }
             }
         }
         if let Some(key) = key {
@@ -650,5 +666,25 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
             state.status = e;
             false
         }
+    }
+}
+
+#[cfg(test)]
+mod input_tests {
+    use super::*;
+    #[test]
+    fn releasing_wrong_finger_rechecks_remaining_target() {
+        let mut s = State::new();
+        s.screen = Screen::Session;
+        s.mode = Mode::Notes;
+        s.source("wrong".into(), Some(62), 100);
+        s.source("correct".into(), Some(60), 100);
+        assert!(!s.practice.waiting_release);
+        s.source("wrong".into(), None, 0);
+        assert!(s.practice.waiting_release);
+        assert_eq!(s.feedback.streak(), 1);
+        assert_eq!(s.practice.completed, 0);
+        s.source("correct".into(), None, 0);
+        assert_eq!(s.practice.completed, 1);
     }
 }

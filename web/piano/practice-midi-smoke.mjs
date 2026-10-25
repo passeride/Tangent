@@ -92,8 +92,10 @@ try {
   await page.evaluate(()=>fakeMidi.inputs.get('p45-in').onmidimessage({data:[0x80,48,0]}));
   await page.keyboard.down('KeyS');await page.waitForFunction(()=>tangentDiagnostics().practice_wrong);
   await page.waitForFunction(()=>tangentDiagnostics().practice_played_label?.includes('2 semitones above'));
+  // Recover by lifting the wrong finger while the correct note stays down.
+  await page.keyboard.down('KeyA');
   await page.keyboard.up('KeyS');
-  await page.keyboard.down('KeyA');await page.waitForFunction(()=>tangentDiagnostics().practice_waiting_release);
+  await page.waitForFunction(()=>tangentDiagnostics().practice_waiting_release);
   assert.deepEqual((await page.evaluate(()=>tangentDiagnostics())).target,[60]);
   await page.keyboard.up('KeyA');await page.waitForFunction(()=>tangentDiagnostics().completed===1);
   assert.deepEqual((await page.evaluate(()=>tangentDiagnostics())).target,[62]);

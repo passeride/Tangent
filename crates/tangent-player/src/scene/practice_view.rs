@@ -147,23 +147,31 @@ fn staff(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme, chords
         gap * 4.,
         t.ink,
     );
-    let bottom = if bottom_step == 18 { bass } else { treble };
     let marker_x = center + (half * 0.52).min(90.);
-    for (keys, x, color) in [
-        (&targets[..], center, t.ink),
+    for (keys, x, color, target) in [
+        (&targets[..], center, t.ink, true),
         (
             &held.iter().copied().collect::<Vec<_>>()[..],
             marker_x,
             t.colors[0],
+            false,
         ),
     ] {
         for &key in keys {
             let pitch = tangent_core::notation::reading_pitch(key);
-            let y = bottom - (pitch.step - bottom_step) as f32 * gap * 0.5;
-            for step in tangent_core::notation::ledger_steps(pitch.step, bottom_step) {
+            let step_base = if target {
+                bottom_step
+            } else if key < 60 {
+                18
+            } else {
+                30
+            };
+            let bottom = if step_base == 18 { bass } else { treble };
+            let y = origin + unit(key) * gap;
+            for step in tangent_core::notation::ledger_steps(pitch.step, step_base) {
                 d.line(
                     x - gap,
-                    bottom - (step - bottom_step) as f32 * gap * 0.5,
+                    bottom - (step - step_base) as f32 * gap * 0.5,
                     gap * 2.,
                     1.,
                     color,
@@ -185,10 +193,10 @@ fn staff(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme, chords
     } else if !chords && held.len() == 1 {
         let distance = i16::from(*held.first().unwrap()) - i16::from(targets[0]);
         if distance == 0 {
-            format!("Played {played} · on target")
+            format!("Played {played} / on target")
         } else {
             format!(
-                "Played {played} · {} semitones {}",
+                "Played {played} / {} semitones {}",
                 distance.abs(),
                 if distance > 0 { "above" } else { "below" }
             )

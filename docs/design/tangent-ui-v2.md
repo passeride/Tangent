@@ -1,6 +1,6 @@
 # Tangent UI/UX v2 — screen, flow and interaction specification
 
-- **Status:** Design direction approved 2026-10-25; **initial main/pause/settings implementation in progress on this branch**. Remaining HUD and features are not implemented.
+- **Status:** Design direction approved 2026-10-25; **main/pause/settings and initial play/practice HUD implemented**. Remaining HUD and features are not implemented.
 - **Scope:** Information architecture, menus, play HUD, practice, settings, library and responsive interaction.
 - **Applies to:** One shared Bevy/wgpu UI in native desktop and web builds.
 - **Visual reference:** Interactive HTML concept reviewed in the design conversation on 2026-10-25. It is a **mockup**, not a running Tangent build, test fixture or implementation asset.
@@ -219,17 +219,17 @@ The owner has authorized initial menu implementation. Preserve working playback,
 ### Slice A — Structure and navigation
 
 - [ ] Main has a clear mode hierarchy and real-data-based Continue state.
-- [ ] Settings are grouped into named categories, accessible from Main and Pause.
-- [ ] Pause is a compact overlay with explicit Resume/Restart/Main actions.
-- [ ] From Settings, Close returns to the previous screen; if originating from a session, remain paused.
+- [x] Settings are grouped into named categories, accessible from Main and Pause.
+- [x] Pause is a compact overlay with explicit Resume/Restart/Main actions.
+- [x] From Settings, Close returns to the previous screen; if originating from a session, remain paused.
 - [ ] Existing song, exercise and library flows remain reachable by keyboard/pointer/touch.
 
 ### Slice B — Play and practice HUD
 
 - [ ] Song title/time/progress, pause and actual device status are legible without covering the music.
-- [ ] Common transport actions work without entering Settings.
+- [x] Common transport actions work without entering Settings.
 - [ ] Solid played-key and expected-key glow remain distinct in every theme, with effects on/off.
-- [ ] Train hides hints by default, shows clear correct/wrong/release feedback and advances only on release.
+- [x] Train hides hints by default, shows clear correct/wrong/release feedback and advances only on release.
 - [ ] FreeForm match labels are non-blocking and never invent confidence/recognition.
 
 ### Slice C — Preferences and robustness
@@ -244,7 +244,8 @@ The owner has authorized initial menu implementation. Preserve working playback,
 
 - [ ] Add evaluation-driven score/accuracy/streak data and results screens.
 - [ ] Add adaptive practice, goals and progress history backed by actual saved data.
-- [ ] Add effect intensity/presets, reduced-motion preference, richer accessibility.
+- [x] Effect intensity/presets and reduced-motion preference (ADR-0017).
+- [ ] Richer accessibility semantics and contrast verification.
 - [ ] Add reliable restore/import of SQLite backups, after integrity/migration handling.
 - [ ] Add truly supported HUD speed/tempo controls and verified recognition confidence.
 
@@ -259,3 +260,11 @@ The owner has authorized initial menu implementation. Preserve working playback,
 ## Verification of documentation
 
 Review the Main -> Library/Train/FreeForm/Play -> Pause -> Settings -> Pause -> Resume navigation described above, check the distinction between implemented and proposed options against the linked ADRs, and confirm that the draft stays within the single-Bevy-surface requirement. UI behavior tests and visual screenshots belong to the later implementation branch.
+
+## Integration update — 2026-10-25
+
+Play now has a compact transport/title/time HUD. Menus support Tab/Shift+Tab,
+visible focus and Enter activation. Practice supports optional target audio, exact
+coloured live staff pointers and persisted clef/difficulty. Effects have persistent
+intensity and reduced motion. Full screen-reader semantics, calibrated scores and
+the remaining unchecked items are still follow-up work.

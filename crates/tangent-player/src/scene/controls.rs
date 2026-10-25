@@ -236,7 +236,9 @@ fn activate(state: &mut State, action: Action, shift: bool) {
                 Action::TrainChords => Mode::Chords,
                 _ => Mode::Play,
             };
+            let (clef, level) = (state.practice.clef, state.practice.level);
             state.practice = tangent_core::practice::Practice::new(state.mode == Mode::Chords);
+            state.practice.configure(clef, level);
             state.particles.clear();
             state.live_bursts.clear();
         }

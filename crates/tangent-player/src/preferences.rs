@@ -10,6 +10,10 @@ pub struct Preferences {
     pub reduced_motion: bool,
     #[serde(default = "default_effect_strength")]
     pub effect_strength: u8,
+    #[serde(default)]
+    pub practice_clef: u8,
+    #[serde(default)]
+    pub practice_level: u8,
     pub volume: f32,
     pub instrument: usize,
     pub hear: bool,
@@ -27,7 +31,13 @@ impl Preferences {
         if self.version != 1 {
             return Err("Unsupported settings version");
         }
-        if self.view > 3 || self.theme > 2 || self.instrument > 1 || self.effect_strength > 2 {
+        if self.view > 3
+            || self.theme > 2
+            || self.instrument > 1
+            || self.effect_strength > 2
+            || self.practice_clef > 2
+            || self.practice_level > 2
+        {
             return Err("Invalid settings choice");
         }
         if !self.volume.is_finite() || !(0. ..=1.).contains(&self.volume) {
@@ -58,6 +68,8 @@ mod tests {
             effects: false,
             reduced_motion: false,
             effect_strength: 1,
+            practice_clef: 0,
+            practice_level: 0,
             volume: 0.25,
             instrument: 1,
             hear: false,
@@ -82,8 +94,18 @@ mod tests {
         assert_eq!(old.midi_output_name, None);
         assert!(!old.reduced_motion);
         assert_eq!(old.effect_strength, 1);
+        assert_eq!(old.practice_clef, 0);
+        assert_eq!(old.practice_level, 0);
         assert!(old.validate().is_ok());
         for bad in [
+            Preferences {
+                practice_clef: 3,
+                ..settings()
+            },
+            Preferences {
+                practice_level: 3,
+                ..settings()
+            },
             Preferences {
                 effect_strength: 3,
                 ..settings()

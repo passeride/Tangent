@@ -169,7 +169,9 @@ impl Practice {
             self.wrong = false;
             true
         } else {
-            self.wrong = true;
+            // A chord can be assembled one finger at a time. A subset of
+            // the expected pitch classes is incomplete, not an error.
+            self.wrong = actual.iter().any(|key| !expected.contains(key));
             false
         }
     }
@@ -193,6 +195,7 @@ mod tests {
             ..Default::default()
         };
         assert!(!p.answer(&[60, 64]));
+        assert!(!p.wrong);
         assert!(!p.answer(&[60, 64, 67, 70]));
         assert!(p.answer(&[64, 67, 72]));
         p.answer(&[]);

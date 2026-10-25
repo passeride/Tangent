@@ -31,11 +31,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     let streak = state.feedback.streak();
     let detail = if l.width > 650. && streak >= 2 {
         format!(
-            "{detail}  ·  {output}  ·  {streak} streak (best {})",
+            "{detail}  /  {output}  /  {streak} streak (best {})",
             state.feedback.best()
         )
     } else {
-        format!("{detail}  ·  {output}")
+        format!("{detail}  /  {output}")
     };
     d.text(x, 31., detail, 11., t.muted);
 }
