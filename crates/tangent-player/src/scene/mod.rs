@@ -62,6 +62,7 @@ pub struct State {
     previous: BTreeSet<usize>,
     live_bursts: Vec<u8>,
     recognition_notes: Vec<(u64, u8)>,
+    recognition_status: String,
     recognition_ticket: u64,
     last_recognition_query: u64,
     particles: Vec<Particle>,
@@ -107,6 +108,7 @@ impl State {
             previous: BTreeSet::new(),
             live_bursts: vec![],
             recognition_notes: vec![],
+            recognition_status: String::new(),
             recognition_ticket: 0,
             last_recognition_query: 0,
             particles: vec![],
@@ -216,6 +218,7 @@ impl State {
         self.practice.answer(&[]);
         self.live_bursts.clear();
         self.recognition_notes.clear();
+        self.recognition_status.clear();
         self.recognition_ticket += 1;
         self.transport.playing = false;
         platform::action("panic", "");
@@ -332,7 +335,7 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
                     let ambiguous = matches.get(1).is_some_and(|next|
                         (best.similarity - next.similarity) < 0.08
                         && best.song_id != next.song_id);
-                    state.status = format!(
+                    state.recognition_status = format!(
                         "{}: {} · {:.0}% interval similarity · note {}",
                         if ambiguous { "Possible match" } else { "Recognized" },
                         best.title, best.similarity * 100., best.note_index + 1
