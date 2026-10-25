@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { chromium } from "playwright";
 import { serve, ready, click, gpuArgs } from "./browser-helpers.mjs";
 const server = await serve(new URL("./", import.meta.url).pathname);
-const browser = await chromium.launch({ headless: true, args: gpuArgs });
+const profile = await mkdtemp(join(tmpdir(), "tangent-library-"));
+let context;
 try {
-  const page = await browser.newPage({ viewport: { width: 1100, height: 800 } });
+  context = await chromium.launchPersistentContext(profile, { headless: true, args: gpuArgs, viewport: { width: 1100, height: 800 } });
+  let page = await context.newPage();
   await ready(page, server.url);
   await click(page, "library");
   await page.waitForFunction(() => tangentDiagnostics().screen === "Library");
@@ -13,7 +17,10 @@ try {
   const buffer = await readFile(new URL("samples/first-light.musicxml", import.meta.url));
   await page.locator("#midi-file").setInputFiles({ name: "library-fixture.musicxml", mimeType: "application/xml", buffer });
   await page.waitForFunction(() => tangentDiagnostics().buttons.some(b => b.id === "library-open"));
-  await page.reload(); await ready(page, server.url);
+  await context.close();
+  context = await chromium.launchPersistentContext(profile, { headless: true, args: gpuArgs, viewport: { width: 1100, height: 800 } });
+  page = await context.newPage();
+  await ready(page, server.url);
   await click(page, "library");
   await click(page, "library-open");
   await page.waitForFunction(() => tangentDiagnostics().screen === "Session" && tangentDiagnostics().title === "First light");
@@ -24,4 +31,4 @@ try {
   await click(page, "library-remove");
   await page.waitForFunction(() => !tangentDiagnostics().buttons.some(b => b.id === "library-open"));
   console.log("Library browser passed: import, durable reload, reopen and confirmed deletion in Bevy UI.");
-} finally { await browser.close(); await server.close(); }
+} finally { await context?.close(); await server.close(); await rm(profile, { recursive: true, force: true }); }

@@ -40,3 +40,13 @@ assert.equal(old.exec("SELECT title FROM fingerprint_songs")[0].values[0][0], "P
 assert.equal(old.exec("PRAGMA user_version")[0].values[0][0], 3);
 old.close();
 console.log("Library SQLite passed: v2 migration, deduplication, original bytes, pagination, export/reopen, delete and input bounds.");
+
+const limited = new SQL.Database(); migrate(limited);
+for (let n = 0; n < libraryLimits.songs; n++)
+  saveLibrarySong(limited, n.toString(16).padStart(64, "0"), source, metadata);
+assert.throws(() => saveLibrarySong(limited, "f".repeat(64), source, metadata), /Library limit reached/);
+assert.equal(listLibrary(limited).total, libraryLimits.songs);
+// A duplicate remains idempotent even when the catalog is full.
+saveLibrarySong(limited, "0".repeat(64), source, metadata);
+assert.equal(listLibrary(limited).total, libraryLimits.songs);
+limited.close();

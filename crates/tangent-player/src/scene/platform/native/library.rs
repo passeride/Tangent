@@ -92,13 +92,24 @@ mod tests {
     use super::*;
     #[test]
     fn source_survives_reopen_and_can_be_imported_again() {
-        let conn = Connection::open_in_memory().unwrap();
+        let path = std::env::temp_dir().join(format!(
+            "tangent-library-{}-{}.sqlite",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let conn = Connection::open(&path).unwrap();
         super::super::migrate(&conn).unwrap();
         let bytes = include_bytes!("../../../../../../web/piano/samples/first-light.musicxml");
         let song = crate::import::song(bytes, "Study".into()).unwrap();
         let meta = serde_json::to_string(&ImportMetadata::from_song(&song, bytes)).unwrap();
         save(&conn, bytes, &meta).unwrap();
         save(&conn, bytes, &meta).unwrap();
+        drop(conn);
+        let conn = Connection::open(&path).unwrap();
+        super::super::migrate(&conn).unwrap();
         let page = list(&conn, &json!({"ticket":1})).unwrap();
         assert_eq!(page["total"], 1);
         let id = page["items"][0]["id"].as_str().unwrap();
@@ -111,5 +122,7 @@ mod tests {
         remove(&conn, id).unwrap();
         assert!(open(&conn, id).is_err());
         assert_eq!(list(&conn, &json!({})).unwrap()["total"], 0);
+        drop(conn);
+        std::fs::remove_file(path).unwrap();
     }
 }
