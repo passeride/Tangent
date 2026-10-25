@@ -72,6 +72,7 @@ pub struct State {
     held: BTreeMap<String, u8>,
     previous: BTreeSet<usize>,
     live_bursts: Vec<effects::Burst>,
+    #[cfg(not(target_arch = "wasm32"))]
     gpu_bursts: Vec<effects::ScreenBurst>,
     feedback: effects::Feedback,
     recognition_notes: Vec<(u64, u8)>,
@@ -123,6 +124,7 @@ impl State {
             held: BTreeMap::new(),
             previous: BTreeSet::new(),
             live_bursts: vec![],
+            #[cfg(not(target_arch = "wasm32"))]
             gpu_bursts: vec![],
             feedback: effects::Feedback::default(),
             recognition_notes: vec![],
@@ -257,6 +259,7 @@ impl State {
         self.held.clear();
         self.practice.answer(&[]);
         self.live_bursts.clear();
+        #[cfg(not(target_arch = "wasm32"))]
         self.gpu_bursts.clear();
         self.feedback.reset();
         self.recognition_notes.clear();
@@ -493,6 +496,7 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
             platform::action("song", &serde_json::to_string(&state.song).unwrap());
             state.previous.clear();
             state.particles.clear();
+            #[cfg(not(target_arch = "wasm32"))]
             state.gpu_bursts.clear();
             state.feedback.reset();
             state.sync();
