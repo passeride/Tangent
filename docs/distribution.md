@@ -23,18 +23,19 @@ Extract the artifact ZIP, then extract the platform archive inside it.
 | macOS Intel | `Tangent-x86_64-apple-darwin` | `Tangent.app` |
 | macOS Apple Silicon | `Tangent-aarch64-apple-darwin` | `Tangent.app` |
 
-The launcher contains the web app and WASM, starts a read-only server at
-**127.0.0.1:38765**, and opens your default browser. It works without a network
-connection, Python, Node or Rust installed. A browser remains required. This is
-packaging for the current browser adapter, not a native Bevy GPU/audio build.
-There are no Android/iOS app packages; use the web version on those devices.
+The desktop executable runs a **native Bevy/wgpu window**, with native OS MIDI
+inputs (midir), an audio device mixer (rodio), and a local bundled SQLite database.
+It does not launch a browser or a local HTTP server, and does not need Node,
+Python or Rust installed. Web and desktop share the same Bevy scene and piano core.
+There are no Android/iOS desktop packages; use the web version there.
 
-Keep the launcher running while using the app. On Windows/Linux, close its console
-or press Ctrl+C to stop. On macOS the .app launches in the background; to stop it,
-quit the Tangent process in Activity Monitor, or run
-`Tangent.app/Contents/MacOS/Tangent` from Terminal and stop with Ctrl+C.
-Builds are currently unsigned and macOS builds are not notarized. OS launch checks
-may therefore require a local owner decision. No signing secrets are configured.
+Close the native window to exit Tangent. Desktop playback uses a lightweight
+harmonic instrument; web sample/audio synthesis and native synthesis are not
+yet identical. On Linux, Ctrl+O uses the system `zenity` file picker if installed.
+Windows uses a PowerShell file picker and macOS the system Open panel via AppleScript.
+MIDI input ports are enumerated on launch; Ctrl+M rescans. Actual hardware
+latency and device hot-plugging still need physical testing. Desktop binaries are
+unsigned and macOS is not notarized; OS launch checks may require owner approval.
 SHA-256 checksum files accompany every archive.
 
 ## Included music
@@ -47,26 +48,39 @@ study is CC0 1.0; provenance and the full dedication ship in `samples/`. Bravura
 SIL OFL font notice is embedded in the distribution. The prior MIDI sample has
 been retired (historical record: `docs/retired-midi-sample.md`).
 
-## Build the same package locally
+## Build the native app locally
 
 ```sh
-cargo build -p tangent-player --target wasm32-unknown-unknown --release --locked
-wasm-bindgen target/wasm32-unknown-unknown/release/tangent_player.wasm --target web --out-dir web/piano/pkg
-python3 scripts/package_web.py
-TANGENT_WEB_DIST="$PWD/dist/piano" cargo build -p tangent-desktop --release --locked
+cargo build -p tangent-desktop --release
+cargo run -p tangent-desktop --release
 python3 scripts/smoke_desktop.py target/release/tangent
 ```
 
-The environment assignment shown is for POSIX shells. In PowerShell set
-`$env:TANGENT_WEB_DIST = "$PWD/dist/piano"` before Cargo, and test `tangent.exe`.
-Builds without that environment variable support workspace checking/tests but
-produce a launcher that explicitly reports missing packaged assets at startup.
-Production packaging refuses a missing WASM or test-music asset.
+On Windows use `target/release/tangent.exe`. Bevy initializes the platform
+graphics backend directly (DX12/Vulkan/Metal), not WebGL or a browser canvas.
 
-## Persistent origin and SQLite
+## Local SQLite and native performance
 
-The launcher now uses `http://127.0.0.1:38765/` on each start to retain browser
-storage. Close the previous launcher before starting another. `TANGENT_PORT` can
-select another port; `0` selects a temporary port and therefore a new storage
-origin. The browser-local SQLite database can be downloaded via Settings → Export
-database. Pages and launcher data are separate. See ADR-0009.
+Desktop settings, practice sessions and future score tables use the schema from
+ADR-0009 in a native `tangent.sqlite` file under the user application data
+folder: `%LOCALAPPDATA%/Tangent` on Windows, `~/Library/Application Support/Tangent`
+on macOS and `$XDG_DATA_HOME/tangent` (default `~/.local/share/tangent`)
+on Linux. Settings → Export database creates a timestamped SQLite backup in
+`~/Downloads` (or the Windows user's Downloads folder).
+
+The native audio/MIDI/SQLite worker uses a separate thread; file bytes do not
+travel through JSON. The render thread reuses the same Bevy entity pools as
+the browser player. The native audio scheduler uses a 32ms lookahead and a
+64-voice ceiling. This is a performance-focused first desktop implementation,
+not a claim of measured latency. Tune buffers and voices after device benchmarks.
+
+Web storage remains browser-local and separate from native storage.
+
+### Review regression checks
+
+- Hold notes, rescan MIDI with Ctrl+M, release and play again. Held notes must
+  clear, and exclusive Windows MIDI ports must reopen without restarting.
+- Adjust volume while a note sounds, then play another note at the same velocity.
+  Existing and new voices must use the same volume scale.
+- Native imports enforce the 16 MiB limit on bytes read as well as metadata;
+  automated tests exercise an unbounded input reader without opening devices.

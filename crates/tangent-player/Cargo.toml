@@ -13,6 +13,13 @@ serde.workspace = true
 serde_json.workspace = true
 bevy_app = { version = "=0.20.0", default-features = false, features = ["std"] }
 bevy_ecs = { version = "=0.20.0", default-features = false, features = ["std"] }
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# Native GPU: the same Bevy scene, not a web view.
+bevy = { version = "=0.20.0", default-features = false, features = ["std", "default_app", "ui_bevy_render", "bevy_winit", "default_font", "x11", "wayland", "multi_threaded"] }
+rodio = { version = "=0.22.2", default-features = false, features = ["playback"] }
+midir = "=0.11.0"
+blake3 = "=1.8.7"
+rusqlite = { version = "=0.40.2", features = ["bundled"] }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen.workspace = true
 bevy = { version = "=0.20.0", default-features = false, features = ["std", "default_app", "ui_bevy_render", "bevy_winit", "default_font", "webgl2", "web"] }
