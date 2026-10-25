@@ -1,6 +1,6 @@
 # Tangent
 
-Piano practice, note reading and MIDI performance, built around **Bevy** with
+Piano practice, note reading and music playback, built around **Bevy** with
 **web as a first-class deployment target**.
 
 Tangent is a new project with its own repository and history. The goal is an
@@ -13,9 +13,13 @@ without importing Neothesia or code from its forks.
 [Run/build guide](docs/distribution.md)
 
 The browser link becomes available after the first successful Pages deployment.
-Click **Try Bach**, then **Play**, to test the included Prelude BWV 924a.
+Open the corner gear, choose **Try Bach**, then **Resume**, to test the included Prelude BWV 924a.
 MIDI typesetting by **jeff covey / Mutopia**, **CC BY-SA 3.0**;
 [source, attribution and license](web/piano/samples/ATTRIBUTION.md).
+
+During play, only the corner gear and timeline remain; the pause screen contains
+transport, volume, file import, fullscreen and every setting. Opening it stops
+playback and releases live notes; returning leaves playback paused until Resume.
 
 ## Screenshots
 
@@ -29,6 +33,8 @@ original demonstration study. These are app screenshots, not design mockups.
 | ![Staff lanes](docs/screenshots/piano-staff.png) | ![Falling notes](docs/screenshots/piano-notes.png) |
 
 ![Stationary sheet reading view with a moving playhead](docs/screenshots/piano-score.png)
+
+![Pause menu with all settings](docs/screenshots/piano-pause.png)
 
 Reproduce with `node web/piano/capture.mjs` after building the WASM package.
 
@@ -53,7 +59,8 @@ See [piano build/run/test instructions](docs/piano-player.md) and the
 has not been verified with a physical device. Desktop launchers package this
 browser player. All player controls and visualizations render inside the Bevy GPU
 canvas.
-Native OS windows/audio, persistent library and MusicXML import remain future work.
+Uncompressed partwise MusicXML import is available as an [explicit subset](docs/musicxml-import.md).
+Native OS windows/audio and persistent library remain future work.
 
 The implementation is not certified as a completed clean room process. Prior
 source exposure remains documented in [PROVENANCE.md](PROVENANCE.md).
@@ -135,8 +142,8 @@ require their own records when introduced.
 | Seek backward / forward | Left / Right (5s), Shift for 15s |
 | Volume down / up | Down / Up (5%) |
 | Beginning / end | Home / End |
-| Fullscreen | F11 or the in-engine Full button |
-| Settings and all shortcuts | F1; Esc closes |
+| Fullscreen | F11 or Full screen in the pause menu |
+| Pause menu and settings | Corner gear, Esc or F1; Space resumes |
 | View / theme / piano / range | V / B / X / R |
 | Song audio / particles | M / P |
 | Import / Bach sample / MIDI | Ctrl+O / Ctrl+B / Ctrl+M |

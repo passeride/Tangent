@@ -1,3 +1,11 @@
+/// Detect the format from bytes, never a filename extension.
+pub fn song(bytes: &[u8], title: String) -> Result<tangent_core::music::Song, String> {
+    if bytes.starts_with(b"MThd") {
+        midi(bytes, title)
+    } else {
+        tangent_musicxml::import(bytes, title)
+    }
+}
 use tangent_core::music::*;
 use tangent_midi::{ChannelMessage as M, EventKind};
 /// MIDI is one source adapter. The application Song has no MIDI header/ticks.

@@ -161,14 +161,18 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
                             .collect()
                     })
                     .unwrap_or_default();
-                match import::midi(&bytes, m["title"].as_str().unwrap_or("MIDI").into()) {
+                match import::song(&bytes, m["title"].as_str().unwrap_or("MIDI").into()) {
                     Ok(song) => {
                         state.panic();
                         state.transport = Transport {
                             duration_us: song.duration_us,
                             ..default()
                         };
-                        state.status = format!("{} notes loaded. Space: play", song.notes.len());
+                        state.status = format!(
+                            "{} notes loaded. {}",
+                            song.notes.len(),
+                            song.warnings.join(" ")
+                        );
                         state.song = song;
                         platform::action("song", &serde_json::to_string(&state.song).unwrap());
                         state.previous.clear();
@@ -180,7 +184,7 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
             }
             "note" => {
                 let id = m["id"].as_str().unwrap_or("midi").to_string();
-                let key = if m["down"].as_bool() == Some(true) {
+                let key = if !state.help && m["down"].as_bool() == Some(true) {
                     m["key"].as_u64().filter(|k| *k < 128).map(|k| k as u8)
                 } else {
                     None

@@ -8,6 +8,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 tangent-core = { path = "../tangent-core" }
 tangent-midi.workspace = true
+tangent-musicxml = { path = "../tangent-musicxml" }
 serde.workspace = true
 serde_json.workspace = true
 bevy_app = { version = "=0.20.0", default-features = false, features = ["std"] }

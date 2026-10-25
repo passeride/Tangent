@@ -49,6 +49,9 @@ export async function ready(page, url) {
   await page.waitForTimeout(500);
 }
 export async function click(page, id) {
+  await page.waitForFunction(
+    id => tangentDiagnostics()?.buttons.some(b => b.id === id), id,
+  );
   const b = await page.evaluate(
     (id) => tangentDiagnostics().buttons.find((b) => b.id === id),
     id,

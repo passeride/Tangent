@@ -58,7 +58,10 @@ impl Player {
         }
     }
     pub fn load_midi(&mut self, bytes: &[u8], title: String) -> Result<String, String> {
-        let song = import::midi(bytes, title)?;
+        self.load_music(bytes, title)
+    }
+    pub fn load_music(&mut self, bytes: &[u8], title: String) -> Result<String, String> {
+        let song = import::song(bytes, title)?;
         let json = serde_json::to_string(&song).unwrap();
         let transport = Transport {
             duration_us: song.duration_us,
@@ -147,6 +150,24 @@ mod tests {
         p.set_playing(false);
         let f: serde_json::Value = serde_json::from_str(&p.frame(900_000.0)).unwrap();
         assert_eq!(f["position_us"], 2_100_000);
+    }
+    #[test]
+    fn musicxml_uses_the_same_song_and_playback_boundary() {
+        let mut p = Player::new();
+        let song = p
+            .load_music(
+                include_bytes!("../../tangent-musicxml/tests/fixtures/piano.musicxml"),
+                "XML".into(),
+            )
+            .unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&song).unwrap();
+        assert_eq!(parsed["notes"].as_array().unwrap().len(), 5);
+        assert!(parsed["notation"].is_object());
+        p.set_playing(true);
+        let frame: serde_json::Value = serde_json::from_str(&p.frame(1_000_000.)).unwrap();
+        assert_eq!(frame["position_us"], 1_000_000);
+        assert!(p.load_music(b"<broken>", "bad".into()).is_err());
+        assert_eq!(p.song_json(), song);
     }
     #[test]
     fn failed_import_preserves_loaded_song() {

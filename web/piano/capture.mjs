@@ -1,5 +1,5 @@
 import { chromium } from "playwright";
-import { serve, ready, gpuArgs } from "./browser-helpers.mjs";
+import { serve, ready, click, gpuArgs } from "./browser-helpers.mjs";
 const server = await serve(new URL("./", import.meta.url).pathname);
 let browser;
 try {
@@ -18,7 +18,10 @@ try {
     });
     await page.keyboard.press("KeyV");
   }
-  console.log("Captured four real Bevy/wgpu screens.");
+  await click(page, "help");
+  await page.waitForTimeout(150);
+  await page.screenshot({ path: new URL("../../docs/screenshots/piano-pause.png", import.meta.url).pathname });
+  console.log("Captured five real Bevy/wgpu screens.");
 } finally {
   await browser?.close();
   await server.close();

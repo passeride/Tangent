@@ -24,8 +24,8 @@ this file tracks the remaining work, not an authorization gate.
 
 ## Reading views
 
-- Import MusicXML into authored score/measure/voice/spelling models, linking written
-  notes to performance IDs. MIDI must continue to work without invented spelling.
+- Expand the initial MusicXML subset (see below). MIDI must continue to work
+  without invented spelling.
 - Add a notation renderer/layout boundary for rests, key/time signatures, beams,
   tuplets, ties across pages, stem direction, collisions and accidental context.
 - Improve narrow-screen score density and auto-follow paging. The current sheet
@@ -40,3 +40,12 @@ this file tracks the remaining work, not an authorization gate.
   renderers or the import parser. Add their own requirements/ADRs before rules.
 - Add full reduced-motion preferences, contrast checks and accessible Bevy UI semantics for
   note/event information. Effects can already be disabled manually.
+
+## MusicXML follow-up (ADR-0006)
+
+- [x] Uncompressed partwise adapter, rational rhythm, voices/staves, sound ties/tempo.
+- [ ] Bounded compressed MXL support through META-INF/container.xml.
+- [ ] Retain key/time/clef changes, written rhythm types/dots/tuplets and engraving detail.
+- [ ] Full authored score layout, rests/tie graphics and score-position mapping.
+- [ ] Repeat/navigation expansion and dynamics/pedal/articulation playback.
+- [ ] Broader exporter fixtures/interoperability.

@@ -48,6 +48,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
     let step = if shift { 15_000_000 } else { 5_000_000 };
     match action {
         Action::Play => {
+            state.help = false;
             if state.transport.position_us >= state.transport.duration_us {
                 state.transport.seek(0);
             }
@@ -107,9 +108,24 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             }
             .unwrap()
         }
-        Action::Help => state.help = !state.help,
-        Action::Import => platform::action("import", ""),
-        Action::Sample => platform::action("sample", ""),
+        Action::Help => {
+            state.help = !state.help;
+            if state.help {
+                state.panic();
+            }
+        }
+        Action::Import | Action::Sample => {
+            state.help = true;
+            state.panic();
+            platform::action(
+                if matches!(action, Action::Import) {
+                    "import"
+                } else {
+                    "sample"
+                },
+                "",
+            );
+        }
         Action::Midi => platform::action("midi", ""),
         Action::Credits => platform::action("credits", ""),
     }
@@ -174,7 +190,7 @@ pub fn input(
         }
     }
     if keys.just_pressed(KeyCode::Escape) {
-        state.help = false;
+        activate(&mut state, Action::Help, false);
     }
     state.arrow_repeat -= time.delta_secs();
     for (key, action) in [

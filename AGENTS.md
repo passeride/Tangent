@@ -7,7 +7,7 @@ Desktop launcher packaging and Pages deployment are described in
 `docs/distribution.md` and ADR-0004. Keep the distinction between a browser-backed
 launcher and native rendering/audio explicit.
 Read `docs/piano-player.md` and ADR-0005 for the actual delivered boundaries;
-native windows/audio and authored-score import remain future work. Read ADR-0005:
+native windows/audio remain future work; see ADR-0006 for the MusicXML subset. Read ADR-0005:
 all application controls and visuals must remain inside the single Bevy canvas.
 
 ## Read first

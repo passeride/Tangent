@@ -20,18 +20,17 @@ pub struct Layout {
     pub unit: f32,
     pub margin: f32,
     pub progress: Rect,
-    pub compact: bool,
 }
 impl Layout {
     pub fn new(width: f32, height: f32, piano: &PianoLayout) -> Self {
         let compact = width < 760.;
-        let top = if compact { 148. } else { 132. };
+        let top = 60.;
         let short = height < 500.;
         let key_h = (height * 0.2).clamp(
             if short { 48. } else { 65. },
             if short { 80. } else { 130. },
         );
-        let strike = (height - if short { 80. } else { 100. } - key_h).max(top + 20.);
+        let strike = (height - 34. - key_h).max(top + 20.);
         let margin = if compact { 10. } else { 28. };
         Self {
             width,
@@ -41,12 +40,11 @@ impl Layout {
             key_h,
             unit: (width - 2. * margin) / piano.white_count as f32,
             margin,
-            compact,
             progress: Rect {
                 x: margin,
-                y: strike + key_h + 14.,
+                y: strike + key_h + 12.,
                 w: width - 2. * margin,
-                h: 14.,
+                h: 10.,
             },
         }
     }

@@ -95,3 +95,11 @@ Independent Bevy 0.20 registry source/API and official examples were consulted;
 no excluded legacy source/assets were consulted. Dependencies/notices were
 regenerated; Bevy's embedded Fira Mono subset adds a separately recorded SIL OFL
 font attribution/license. Screenshots are actual new-app captures.
+
+## MusicXML and pause menu — 2026-10-25
+
+Original MusicXML adapter and synthetic XML fixtures were authored for Tangent
+using W3C MusicXML 4.0 as the public reference, without consulting excluded legacy
+source. roxmltree 0.20.0 comes from crates.io (MIT OR Apache-2.0). The pause gear
+uses original Bevy geometry, no imported icon/font asset. Prior exposure above
+remains disclosed. ADR-0006 records the delivered subset and remaining work.

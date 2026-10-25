@@ -37,7 +37,7 @@ mod tests {
 }
 
 /// Optional authored notation; independent from absolute performance time.
-/// No importer supplies this yet. MIDI projections use ReadingPitch instead.
+/// MusicXML supplies this; MIDI projections use ReadingPitch instead.
 #[derive(Debug, Clone, Serialize)]
 pub struct NotatedScore {
     pub staves: Vec<NotatedStaff>,

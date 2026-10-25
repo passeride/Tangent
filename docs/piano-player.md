@@ -35,8 +35,8 @@ static app and generated WASM; serve it over HTTP rather than opening file URLs.
 - Percussion channels are silent and omitted from the piano render window.
 
 Imported MIDI is a **performance**, not authored notation. Sharp spelling and
-symbol duration categories are approximate; no MusicXML parser or full score
-engraver is implemented. Program changes are retained in the performance stream
+symbol duration categories are approximate. MusicXML now has an explicit initial
+import subset; a full score engraver is not implemented. Program changes are retained in the performance stream
 but all melodic channels use the selected piano. Pressure, SysEx, bank/program
 instruments, RPN tuning/bend-range changes and pedal-aware scoring are not rendered.
 Seeking re-attacks currently sounding voices with fresh envelopes. The 100 ms
@@ -97,3 +97,11 @@ HTML controls, OS file chooser and black-key pointer input are included.
 The bootstrap probes WebGL2 on a detached canvas before initializing Bevy, and
 reports asynchronous renderer failures. A browser test simulates unavailable
 WebGL2 and verifies a visible explanation instead of an endless loading screen.
+
+## Pause screen and MusicXML
+
+The corner gear, Esc or F1 opens a pause screen and stops song/live sound.
+All settings, import/sample, transport, volume, fullscreen and MIDI controls are
+inside that screen. Space resumes and closes it; Return/Esc/F1 closes it while
+remaining paused. Playing shows only a gear and the timeline, with shortcuts
+available. See [MusicXML import](musicxml-import.md) for the new authored subset.

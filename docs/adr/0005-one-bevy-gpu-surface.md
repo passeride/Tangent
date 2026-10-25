@@ -51,6 +51,11 @@ up/down ±5% volume; Home/End; F11 fullscreen; V view; B theme; M song sound;
 P particles; X piano profile; R visible range; F1 settings/help; Esc close settings;
 Ctrl+O import, Ctrl+B sample, Ctrl+M MIDI. A/W/S/E/.../K remain piano keys.
 
+UI refinement 2026-10-25: all controls/settings are now in a pause screen opened
+by the corner gear, Esc or F1. Opening it pauses transport and releases voices.
+Space resumes and closes it; closing via Esc/F1/Return leaves transport paused.
+The playing surface retains only the gear, notes, piano and seek timeline.
+
 Bevy is a wasm-target dependency here, so the browser-backed desktop launchers
 continue embedding this same tested application without linking native GPU/audio
 libraries. Native Bevy windows/audio are a distinct future adapter.

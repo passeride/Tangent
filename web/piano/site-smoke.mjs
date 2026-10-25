@@ -9,6 +9,7 @@ try {
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await ready(page, server.url);
+  await click(page, "help");
   await click(page, "sample");
   await page.waitForFunction(() => tangentDiagnostics().notes === 228);
   await page.keyboard.press("Space");

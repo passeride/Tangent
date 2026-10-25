@@ -1,6 +1,6 @@
 # Third-party dependencies
 
-Generated from Cargo metadata/lockfiles on 2026-10-24. Includes resolved target/build dependencies; this is not a claim that each is linked into every target. The project-wide license remains unselected.
+Generated from Cargo metadata/lockfiles on 2026-10-25. Includes resolved target/build dependencies; this is not a claim that each is linked into every target. The project-wide license remains unselected.
 
 The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web Audio. Native launchers embed that same web distribution. The pure music/import crates remain independent of rendering. Bevy renderer dependencies are scoped to wasm32.
 
@@ -365,6 +365,7 @@ The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web
 | renderdoc-sys | 1.1.0 | MIT OR Apache-2.0 | https://github.com/ebkalderon/renderdoc-rs |
 | rodio | 0.22.2 | MIT OR Apache-2.0 | https://github.com/RustAudio/rodio |
 | ron | 0.12.2 | MIT OR Apache-2.0 | https://github.com/ron-rs/ron |
+| roxmltree | 0.20.0 | MIT OR Apache-2.0 | https://github.com/RazrFalcon/roxmltree |
 | rustc-hash | 1.1.0 | Apache-2.0/MIT | https://github.com/rust-lang-nursery/rustc-hash |
 | rustc-hash | 2.1.3 | Apache-2.0 OR MIT | https://github.com/rust-lang/rustc-hash |
 | rustc_version | 0.4.1 | MIT OR Apache-2.0 | https://github.com/djc/rustc-version-rs |

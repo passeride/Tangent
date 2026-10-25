@@ -22,3 +22,5 @@ GitHub without a documentation server. No docs framework is required yet.
 - [Follow-up work](TODO.md): implementation and architecture backlog.
 
 - [Distribution](distribution.md): web hosting, platform downloads and local launchers.
+
+- [MusicXML import subset](musicxml-import.md)

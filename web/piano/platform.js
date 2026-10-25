@@ -45,7 +45,7 @@ export function installPlatform() {
   async function load(bytes, title, ticket) {
     if (ticket !== generation) return;
     if (bytes.length > 16 * 1024 * 1024)
-      throw Error("MIDI files must be 16 MiB or smaller.");
+      throw Error("Music files must be 16 MiB or smaller.");
     queue.push({ type: "file", bytes: [...bytes], title });
   }
   file.onchange = async () => {
@@ -54,10 +54,10 @@ export function installPlatform() {
     if (!selected) return;
     try {
       if (selected.size > 16 * 1024 * 1024)
-        throw Error("MIDI files must be 16 MiB or smaller.");
+        throw Error("Music files must be 16 MiB or smaller.");
       await load(
         new Uint8Array(await selected.arrayBuffer()),
-        selected.name.replace(/\.midi?$/i, ""),
+        selected.name.replace(/\.(midi?|musicxml|xml)$/i, ""),
         ticket,
       );
     } catch (e) {

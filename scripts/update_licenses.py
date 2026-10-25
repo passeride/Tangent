@@ -6,7 +6,7 @@ import subprocess
 root = pathlib.Path(__file__).resolve().parents[1]
 metadata = json.loads(subprocess.check_output(['cargo', 'metadata', '--format-version', '1', '--locked'], cwd=root))
 packages = sorted((p for p in metadata['packages'] if p['source']), key=lambda p:(p['name'],p['version']))
-lines = ['# Third-party dependencies', '', 'Generated from Cargo metadata/lockfiles on 2026-10-24. Includes resolved target/build dependencies; this is not a claim that each is linked into every target. The project-wide license remains unselected.', '', 'The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web Audio. Native launchers embed that same web distribution. The pure music/import crates remain independent of rendering. Bevy renderer dependencies are scoped to wasm32.', '', '| Package | Version | Declared license | Original source |', '| --- | --- | --- | --- |']
+lines = ['# Third-party dependencies', '', 'Generated from Cargo metadata/lockfiles on 2026-10-25. Includes resolved target/build dependencies; this is not a claim that each is linked into every target. The project-wide license remains unselected.', '', 'The web player uses Bevy 0.20 UI/wgpu with the WebGL2 backend. Audio remains Web Audio. Native launchers embed that same web distribution. The pure music/import crates remain independent of rendering. Bevy renderer dependencies are scoped to wasm32.', '', '| Package | Version | Declared license | Original source |', '| --- | --- | --- | --- |']
 groups = {}
 missing = []
 for p in packages:

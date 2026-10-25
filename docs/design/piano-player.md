@@ -10,10 +10,11 @@
 The piano anchors the bottom of a quiet, dark stage. Colored notes arrive at a
 thin strike line, illuminate their keys and create brief upward sparks. An
 original two-hand study makes the first screen useful before importing a file.
-Controls stay outside the moving field. No score/combo is invented in this slice;
+Only a small gear in the top-right corner remains during play. It opens a pause
+screen containing every setting and transport/file/fullscreen control. No score/combo is invented in this slice;
 those are separate practice/performance rules.
 
-A single view selector offers:
+The pause screen view selector offers:
 
 1. **Falling blocks:** pitch lanes align with the physical keyboard; block length
    is key-down duration, including overlapping notes.
@@ -24,7 +25,7 @@ A single view selector offers:
    conventional horizontal engraving.
 3. **Falling notes:** the same staff/ledger lines remain visible while
    noteheads/stems/flags descend to the strike line and stay
-   there until release. A small progress ring indicates remaining key-down time.
+   there until release. A small duration trace indicates remaining key-down time.
    Approximate symbol categories are not authoritative written rhythms.
 4. **Sheet & playhead:** stationary bass/treble pitch notation, ledger lines and
    a moving vertical playhead. Eight-second pages change at the edge. Thin
@@ -41,7 +42,7 @@ Keys outside the visible range can still sound; use 88 keys to see the full pian
 
 Desktop: A W S E D F T G Y H U J K play C4–C5. Space controls transport. Pointer
 and multiple touches use independent source tokens; glissando prioritizes black
-keys using the same geometry used for drawing. Form controls retain normal keys.
+keys using the same geometry used for drawing. All application controls are Bevy UI.
 Hardware MIDI is optional and requires an explicit connection action.
 
 ## Important states
@@ -49,6 +50,7 @@ Hardware MIDI is optional and requires an explicit connection action.
 - Loading/build failure: visible error, playback stays disabled.
 - Sound activation: user gesture resumes AudioContext; no autoplay on page load.
 - Paused/free play: keys remain usable, song clock is stationary.
+- Pause menu: song and live voices stop; piano input is disabled until leaving.
 - Import error: retain the current song and allow another file immediately.
 - Unsupported/denied MIDI: explain the capability; pointer/keyboard remain usable.
 - Hidden tab/window blur: pause playback and release live/scheduled voices.
@@ -59,14 +61,13 @@ Hardware MIDI is optional and requires an explicit connection action.
 Real Chromium/WASM smoke covers a produced audio signal, keyboard and black-key
 pointer input, transport, all four renderers, themes, import failure/recovery and
 a narrow viewport. Screenshots were inspected for desktop and narrow layout;
-clefs use original vector paths because musical glyphs were missing in the test
-browser's default fonts. Browser screenshots are verification artifacts, not
+the GPU renderer uses geometric noteheads and text clef labels. Browser screenshots are verification artifacts, not
 imported design assets. Physical MIDI, mobile Safari and native playback have not
 been tested. See [follow-up tasks](../TODO.md).
 
 The supplied sketch informed the hierarchy; its photo is not bundled. The small
-circle-and-tangent mark, clefs and note shapes are newly drawn SVG/Canvas geometry.
-No external fonts, music recordings or SoundFont are bundled.
+gear and note shapes are original Bevy geometry. Bevy's Fira Mono font and the
+Mutopia MIDI sample have separate license records; no recording or SoundFont is bundled.
 
 ## In-engine surface update — 2026-10-24
 
