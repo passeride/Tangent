@@ -34,10 +34,6 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         );
     }
     d.text(pad + 54., title_y + 3., "TANGENT", 27., t.ink);
-    #[cfg(not(target_arch = "wasm32"))]
-    if state.screen == Screen::Main {
-        d.button(state, pad, l.height - 44., 90., "Exit", Action::Exit, t);
-    }
 
     if state.screen == Screen::Train {
         let x = pad;

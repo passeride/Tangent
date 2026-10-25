@@ -147,8 +147,8 @@ notation layout, sampled sound and further formats require separate decisions.
 3. Build a small MIDI playback and virtual-piano slice.
 4. Expand into practice, library and scored performance after those foundations work.
 
-The importer and initial web piano/playback slice are delivered. Persistence,
-full notation and advanced practice/performance modes remain open in [the backlog](docs/TODO.md).
+The importer, local library, settings persistence and initial piano/practice slices
+are delivered. Full notation and advanced practice/performance modes remain open in [the backlog](docs/TODO.md).
 
 ## Contributing
 

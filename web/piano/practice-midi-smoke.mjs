@@ -128,6 +128,22 @@ try {
   await page.waitForFunction(()=>tangentDiagnostics().midi_output==='');
   assert.equal((await page.evaluate(()=>tangentDiagnostics())).preferences.midi_output_name,'Yamaha P-45');
   assert.equal((await page.evaluate(()=>tangentDiagnostics())).playing,false);
+  await click(page,'settings');
+  await click(page,'settings-effects'); await click(page,'effect-strength');
+  await click(page,'settings-accessibility'); await click(page,'reduced-motion');
+  await click(page,'settings-back'); await click(page,'play');
+  await page.keyboard.down('KeyA');
+  await page.waitForFunction(()=>tangentDiagnostics().solid_keys.includes(60));
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).vfx_particles,0);
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).vfx_ripples,0);
+  await page.keyboard.up('KeyA');
+  await page.waitForFunction(()=>tangentDiagnostics().storage.pending===0);
+  await page.reload(); await ready(page,server.url);
+  const saved=await page.evaluate(()=>tangentDiagnostics().preferences);
+  assert.equal(saved.reduced_motion,true); assert.equal(saved.effect_strength,2);
+  assert.equal(saved.practice_clef,1); assert.equal(saved.practice_level,2);
+  await click(page,'train'); await click(page,'train-notes');
+  await page.waitForFunction(()=>tangentDiagnostics().practice_clef==='Bass' && tangentDiagnostics().practice_level==='Chromatic');
   assert.deepEqual(errors,[]);
   console.log('Real Bevy practice, MIDI output/no echo, glow/solid, pause/disconnect and 390px layout passed.');
 } finally {await browser.close();await server.close();}

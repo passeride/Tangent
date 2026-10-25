@@ -1,5 +1,6 @@
 //! Shared judgement and VFX presets. All render backends consume the same events.
 //! Player input alone awards streaks: backing-track notes never do.
+#[cfg(not(target_arch = "wasm32"))]
 use super::*;
 /// Logical-pixel scale shared by Hanabi and WebGL2. Bevy reports window sizes
 /// in logical pixels, so OS DPI scaling is already accounted for.

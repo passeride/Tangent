@@ -431,6 +431,19 @@ pub fn render(
             super::settings::pause(&mut d, &mut state, &l, t);
         }
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    if state.screen == Screen::Main && !state.help {
+        let pad = if l.width < 1000. { 20. } else { 48. };
+        d.button(
+            &mut state,
+            pad,
+            l.height - 44.,
+            90.,
+            "Exit",
+            Action::Exit,
+            t,
+        );
+    }
     if let Some((r, _)) = state
         .focused_button
         .and_then(|i| state.buttons.get(i))

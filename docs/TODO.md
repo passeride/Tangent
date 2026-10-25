@@ -18,7 +18,7 @@ this file tracks the remaining work, not an authorization gate.
 - Index long sustained notes and visible windows; frame JSON and prefix scanning
   are prototype boundaries and need dense/long-song profiling.
 - [x] Save user settings in local SQLite; export a portable database (ADR-0009).
-- [x] Add a local SQLite symbolic fingerprint index and FreeForm MIDI identification (ADR-0011); original score files still are not persisted.
+- [x] Add a local SQLite symbolic fingerprint index and FreeForm MIDI identification (ADR-0011).
 - [x] Persist original music sources and add a paged Bevy Library view (ADR-0013).
 - [x] Library title/composer search, metadata editing, sorting/filtering, batch import and source/fingerprint cleanup (ADR-0014).
 - Add library folders/tags, backup restore and meaningful score/session recording.
@@ -41,8 +41,8 @@ this file tracks the remaining work, not an authorization gate.
   without invented spelling.
 - Add a notation renderer/layout boundary for rests, key/time signatures, beams,
   tuplets, ties across pages, stem direction, collisions and accidental context.
-- Improve narrow-screen score density and auto-follow paging. The current sheet
-  view uses time spacing and eight-second pages, not engraved measures.
+- Improve narrow-screen score density and auto-follow paging. MusicXML uses authored measures; refine its layout and the approximate MIDI
+  fallback independently.
 - Evaluate the rotated-staff learning projection with users; keyboard spacing
   differs from conventional equal staff steps, and dense chords need layout work.
 - Add key-range auto-fit/zoom and a clear indicator for off-screen pitches.

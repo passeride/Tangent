@@ -86,6 +86,10 @@ try {
   await click(page, "train-notes");
   await page.waitForFunction(() => tangentDiagnostics().screen === "Session");
   assert.equal((await page.evaluate(() => tangentDiagnostics())).vfx_scale, 1.125);
+  await click(page, "practice-listen");
+  await page.waitForFunction(()=>tangentDiagnostics().energy > 0.0001);
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).completed, 0);
+  await page.waitForFunction(()=>tangentDiagnostics().reference_keys.length===0);
   await page.keyboard.down("KeyA");
   await page.waitForFunction(() => tangentDiagnostics().practice_waiting_release === true);
   await page.waitForFunction(() => tangentDiagnostics().vfx_particles >= 20
