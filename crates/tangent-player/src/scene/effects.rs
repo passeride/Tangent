@@ -1,6 +1,11 @@
 //! Shared judgement and VFX presets. All render backends consume the same events.
 //! Player input alone awards streaks: backing-track notes never do.
 use super::*;
+/// Logical-pixel scale shared by Hanabi and WebGL2. Bevy reports window sizes
+/// in logical pixels, so OS DPI scaling is already accounted for.
+pub(super) fn viewport_scale(width: f32, height: f32) -> f32 {
+    (width / 1280.0).min(height / 800.0).clamp(0.65, 3.5)
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Grade {
     Correct,
@@ -49,14 +54,34 @@ impl Preset {
             Self::Streak25 => [1.0, 0.94, 0.57],
         }
     }
+    pub fn lifetime(self) -> f32 {
+        match self {
+            Self::Wrong => 0.48,
+            Self::FreePlay => 0.68,
+            Self::Correct => 0.90,
+            Self::Streak5 => 1.15,
+            Self::Streak10 => 1.35,
+            Self::Streak25 => 1.55,
+        }
+    }
+    pub fn burst_radius(self) -> f32 {
+        match self {
+            Self::Wrong => 85.0,
+            Self::FreePlay => 65.0,
+            Self::Correct => 140.0,
+            Self::Streak5 => 195.0,
+            Self::Streak10 => 270.0,
+            Self::Streak25 => 365.0,
+        }
+    }
     pub fn count(self) -> usize {
         match self {
-            Self::Correct => 12,
-            Self::Wrong => 8,
-            Self::FreePlay => 5,
-            Self::Streak5 => 24,
-            Self::Streak10 => 40,
-            Self::Streak25 => 60,
+            Self::Correct => 32,
+            Self::Wrong => 22,
+            Self::FreePlay => 12,
+            Self::Streak5 => 60,
+            Self::Streak10 => 96,
+            Self::Streak25 => 144,
         }
     }
 }
@@ -133,6 +158,21 @@ pub(super) fn belongs_to_target(practice: &tangent_core::practice::Practice, key
 mod tests {
     use super::*;
     #[test]
+    fn responsive_scale_matches_logical_viewport_size() {
+        assert_eq!(viewport_scale(1280.0, 800.0), 1.0);
+        assert_eq!(viewport_scale(3840.0, 2160.0), 2.7);
+        assert_eq!(viewport_scale(1920.0, 1080.0), 1.35);
+        assert_eq!(viewport_scale(390.0, 844.0), 0.65);
+    }
+    #[test]
+    fn larger_milestones_have_more_particles_and_reach() {
+        for pair in [Preset::Correct, Preset::Streak5, Preset::Streak10]
+            .windows(2) {
+            assert!(pair[0].count() < pair[1].count());
+            assert!(pair[0].burst_radius() < pair[1].burst_radius());
+        }
+    }
+    #[test]
     fn streak_milestones_and_wrong_note_reset() {
         let mut f = Feedback::default();
         assert_eq!(f.register(Grade::Neutral), Preset::FreePlay);
@@ -197,32 +237,31 @@ pub(super) mod gpu {
     }
     fn asset(preset: Preset) -> EffectAsset {
         let writer = ExprWriter::new();
-        let lifetime = match preset {
-            Preset::Wrong => 0.34,
-            Preset::Streak25 => 1.0,
-            _ => 0.70,
-        };
+        let lifetime = preset.lifetime();
+        let zoom = writer.add_property("vfx_scale", 1.0_f32.into());
+        let zoom_value = writer.prop(zoom);
         let init_age = SetAttributeModifier::new(Attribute::AGE, writer.lit(0.).expr());
         let init_lifetime =
             SetAttributeModifier::new(Attribute::LIFETIME, writer.lit(lifetime).expr());
         let init_pos = SetPositionSphereModifier {
             center: writer.lit(Vec3::ZERO).expr(),
-            radius: writer.lit(2.5).expr(),
+            radius: writer.lit(5.0).expr(),
             dimension: ShapeDimension::Volume,
         };
         let init_vel = SetVelocitySphereModifier {
             center: writer.lit(Vec3::ZERO).expr(),
-            speed: writer
-                .lit(match preset {
-                    Preset::Wrong => 40.,
-                    Preset::FreePlay => 32.,
-                    Preset::Streak25 => 140.,
-                    Preset::Streak10 => 115.,
-                    _ => 75.,
-                })
-                .expr(),
+            speed: (writer.lit(preset.burst_radius() * 1.8) * zoom_value.clone()).expr(),
         };
-        let gravity = AccelModifier::new(writer.lit(Vec3::new(0., -110., 0.)).expr());
+        let gravity = AccelModifier::new(
+            (writer.lit(Vec3::new(0., -135., 0.)) * zoom_value.clone()).expr(),
+        );
+        // Initialize size as a particle attribute to support per-instance
+        // scaling. SetSizeModifier overrides particle size with a fixed value.
+        let init_size = SetAttributeModifier::new(
+            Attribute::SIZE,
+            (writer.lit(if preset == Preset::Streak25 { 11. } else { 8. }) * zoom_value)
+                .expr(),
+        );
         let [r, g, b] = preset.rgb();
         let mut gradient = bevy_hanabi::Gradient::new();
         gradient.add_key(0., Vec4::new(r, g, b, 0.98));
@@ -238,11 +277,9 @@ pub(super) mod gpu {
         .init(init_lifetime)
         .init(init_pos)
         .init(init_vel)
+        .init(init_size)
         .update(gravity)
         .render(ColorOverLifetimeModifier::new(gradient))
-        .render(SetSizeModifier {
-            size: Vec3::splat(3.5).into(),
-        })
         .render(ScreenSpaceSizeModifier)
     }
     fn flush(
@@ -269,10 +306,13 @@ pub(super) mod gpu {
             // Bevy's Camera2d uses centered world coordinates; UI uses top-left pixels.
             let x = event.x - window.width() * 0.5;
             let y = window.height() * 0.5 - event.y;
+            let mut properties = EffectProperties::default();
+            properties.set("vfx_scale", viewport_scale(window.width(), window.height()).into());
             commands.spawn((
                 ParticleEffect::new(catalog.0[event.preset as usize].clone()),
+                properties,
                 Transform::from_xyz(x, y, 1.),
-                TimedEffect(1.3),
+                TimedEffect(event.preset.lifetime() + 0.25),
             ));
         }
     }
