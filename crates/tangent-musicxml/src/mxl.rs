@@ -54,7 +54,7 @@ fn entries(bytes: &[u8]) -> Result<Vec<Entry<'_>>, String> {
     let count = u16_at(bytes, eocd + 10)? as usize;
     let dir_size = u32_at(bytes, eocd + 12)? as usize;
     let dir_start = u32_at(bytes, eocd + 16)? as usize;
-    if count == 0 || count > MAX_ENTRIES || count == u16::MAX
+    if count == 0 || count > MAX_ENTRIES || count == usize::from(u16::MAX)
         || dir_size == u32::MAX as usize || dir_start == u32::MAX as usize
     {
         return Err("MXL ZIP entry count or ZIP64 format is unsupported".into());
