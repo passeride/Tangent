@@ -45,4 +45,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 
 - [ADR-0014: Library search and metadata](0014-library-search-and-metadata.md) — accepted; Unicode search, editing, sort/filter, batches and fingerprint ownership.
 
-- [ADR-0015: MIDI output and reading practice](0015-midi-output-and-reading-practice.md) — accepted; explicit output, no echo, played/glow cues and clef/level exercises.
+- [ADR-0015: MIDI output and reading practice](0015-midi-output-and-reading-practice.md) — accepted; no echo, played/glow cues and clef/level exercises (output persistence superseded by ADR-0016).
+- [ADR-0016: Persistent MIDI output selection](0016-persistent-midi-output-selection.md) — accepted; Bevy dropdown, SQLite preference and safe name-based reconnection.
