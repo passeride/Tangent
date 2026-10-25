@@ -24,6 +24,7 @@ pub(super) struct Library {
     pub focus: Option<Field>,
     pub edit: Option<Edit>,
     selected: bool,
+    modifiers: [bool; 4],
     search_delay: Option<f32>,
 }
 impl Default for Library {
@@ -42,6 +43,7 @@ impl Default for Library {
             focus: None,
             edit: None,
             selected: false,
+            modifiers: [false; 4],
             search_delay: None,
         }
     }
@@ -75,6 +77,23 @@ impl Library {
                 self.reset_page();
             }
         }
+    }
+    pub fn input_event(&mut self, key: KeyCode, text: Option<&str>, pressed: bool, enabled: bool) {
+        let modifier = match key {
+            KeyCode::ControlLeft => Some(0),
+            KeyCode::ControlRight => Some(1),
+            KeyCode::SuperLeft => Some(2),
+            KeyCode::SuperRight => Some(3),
+            _ => None,
+        };
+        if let Some(index) = modifier {
+            self.modifiers[index] = pressed;
+        } else if enabled && pressed {
+            self.type_key(key, text, self.modifiers.iter().any(|held| *held));
+        }
+    }
+    pub fn clear_modifiers(&mut self) {
+        self.modifiers = [false; 4];
     }
     pub fn type_key(&mut self, key: KeyCode, text: Option<&str>, ctrl: bool) {
         let Some(field) = self.focus else {
@@ -390,6 +409,17 @@ fn render_edit(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn modifier_release_in_same_frame_does_not_swallow_replacement_text() {
+        let mut library = Library::default();
+        library.focus(Field::Search);
+        library.query = "Old".into();
+        library.input_event(KeyCode::ControlLeft, None, true, true);
+        library.input_event(KeyCode::KeyA, Some("a"), true, true);
+        library.input_event(KeyCode::ControlLeft, None, false, true);
+        library.input_event(KeyCode::KeyB, Some("Bach"), true, true);
+        assert_eq!(library.query, "Bach");
+    }
     #[test]
     fn unicode_search_replaces_selection_and_preserves_text_controls() {
         let mut library = Library::default();

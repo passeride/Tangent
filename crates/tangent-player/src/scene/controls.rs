@@ -325,11 +325,15 @@ pub fn input(
         || keys.just_pressed(KeyCode::SuperRight);
     let typing = state.screen == Screen::Library && state.library.focus.is_some();
     for event in text_events.read() {
-        if typing && event.state.is_pressed() {
-            state
-                .library
-                .type_key(event.key_code, event.text.as_deref(), ctrl);
-        }
+        state.library.input_event(
+            event.key_code,
+            event.text.as_deref(),
+            event.state.is_pressed(),
+            typing,
+        );
+    }
+    if !window.focused {
+        state.library.clear_modifiers();
     }
     if state.screen == Screen::Library {
         state.library.tick(time.delta_secs());
