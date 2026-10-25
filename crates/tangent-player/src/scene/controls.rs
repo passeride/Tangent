@@ -328,7 +328,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         Action::SettingsTab(tab) => {
             state.midi_dropdown_open = false;
             state.settings_tab = tab;
-        },
+        }
         Action::Import | Action::Sample => {
             state.help = state.screen != Screen::Library;
             state.panic();
@@ -365,7 +365,9 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             // A missing device is not silently mapped to a different output.
             let selection = match index {
                 None => Some((String::new(), None)),
-                Some(i) => state.midi_outputs.get(i)
+                Some(i) => state
+                    .midi_outputs
+                    .get(i)
                     .map(|p| (p.id.clone(), Some(p.name.clone()))),
             };
             if let Some((id, name)) = selection {
