@@ -101,10 +101,12 @@ WebGL2 and verifies a visible explanation instead of an endless loading screen.
 ## Pause screen and MusicXML
 
 The corner gear, Esc or F1 opens a pause screen and stops song/live sound.
-All settings, import/sample, transport, volume, fullscreen and MIDI controls are
-inside that screen. Space resumes and closes it; Return/Esc/F1 closes it while
-remaining paused. Playing shows only a gear and the timeline, with shortcuts
-available. See [MusicXML import](musicxml-import.md) for the new authored subset.
+The pause overlay now contains Resume, restart/seek where applicable,
+quick view/audio, Settings, Library and Main. Settings is a separate categorized
+screen with Audio & MIDI, Visuals, Practice, Effects, Accessibility (planned),
+and Data & About. Back to pause never resumes playback. Space resumes only from
+the pause overlay; Esc closes Pause while leaving transport stopped. Playing shows
+only a gear and the timeline, with shortcuts available. See [MusicXML import](musicxml-import.md) for the new authored subset.
 
 
 The MusicXML demo and note display are described in ADR-0007: real Bravura G/F
@@ -148,12 +150,17 @@ Pages SQLite loading and embedded launcher asset/port smoke pass.
 
 ## MIDI output and reading practice
 
-Settings → Rescan MIDI discovers outputs; Output cycles Computer audio and devices.
+Settings → Audio & MIDI → Rescan / connect MIDI discovers outputs; Output cycles Computer audio and devices.
 Select the P-45/Digital Piano port to send playback to its speakers. Local Control
 must stay On: hardware input is displayed/evaluated but not echoed. Computer and
 onscreen keys are sent on channel 16. The piano's volume/timbre controls apply to
 external output; Tangent volume/profile controls affect computer synthesis.
-Output selection is session-only. Rescan on desktop resets it to Computer audio.
+Output selection is persisted by device name in SQLite (ADR-0016). On startup
+or after rescan, a uniquely matching available output reconnects automatically;
+if missing or ambiguous, Computer audio remains active while the saved name is
+retained. Web MIDI requires already-granted permission to reconnect without a
+gesture; otherwise use Settings → Audio & MIDI → Rescan / connect MIDI. The
+Bevy dropdown includes Computer audio and available devices, with pagination.
 Pause, seek, switching outputs and exiting silence the MIDI destination.
 
 Song notes glow around unfilled keys; your actual key presses fill them. These

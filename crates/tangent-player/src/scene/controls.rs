@@ -38,10 +38,15 @@ pub enum Action {
     Sample,
     Midi,
     MidiOutput,
+    MidiOutputSelect(Option<usize>),
+    MidiOutputPage(bool),
     PracticeClef,
     PracticeLevel,
     PracticeHint,
     Help,
+    Settings,
+    SettingsBack,
+    SettingsTab(SettingsTab),
     Credits,
     ExportDatabase,
 }
@@ -86,10 +91,24 @@ impl Action {
             Self::Sample => "sample",
             Self::Midi => "midi",
             Self::MidiOutput => "midi-output",
+            Self::MidiOutputSelect(Some(_)) => "midi-output-choice",
+            Self::MidiOutputSelect(None) => "midi-output-computer",
+            Self::MidiOutputPage(true) => "midi-output-next",
+            Self::MidiOutputPage(false) => "midi-output-prev",
             Self::PracticeClef => "practice-clef",
             Self::PracticeLevel => "practice-level",
             Self::PracticeHint => "practice-hint",
             Self::Help => "help",
+            Self::Settings => "settings",
+            Self::SettingsBack => "settings-back",
+            Self::SettingsTab(tab) => match tab {
+                SettingsTab::AudioMidi => "settings-audio",
+                SettingsTab::Visuals => "settings-visuals",
+                SettingsTab::Practice => "settings-practice",
+                SettingsTab::Effects => "settings-effects",
+                SettingsTab::Accessibility => "settings-accessibility",
+                SettingsTab::Data => "settings-data",
+            },
             Self::Credits => "credits",
             Self::ExportDatabase => "export-database",
         }
@@ -149,6 +168,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         Action::Library => {
             state.panic();
             state.help = false;
+            state.settings_open = false;
             state.screen = Screen::Library;
             state.library.pending_delete = None;
             state.library.focus = None;
@@ -170,6 +190,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
                 let id = entry.id.clone();
                 state.panic();
                 state.help = false;
+                state.settings_open = false;
                 state.screen = Screen::Session;
                 state.mode = Mode::Play;
                 state.status = "Opening piece…".into();
@@ -190,6 +211,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         Action::Main | Action::Train => {
             state.panic();
             state.help = false;
+            state.settings_open = false;
             state.screen = if matches!(action, Action::Main) {
                 Screen::Main
             } else {
@@ -199,6 +221,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         Action::StartPlay | Action::FreeForm | Action::TrainNotes | Action::TrainChords => {
             state.panic();
             state.help = false;
+            state.settings_open = false;
             state.screen = Screen::Session;
             state.mode = match action {
                 Action::FreeForm => Mode::FreeForm,
@@ -211,7 +234,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.live_bursts.clear();
         }
         Action::Play => {
-            if state.screen != Screen::Session {
+            if state.screen != Screen::Session || state.settings_open {
                 return;
             }
             state.help = false;
@@ -264,6 +287,9 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         Action::Effects => {
             state.effects = !state.effects;
             state.particles.clear();
+            state.ripples.clear();
+            #[cfg(not(target_arch = "wasm32"))]
+            state.gpu_bursts.clear();
         }
         Action::Instrument => {
             state.instrument = (state.instrument + 1) % 2;
@@ -278,10 +304,33 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             .unwrap()
         }
         Action::Help => {
-            state.help = !state.help;
-            if state.help {
+            if state.settings_open {
+                state.settings_open = false;
+                state.help = state.screen == Screen::Session;
+            } else {
+                state.help = !state.help;
+                if state.help {
+                    state.panic();
+                }
+            }
+        }
+        Action::Settings => {
+            if !state.help {
                 state.panic();
             }
+            state.help = true;
+            state.settings_open = true;
+            state.midi_dropdown_open = false;
+            state.settings_tab = SettingsTab::AudioMidi;
+        }
+        Action::SettingsBack => {
+            state.midi_dropdown_open = false;
+            state.settings_open = false;
+            state.help = state.screen == Screen::Session;
+        }
+        Action::SettingsTab(tab) => {
+            state.midi_dropdown_open = false;
+            state.settings_tab = tab;
         }
         Action::Import | Action::Sample => {
             state.help = state.screen != Screen::Library;
@@ -311,19 +360,38 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         }
         Action::PracticeHint => state.practice.hint = !state.practice.hint,
         Action::MidiOutput => {
-            let next = state
-                .midi_outputs
-                .iter()
-                .position(|p| p.id == state.midi_output)
-                .map_or(0, |i| i + 1);
-            let id = state
-                .midi_outputs
-                .get(next)
-                .map_or(String::new(), |p| p.id.clone());
-            state.panic();
-            platform::action("midi-output", &id);
+            state.midi_dropdown_open = !state.midi_dropdown_open;
+            state.midi_dropdown_page = 0;
+        }
+        Action::MidiOutputSelect(index) => {
+            // Persist a human-stable device name, never the scan-local port ID.
+            // A missing device is not silently mapped to a different output.
+            let selection = match index {
+                None => Some((String::new(), None)),
+                Some(i) => state
+                    .midi_outputs
+                    .get(i)
+                    .map(|p| (p.id.clone(), Some(p.name.clone()))),
+            };
+            if let Some((id, name)) = selection {
+                state.midi_dropdown_open = false;
+                state.preferred_midi_output = name;
+                state.midi_restore_pending = false;
+                state.panic();
+                platform::action("midi-output", &id);
+            }
+        }
+        Action::MidiOutputPage(next) => {
+            let pages = state.midi_outputs.len().div_ceil(5).max(1);
+            if next {
+                state.midi_dropdown_page = (state.midi_dropdown_page + 1).min(pages - 1);
+            } else {
+                state.midi_dropdown_page = state.midi_dropdown_page.saturating_sub(1);
+            }
         }
         Action::Midi => {
+            state.midi_dropdown_open = false;
+            state.midi_restore_pending = state.preferred_midi_output.is_some();
             state.panic();
             platform::action("midi", "");
         }
@@ -404,7 +472,12 @@ pub fn input(
     }
     if state.screen != Screen::Session {
         if keys.just_pressed(KeyCode::F1) {
-            activate(&mut state, Action::Help, false);
+            let action = if state.help {
+                Action::SettingsBack
+            } else {
+                Action::Settings
+            };
+            activate(&mut state, action, false);
         }
         if keys.just_pressed(KeyCode::Escape) {
             if state.screen == Screen::Library && state.library.edit.is_some() {
@@ -413,7 +486,7 @@ pub fn input(
                 state.library.focus = None;
             } else {
                 let action = if state.help {
-                    Action::Help
+                    Action::SettingsBack
                 } else {
                     Action::Main
                 };
@@ -439,7 +512,7 @@ pub fn input(
         }
         return;
     }
-    if ctrl {
+    if ctrl && !state.help {
         for (key, action) in [
             (KeyCode::KeyO, Action::Import),
             (KeyCode::KeyB, Action::Sample),
@@ -463,7 +536,11 @@ pub fn input(
             (KeyCode::KeyR, Action::Range),
             (KeyCode::F1, Action::Help),
         ] {
-            if keys.just_pressed(key) {
+            if keys.just_pressed(key)
+                && (!state.help
+                    || matches!(action, Action::Help | Action::Fullscreen)
+                    || (matches!(action, Action::Play) && !state.settings_open))
+            {
                 activate(&mut state, action, shift);
             }
         }
@@ -478,12 +555,14 @@ pub fn input(
         (KeyCode::ArrowDown, Action::Quieter),
         (KeyCode::ArrowUp, Action::Louder),
     ] {
-        if keys.just_pressed(key) || (keys.pressed(key) && state.arrow_repeat <= 0.) {
+        if !state.help
+            && (keys.just_pressed(key) || (keys.pressed(key) && state.arrow_repeat <= 0.))
+        {
             activate(&mut state, action, shift);
             state.arrow_repeat = 0.15;
         }
     }
-    if state.mode == Mode::Play && keys.just_pressed(KeyCode::End) {
+    if state.mode == Mode::Play && !state.help && keys.just_pressed(KeyCode::End) {
         let end = state.transport.duration_us;
         state.transport.seek(end);
         state.sync();

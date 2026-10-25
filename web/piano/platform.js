@@ -49,6 +49,16 @@ export async function installPlatform() {
     storage = await openStorage();
     storageStatus("Settings saved on this device.");
     queue.push({ type: "preferences", data: storage.settings });
+    // Browser MIDI authorization may still require a user gesture. Reconnect
+    // automatically only if the origin already has permission; otherwise the
+    // saved device remains visible until the user selects Rescan / connect.
+    if (storage.settings?.midi_output_name && navigator.permissions?.query) {
+      navigator.permissions.query({name:"midi",sysex:false})
+        .then(permission => {
+          if (permission.state === "granted") return midi();
+        })
+        .catch(() => {}); // Unsupported Permissions API: manual connect is safe.
+    }
   } catch (error) {
     storageStatus("Local saving unavailable; existing data preserved.");
     console.warn("Tangent storage:", error);

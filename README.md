@@ -15,14 +15,15 @@ without importing Neothesia or code from its forks.
 The browser link becomes available after the first successful Pages deployment.
 The bundled **First light** MusicXML piano study includes bass/treble staves,
 16 written measures, first/second endings, repeats, meter and tempo changes.
-Choose **Play** from the new main menu, then press **Space** to play, **V** for the note views, or choose **XML demo** in the
-corner-gear pause screen. The original demo is [CC0 1.0](web/piano/samples/ATTRIBUTION.md).
+Choose **Play** from the new main menu, then press **Space** to play, **V** for the note views, or choose **Load sample** in **Settings → Data & About**. The original demo is [CC0 1.0](web/piano/samples/ATTRIBUTION.md).
 
-During play, only the corner gear and timeline remain; the pause screen contains
-transport, volume, file import, fullscreen and every setting. Opening it stops
-playback and releases live notes; returning leaves playback paused until Resume.
+During play, only the corner gear and timeline remain. The pause overlay has
+Resume, transport, quick view/audio, Settings and navigation. Full settings are
+organized into Audio & MIDI, Visuals, Practice, Effects, Accessibility (planned),
+and Data & About. Opening Pause stops playback and releases live notes; returning
+from Settings stays paused until Resume.
 
-The app opens at a logo-first main menu: **Play**, **Library**, **Train**, **FreeForm**, and
+The UI v2 branch opens at a responsive, action-card main menu: **Play**, **Library**, **Train**, **FreeForm**, and
 **Settings**. Train offers treble/bass note reading with three levels, optional hints and diatonic chord exercises; FreeForm
 keeps song playback silent. Return home from the corner-gear pause screen.
 
@@ -45,7 +46,10 @@ original demonstration study. These are app screenshots, not design mockups.
 
 ![MusicXML first and second endings](docs/screenshots/piano-endings.png)
 
-![Pause menu with all settings](docs/screenshots/piano-pause.png)
+![Previous combined pause/settings UI, captured before the UI v2 branch](docs/screenshots/piano-pause.png)
+
+The screenshots above are baseline captures from the previous UI; they have not
+been regenerated for UI v2. See [UI/UX v2 design](docs/design/tangent-ui-v2.md).
 
 Reproduce with `node web/piano/capture.mjs` after building the WASM package.
 
@@ -63,9 +67,12 @@ sort/filter, reopen and remove saved pieces. Windows packages include a short
 [P-45 test](docs/test-p45.md) and PowerShell report starter.
 See [music library](docs/music-library.md) for limits and backup behavior.
 
-To hear playback through your piano, open **Settings → Rescan MIDI → Output**
-and cycle to its MIDI port (for example Digital Piano / P-45). The selected output
-replaces computer audio; leave the piano's Local Control On. Physical piano input
+To hear playback through your piano, open **Settings → Audio & MIDI**, select
+**Rescan / connect MIDI**, then choose your piano from the **MIDI output dropdown**.
+The selected device name is saved in local SQLite and restored on later launches
+when it matches exactly one connected port. Browser reconnection requires prior MIDI
+permission; if the device is unavailable, Computer audio is used until reconnection.
+The selected output replaces computer audio; leave the piano's Local Control On. Physical piano input
 is not echoed. **Solid keys mean played input; glowing edges mean expected song
 notes.** Train → Notes offers treble, bass or both clefs, three levels and Show hint.
 The answer stays visible until all keys are released. See [MIDI and practice details](docs/adr/0015-midi-output-and-reading-practice.md).
@@ -168,8 +175,8 @@ require their own records when introduced.
 | Seek backward / forward | Left / Right (5s), Shift for 15s |
 | Volume down / up | Down / Up (5%) |
 | Beginning / end | Home / End |
-| Fullscreen | F11 or Full screen in the pause menu |
-| Pause menu and settings | Corner gear, Esc or F1; Space resumes |
+| Fullscreen | F11 or Settings → Visuals |
+| Pause / Settings | Corner gear or Esc/F1 (session); Settings from pause or Main; Space resumes from pause |
 | View / theme / piano / range | V / B / X / R |
 | Song audio / particles | M / P |
 | Import / MusicXML demo / MIDI | Ctrl+O / Ctrl+B / Ctrl+M |

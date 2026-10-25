@@ -14,8 +14,17 @@ try {
   let page = await context.newPage();
   await ready(page, server.url);
   await page.waitForFunction(() => tangentDiagnostics().storage.ready);
-  await click(page, "help");
-  for (const id of ["theme", "instrument", "effects", "view", "range", "quieter", "hear"]) {
+  await click(page, "settings");
+  for (const [tab, id] of [
+    ["settings-visuals", "theme"],
+    ["settings-audio", "instrument"],
+    ["settings-effects", "effects"],
+    ["settings-visuals", "view"],
+    ["settings-visuals", "range"],
+    ["settings-audio", "quieter"],
+    ["settings-audio", "hear"],
+  ]) {
+    await click(page, tab);
     const before = await page.evaluate(() => JSON.stringify(tangentDiagnostics().preferences));
     await click(page, id);
     await page.waitForFunction(before => JSON.stringify(tangentDiagnostics().preferences) !== before, before);
@@ -30,7 +39,8 @@ try {
   assert.deepEqual(canonical(await page.evaluate(() => tangentDiagnostics().preferences)), canonical(expected));
   assert.equal(await page.evaluate(() => tangentDiagnostics().playing), false);
   assert.equal(await page.evaluate(() => tangentDiagnostics().screen), "Main");
-  await click(page, "help");
+  await click(page, "settings");
+  await click(page, "settings-data");
   const downloadPromise = page.waitForEvent("download");
   await click(page, "export-database");
   const download = await downloadPromise;
@@ -45,6 +55,7 @@ try {
     window.originalPut = IDBObjectStore.prototype.put;
     IDBObjectStore.prototype.put = function() { throw new DOMException("Full for test", "QuotaExceededError"); };
   });
+  await click(page, "settings-visuals");
   await click(page, "theme");
   await page.waitForFunction(() => tangentDiagnostics().storage.error !== null);
   await page.waitForFunction(() => tangentDiagnostics().storage_status.includes("Could not save"));

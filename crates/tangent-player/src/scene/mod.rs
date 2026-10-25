@@ -1,11 +1,13 @@
 //! One shared Bevy/wgpu window and UI renderer for native desktop and web.
 mod controls;
 mod draw;
+mod effects;
 mod layout;
 mod library;
 mod menu;
 mod platform;
 mod score;
+mod settings;
 mod theme;
 use super::{import, preferences::Preferences};
 use bevy::{prelude::*, window::WindowResolution};
@@ -43,6 +45,36 @@ enum Mode {
     Notes,
     Chords,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SettingsTab {
+    AudioMidi,
+    Visuals,
+    Practice,
+    Effects,
+    Accessibility,
+    Data,
+}
+impl SettingsTab {
+    const ALL: [Self; 6] = [
+        Self::AudioMidi,
+        Self::Visuals,
+        Self::Practice,
+        Self::Effects,
+        Self::Accessibility,
+        Self::Data,
+    ];
+    fn title(self) -> &'static str {
+        match self {
+            Self::AudioMidi => "Audio & MIDI",
+            Self::Visuals => "Visuals",
+            Self::Practice => "Practice",
+            Self::Effects => "Effects",
+            Self::Accessibility => "Accessibility",
+            Self::Data => "Data & About",
+        }
+    }
+}
+
 #[derive(serde::Deserialize)]
 struct MidiPort {
     id: String,
@@ -64,18 +96,28 @@ pub struct State {
     instrument: usize,
     hear: bool,
     help: bool,
+    settings_open: bool,
+    settings_tab: SettingsTab,
     status: String,
     midi_outputs: Vec<MidiPort>,
     midi_output: String,
+    preferred_midi_output: Option<String>,
+    midi_restore_pending: bool,
+    midi_dropdown_open: bool,
+    midi_dropdown_page: usize,
     clock: f64,
     held: BTreeMap<String, u8>,
     previous: BTreeSet<usize>,
-    live_bursts: Vec<u8>,
+    live_bursts: Vec<effects::Burst>,
+    #[cfg(not(target_arch = "wasm32"))]
+    gpu_bursts: Vec<effects::ScreenBurst>,
+    feedback: effects::Feedback,
     recognition_notes: Vec<(u64, u8)>,
     recognition_status: String,
     recognition_ticket: u64,
     last_recognition_query: u64,
     particles: Vec<Particle>,
+    ripples: Vec<Ripple>,
     buttons: Vec<(layout::Rect, controls::Action)>,
     arrow_repeat: f32,
     viewport_set: bool,
@@ -89,7 +131,16 @@ struct Particle {
     vx: f32,
     vy: f32,
     life: f32,
+    duration: f32,
+    size: f32,
     color: Color,
+}
+struct Ripple {
+    x: f32,
+    y: f32,
+    age: f32,
+    scale: f32,
+    preset: effects::Preset,
 }
 impl State {
     fn new() -> Self {
@@ -113,18 +164,28 @@ impl State {
             instrument: 0,
             hear: true,
             help: false,
+            settings_open: false,
+            settings_tab: SettingsTab::AudioMidi,
             status: "Tap a key or press Space to enable sound. F1: shortcuts".into(),
             midi_outputs: vec![],
             midi_output: String::new(),
+            preferred_midi_output: None,
+            midi_restore_pending: false,
+            midi_dropdown_open: false,
+            midi_dropdown_page: 0,
             clock: platform::clock_us(),
             held: BTreeMap::new(),
             previous: BTreeSet::new(),
             live_bursts: vec![],
+            #[cfg(not(target_arch = "wasm32"))]
+            gpu_bursts: vec![],
+            feedback: effects::Feedback::default(),
             recognition_notes: vec![],
             recognition_status: String::new(),
             recognition_ticket: 0,
             last_recognition_query: 0,
             particles: vec![],
+            ripples: vec![],
             buttons: vec![],
             arrow_repeat: 0.,
             viewport_set: false,
@@ -149,6 +210,7 @@ impl State {
             hear: self.hear,
             first_key: self.piano.keys.first().unwrap().key,
             last_key: self.piano.keys.last().unwrap().key,
+            midi_output_name: self.preferred_midi_output.clone(),
         }
     }
     fn restore_preferences(&mut self, p: Preferences) {
@@ -158,9 +220,38 @@ impl State {
         self.volume = p.volume;
         self.instrument = p.instrument;
         self.hear = p.hear;
+        self.preferred_midi_output = p.midi_output_name;
+        self.midi_restore_pending = self.preferred_midi_output.is_some();
         self.piano = PianoLayout::new(p.first_key, p.last_key).unwrap();
         self.viewport_set = true;
         self.sync();
+        self.restore_midi_output();
+    }
+    /// Only a unique, currently reported name can be restored. Native port IDs
+    /// are transient scan indices, never suitable for persistent preferences.
+    fn restore_midi_output(&mut self) {
+        if !self.midi_restore_pending {
+            return;
+        }
+        let Some(name) = self.preferred_midi_output.as_ref() else {
+            self.midi_restore_pending = false;
+            return;
+        };
+        let matches: Vec<_> = self
+            .midi_outputs
+            .iter()
+            .filter(|p| &p.name == name)
+            .collect();
+        if matches.len() > 1 {
+            self.midi_restore_pending = false;
+            self.status = format!("Multiple MIDI outputs named {name}; select one manually.");
+        } else if let Some(port) = matches.first() {
+            let id = port.id.clone();
+            self.midi_restore_pending = false;
+            self.panic();
+            platform::action("midi-output", &id);
+        }
+        // Zero matches: retain the preference and let a future Rescan retry.
     }
     fn sync(&self) {
         platform::action("transport",&serde_json::json!({"position":self.transport.position_us,"playing":self.transport.playing && self.mode==Mode::Play && self.screen==Screen::Session && !self.help,"volume":self.volume,"hear":self.hear,"instrument":self.instrument}).to_string());
@@ -180,11 +271,33 @@ impl State {
                 return;
             }
             self.held.insert(id.clone(), key);
-            self.live_bursts.push(key);
             self.capture_for_recognition(key);
-            if matches!(self.mode, Mode::Notes | Mode::Chords) {
-                let held: Vec<_> = self.held.values().copied().collect();
-                self.practice.answer(&held);
+            // Never judge backing-track playback as a player hit. A partial
+            // chord is not wrong merely because the other fingers are pending.
+            let grade = match self.mode {
+                Mode::Play if self.transport.playing => Some(
+                    if effects::expected_song_hit(&self.song, self.transport.position_us, key) {
+                        effects::Grade::Correct
+                    } else {
+                        effects::Grade::Wrong
+                    },
+                ),
+                Mode::Play | Mode::FreeForm => Some(effects::Grade::Neutral),
+                Mode::Notes | Mode::Chords => {
+                    let target_member = effects::belongs_to_target(&self.practice, key);
+                    let held: Vec<_> = self.held.values().copied().collect();
+                    if self.practice.answer(&held) {
+                        Some(effects::Grade::Correct)
+                    } else if !self.practice.waiting_release && !target_member {
+                        Some(effects::Grade::Wrong)
+                    } else {
+                        None
+                    }
+                }
+            };
+            if let Some(grade) = grade {
+                let preset = self.feedback.register(grade);
+                self.live_bursts.push(effects::Burst { key, preset });
             }
             platform::action(
                 "on",
@@ -230,6 +343,10 @@ impl State {
         self.held.clear();
         self.practice.answer(&[]);
         self.live_bursts.clear();
+        self.ripples.clear();
+        #[cfg(not(target_arch = "wasm32"))]
+        self.gpu_bursts.clear();
+        self.feedback.reset();
         self.recognition_notes.clear();
         self.recognition_status.clear();
         self.recognition_ticket += 1;
@@ -280,6 +397,8 @@ pub fn run() {
         )
         .add_systems(Update, (update, controls::input, draw::render).chain());
     #[cfg(not(target_arch = "wasm32"))]
+    effects::gpu::install(&mut app);
+    #[cfg(not(target_arch = "wasm32"))]
     app.add_systems(Update, platform::native_window);
     app.run();
     #[cfg(not(target_arch = "wasm32"))]
@@ -305,6 +424,7 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
             "midi-outputs" => {
                 state.midi_outputs = serde_json::from_value(m["ports"].clone()).unwrap_or_default();
                 state.midi_output = m["selected"].as_str().unwrap_or("").into();
+                state.restore_midi_output();
             }
             "preferences" => {
                 if !m["data"].is_null() {
@@ -432,6 +552,10 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
     }
     let dt = time.delta_secs().min(0.05);
     state.particles.retain(|p| p.life > 0.);
+    state.ripples.retain(|r| r.age < r.preset.lifetime() * 0.8);
+    for ripple in &mut state.ripples {
+        ripple.age += dt;
+    }
     for p in &mut state.particles {
         p.life -= dt;
         p.x += p.vx * dt;
@@ -462,6 +586,10 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
             platform::action("song", &serde_json::to_string(&state.song).unwrap());
             state.previous.clear();
             state.particles.clear();
+            state.ripples.clear();
+            #[cfg(not(target_arch = "wasm32"))]
+            state.gpu_bursts.clear();
+            state.feedback.reset();
             state.sync();
             true
         }

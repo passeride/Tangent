@@ -16,6 +16,9 @@ bevy_ecs = { version = "=0.20.0", default-features = false, features = ["std"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # Native GPU: the same Bevy scene, not a web view.
 bevy = { version = "=0.20.0", default-features = false, features = ["std", "default_app", "ui_bevy_render", "bevy_winit", "default_font", "x11", "wayland", "multi_threaded"] }
+# Hanabi main is Bevy 0.20-compatible; 0.19.x crates.io targets Bevy 0.19.
+# Pin the commit to keep native desktop builds reproducible.
+bevy_hanabi = { git = "https://github.com/djeedai/bevy_hanabi", rev = "d277555d4a2350da6787245d15c56c62c739594d", default-features = false, features = ["2d"] }
 rodio = { version = "=0.22.2", default-features = false, features = ["playback"] }
 midir = "=0.11.0"
 blake3 = "=1.8.7"
