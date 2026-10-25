@@ -62,6 +62,7 @@ export async function installPlatform() {
   }
   let importSequence=0, lastImportSave=Promise.resolve(true);
   const importReceipts=new Map();
+  let batchInfo={id:0,pending:false,total:0,saved:0};
   async function load(bytes, title, ticket, fromLibrary=false) {
     if (ticket !== generation) return false;
     if (bytes.length > 16 * 1024 * 1024) throw Error("Music files must be 16 MiB or smaller.");
@@ -71,8 +72,12 @@ export async function installPlatform() {
     return complete;
   }
   file.onchange = async () => {
-    const selected=Array.from(file.files), ticket=++generation;
+    const selected=Array.from(file.files);
+    // Closing/resetting the native chooser may emit an empty change event.
+    // It must not cancel a batch whose File objects have already been captured.
     if (!selected.length) return;
+    const ticket=++generation, batch=batchInfo.id+1;
+    batchInfo={id:batch,pending:true,total:selected.length,saved:0};
     try {
       if (selected.length>20) throw Error("Choose at most 20 files at once.");
       let saved=0;
@@ -82,11 +87,12 @@ export async function installPlatform() {
           if (item.size>16*1024*1024) throw Error(`${item.name}: exceeds 16 MiB`);
           const ok=await load(new Uint8Array(await item.arrayBuffer()),item.name.replace(/\.(midi?|musicxml|xml|mxl)$/i,""),ticket);
           if (ok) saved++;
+          if(batchInfo.id===batch) batchInfo.saved=saved;
         } catch(error) { queue.push({type:"library-status",text:String(error.message??error)}); }
       }
       if (ticket===generation && selected.length>1) queue.push({type:"library-status",text:`Saved ${saved} of ${selected.length} files. Duplicate files update existing entries.`});
     } catch(error) { queue.push({type:"library-status",text:String(error.message??error)}); }
-    finally { file.value=""; }
+    finally { if(batchInfo.id===batch) batchInfo.pending=false; file.value=""; }
   };
   async function midi() {
     if (!navigator.requestMIDIAccess)
@@ -313,6 +319,7 @@ export async function installPlatform() {
     state
       ? {
           ...state,
+          imports: {...batchInfo,waiting:importReceipts.size},
           storage: storage?.diagnostics ?? { ready: false },
           energy: audio.energy(),
           audioState: audio.context?.state,

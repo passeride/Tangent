@@ -11,24 +11,16 @@ const options={ headless:true,args:gpuArgs,viewport:{width:1100,height:800} };
 try {
   context=await chromium.launchPersistentContext(profile,options);
   let page=await context.newPage();
-  page.on("console",message=>console.log("LIBRARY BROWSER",message.text()));
   page.on("pageerror",error=>console.error("LIBRARY PAGE ERROR",error.message));
-  await page.addInitScript(()=>{
-    Object.defineProperty(window,"tangentPlatform",{configurable:true,set(platform){
-      const action=platform.action,store=platform.store_import,pull=platform.pull;
-      platform.action=function(name,data){if(["import-result","library-list"].includes(name)) console.log("adapter action",name,data);return action.call(this,name,data);};
-      platform.store_import=function(bytes,data){const meta=JSON.parse(data);console.log("adapter save",bytes.length,meta.title,Boolean(meta.fingerprint));return store.call(this,bytes,data);};
-      platform.pull=function(){const value=pull.call(this);for(const item of JSON.parse(value)) if(item.type.startsWith("library")||item.type==="file") console.log("adapter event",item.type,item.text??item.title??item.total,item.import_ticket??item.ticket??"");return value;};
-      delete window.tangentPlatform;window.tangentPlatform=platform;
-    }});
-  });
   await ready(page,server.url);await click(page,"library");
   const buffer=await readFile(new URL("samples/first-light.musicxml",import.meta.url));
   const second=Buffer.from(buffer.toString().replace("First light - Tangent piano study","Second test study"));
   const firstFile={name:"first.musicxml",mimeType:"application/xml",buffer};
   await click(page,"import");
   await page.locator("#midi-file").setInputFiles([firstFile,{name:"second.musicxml",mimeType:"application/xml",buffer:second}]);
-  await page.waitForFunction(()=>tangentDiagnostics().library_total===2 && !document.querySelector("#midi-file").value);
+  // A chooser-reset/cancel event must not cancel captured files in this batch.
+  await page.evaluate(()=>{const file=document.querySelector("#midi-file");file.value="";file.dispatchEvent(new Event("change",{bubbles:true}));});
+  await page.waitForFunction(()=>tangentDiagnostics().library_total===2 && !tangentDiagnostics().imports.pending);
   await click(page,"library-sort");
   await page.waitForFunction(()=>tangentDiagnostics().library_items[0]?.title==="First light - Tangent piano study");
   await click(page,"library-edit");await click(page,"library-title");await page.waitForFunction(()=>tangentDiagnostics().library_focus==="title");
@@ -43,7 +35,7 @@ try {
   await click(page,"library-format"); // MusicXML includes the edited piece.
   await page.waitForFunction(()=>tangentDiagnostics().library_total===1);
   await click(page,"import");await page.locator("#midi-file").setInputFiles(firstFile);
-  await page.waitForFunction(()=>!document.querySelector("#midi-file").value&&tangentDiagnostics().storage.pending===0);
+  await page.waitForFunction(()=>!tangentDiagnostics().imports.pending&&tangentDiagnostics().storage.pending===0);
   await page.waitForFunction(()=>tangentDiagnostics().library_items[0]?.title==="Evening study");
   await context.close();context=await chromium.launchPersistentContext(profile,options);
   page=await context.newPage();await ready(page,server.url);await click(page,"library");
