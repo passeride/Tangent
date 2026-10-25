@@ -129,6 +129,27 @@ impl Drawing {
         }
         state.buttons.push((Rect { x, y, w, h }, action));
     }
+    /// A larger two-column mode tile for the desktop home screen.
+    pub(super) fn menu_tile(
+        &mut self,
+        state: &mut State,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        title: &str,
+        subtitle: &str,
+        action: Action,
+        t: theme::Theme,
+    ) {
+        self.rect(x, y, w, h, t.panel, 12.);
+        // Simple original note marker: avoids icons/assets outside Bevy.
+        self.rect(x + 20., y + 22., 13., 9., t.colors[0], 8.);
+        self.rect(x + 30., y + 10., 3., 20., t.colors[0], 1.);
+        self.text(x + 20., y + h - 60., title, 19., t.ink);
+        self.text(x + 20., y + h - 33., subtitle, 11., t.muted);
+        state.buttons.push((Rect { x, y, w, h }, action));
+    }
     pub(super) fn note(
         &mut self,
         x: f32,
