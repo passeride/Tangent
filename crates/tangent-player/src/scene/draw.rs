@@ -103,14 +103,27 @@ impl Drawing {
         t: theme::Theme,
     ) {
         self.rect(
-            x, y, w, h,
-            if primary { t.colors[0].with_alpha(0.18) } else { t.panel },
+            x,
+            y,
+            w,
+            h,
+            if primary {
+                t.colors[0].with_alpha(0.18)
+            } else {
+                t.panel
+            },
             10.,
         );
         if primary {
             self.rect(x, y + 4., 3., h - 8., t.colors[0], 2.);
         }
-        self.text(x + 16., y + if h < 52. { 12. } else { 10. }, title, 16., t.ink);
+        self.text(
+            x + 16.,
+            y + if h < 52. { 12. } else { 10. },
+            title,
+            16.,
+            t.ink,
+        );
         if h >= 52. && !subtitle.is_empty() {
             self.text(x + 16., y + 34., subtitle, 11., t.muted);
         }
