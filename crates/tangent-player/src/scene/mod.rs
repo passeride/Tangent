@@ -344,6 +344,7 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
                 let candidates: Vec<fingerprint::Candidate> =
                     serde_json::from_value(m["candidates"].clone()).unwrap_or_default();
                 let matches = fingerprint::rank_matches(&keys, &candidates, 2);
+                state.recognition_status.clear();
                 if let Some(best) = matches.first() {
                     let ambiguous = matches.get(1).is_some_and(|next| {
                         (best.similarity - next.similarity) < 0.08 && best.song_id != next.song_id
