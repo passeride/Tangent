@@ -1,4 +1,5 @@
 //! Bounded MusicXML partwise adapter. No renderer, I/O, XML entity expansion or MIDI dependency.
+mod mxl;
 mod parse;
 mod structure;
 mod timeline;
@@ -52,17 +53,17 @@ struct Measure {
     repeat_end: Option<u8>,
     ending: Option<Ending>,
 }
-/// Supports UTF-8 score-partwise .musicxml/.xml. Compressed .mxl is explicitly rejected.
+/// Supports UTF-8 score-partwise .musicxml/.xml and bounded compressed .mxl ZIP archives.
 pub fn import(bytes: &[u8], fallback_title: String) -> Result<Song> {
     if bytes.len() > 16 * 1024 * 1024 {
         return Err("MusicXML exceeds 16 MiB".into());
     }
-    if bytes.starts_with(b"PK") {
-        return Err(
-            "Compressed MusicXML (.mxl) is not supported yet. Export uncompressed .musicxml."
-                .into(),
-        );
-    }
+    let expanded = if bytes.starts_with(b"PK") {
+        Some(mxl::unpack(bytes)?)
+    } else {
+        None
+    };
+    let bytes = expanded.as_deref().unwrap_or(bytes);
     let xml = std::str::from_utf8(bytes).map_err(|_| "MusicXML must be UTF-8")?;
     // roxmltree does not resolve external entities. Permit the common external
     // MusicXML DOCTYPE, but never enable DTD/internal entity parsing.
