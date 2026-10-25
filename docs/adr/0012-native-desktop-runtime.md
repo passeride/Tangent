@@ -66,3 +66,10 @@ as the browser schema v2 and returns at most 30 candidates to the Rust matcher.
 Native content identifiers use the already inventoried BLAKE3 crate; browser
 identifiers use SHA-256. Identifiers are local to each independent catalog, not
 composition identities. Backup restore across adapters is not implemented.
+
+## Native Exit action — 2026-10-25
+
+Main includes Exit on native only. It pauses/releases input, requests Bevy AppExit
+and uses the existing post-run I/O shutdown to silence MIDI before process exit.
+Web omits the action. This reuses the native capability boundary; no forceful
+process termination or extra framework is introduced.

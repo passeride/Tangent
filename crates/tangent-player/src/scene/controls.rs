@@ -1,6 +1,8 @@
 use super::*;
 #[derive(Clone, Copy, Debug)]
 pub enum Action {
+    #[cfg(not(target_arch = "wasm32"))]
+    Exit,
     Main,
     Library,
     LibraryOpen(usize),
@@ -129,6 +131,11 @@ fn activate(state: &mut State, action: Action, shift: bool) {
     }
     let step = if shift { 15_000_000 } else { 5_000_000 };
     match action {
+        #[cfg(not(target_arch = "wasm32"))]
+        Action::Exit => {
+            state.panic();
+            platform::action("quit", "");
+        }
         Action::LibrarySearch => state.library.focus(library::Field::Search),
         Action::LibraryClearSearch => {
             state.library.query.clear();
@@ -463,7 +470,7 @@ pub fn input(
         );
     }
     if !window.focused {
-        if state.transport.playing || !state.held.is_empty() {
+        if state.transport.playing || !state.held.is_empty() || state.reference_remaining > 0. {
             state.panic();
         }
         state.library.clear_modifiers();

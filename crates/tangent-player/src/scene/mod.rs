@@ -669,23 +669,3 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
         }
     }
 }
-
-#[cfg(test)]
-mod input_tests {
-    use super::*;
-    #[test]
-    fn releasing_wrong_finger_rechecks_remaining_target() {
-        let mut s = State::new();
-        s.screen = Screen::Session;
-        s.mode = Mode::Notes;
-        s.source("wrong".into(), Some(62), 100);
-        s.source("correct".into(), Some(60), 100);
-        assert!(!s.practice.waiting_release);
-        s.source("wrong".into(), None, 0);
-        assert!(s.practice.waiting_release);
-        assert_eq!(s.feedback.streak(), 1);
-        assert_eq!(s.practice.completed, 0);
-        s.source("correct".into(), None, 0);
-        assert_eq!(s.practice.completed, 1);
-    }
-}

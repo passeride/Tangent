@@ -33,6 +33,7 @@ const LOOKAHEAD_US: u64 = 32_000;
 static BUS: OnceLock<Bus> = OnceLock::new();
 static START: OnceLock<Instant> = OnceLock::new();
 static FULLSCREEN: AtomicBool = AtomicBool::new(false);
+static QUIT: AtomicBool = AtomicBool::new(false);
 static SHUTDOWN_DONE: AtomicBool = AtomicBool::new(false);
 
 struct Bus {
@@ -63,7 +64,9 @@ pub fn clock_us() -> f64 {
     START.get_or_init(Instant::now).elapsed().as_secs_f64() * 1_000_000.0
 }
 pub fn action(name: &str, data: &str) {
-    if name == "fullscreen" {
+    if name == "quit" {
+        QUIT.store(true, Ordering::Release);
+    } else if name == "fullscreen" {
         FULLSCREEN.store(true, Ordering::Release);
     } else {
         let _ = bus().actions.send((name.into(), data.into()));
@@ -83,6 +86,9 @@ pub fn store_import(bytes: &[u8], metadata: &str) {
 }
 pub fn take_file() -> Option<SourceFile> {
     bus().files.lock().ok()?.try_recv().ok()
+}
+pub fn take_quit_request() -> bool {
+    QUIT.swap(false, Ordering::AcqRel)
 }
 pub fn take_fullscreen_request() -> bool {
     FULLSCREEN.swap(false, Ordering::AcqRel)

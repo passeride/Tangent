@@ -180,6 +180,15 @@ impl Practice {
 mod tests {
     use super::*;
     #[test]
+    fn releasing_wrong_finger_can_complete_held_target() {
+        let mut p = Practice::default();
+        assert!(!p.answer(&[60, 62]));
+        assert!(p.answer(&[60]));
+        assert_eq!(p.completed, 0);
+        p.answer(&[]);
+        assert_eq!(p.completed, 1);
+    }
+    #[test]
     fn notes_require_correct_octave_and_release() {
         let mut p = Practice::default();
         assert!(!p.answer(&[72]));

@@ -29,7 +29,8 @@ this file tracks the remaining work, not an authorization gate.
 - Add OS-integrated drag/drop and robust cross-platform native file picker
   (currently PowerShell, AppleScript and optional Zenity).
 - Extend fingerprint search with polyphonic voices, multiple arrangements per work, calibrated match confidence and large-library performance.
-- Add managed desktop lifecycle/quit UI, signing and macOS notarization.
+- [x] Native Exit UI through managed Bevy shutdown (ADR-0012).
+- Add signing and macOS notarization.
 
 - [x] Explicit MIDI output selection, no hardware echo, cancellation and seek-state reconstruction (ADR-0015). Verify output with physical P-45.
 - [x] Independent played solid fill and expected edge glow, including when particles are off.

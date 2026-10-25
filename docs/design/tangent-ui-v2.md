@@ -154,9 +154,9 @@ Desktop: persistent left navigation and a content pane; compact viewport: access
 | --- | --- | --- |
 | **Audio & MIDI** | Input device and state, rescan, output choice (Computer audio / discovered MIDI outputs), internal synth volume/preset, no-echo explanation | Existing underlying features; new presentation |
 | **Visuals & notation** | Four modes, Aurora/Ember/Paper, 49/61/88 keys, sparkles, optional key labels, HUD visibility | Existing modes/themes/ranges/effects; labels/HUD presets proposed |
-| **Practice** | Note clef, level, explicit hint, chord training entry, exercise feedback explanation | Core controls existing; global defaults and optional audio feedback proposed |
-| **Effects** | Effects enable, intensity, subdued correct/error feedback and future streak presets | Effects toggle existing; intensity, granular presets/streak effects proposed |
-| **Accessibility** | Reduce motion, high contrast, UI scale, text descriptions in addition to colour, keyboard focus | Proposed; requires validation |
+| **Practice** | Note clef, level, explicit hint, chord training entry, exercise feedback explanation | Persisted clef/level defaults, reference sound and live pitch pointers implemented |
+| **Effects** | Effects enable, intensity, subdued correct/error feedback and future streak presets | Toggle, intensity and streak feedback implemented; granular custom presets proposed |
+| **Accessibility** | Reduce motion, high contrast, UI scale, text descriptions in addition to colour, keyboard focus | Reduced motion and keyboard focus implemented; broader semantics/contrast pending |
 | **Data & About** | Local SQLite status/export, shortcuts, storage limitations, app/build info, license/credits, backup/restore notice | Export/shortcuts/credits existing; restore proposed |
 
 #### MIDI behavior is not merely cosmetic
@@ -164,7 +164,7 @@ Desktop: persistent left navigation and a content pane; compact viewport: access
 - MIDI **input** and **output** are separate choices; the Yamaha P-45 and other physical pianos already sound through their own speakers with Local Control On.
 - Song playback to a selected MIDI output replaces internal computer synthesis; **never echo physical input back to the same instrument**.
 - App synth volume and piano presets must clearly show when they do not control the external piano's own speaker volume/timbre.
-- Output selection is **session-only** today. No automatic reconnection to a stale port index. Show connection/disconnection/error and the **Rescan** action.
+- Output selection persists by device name (ADR-0016). Only uniquely matching connected names are restored; missing or duplicate names fall back to Computer audio. Show errors and the **Rescan** action.
 - Selection/rescan is a deliberate operation that respects playback pause and cancellation behavior defined in ADR-0015.
 
 #### Save semantics
