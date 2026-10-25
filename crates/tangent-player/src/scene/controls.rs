@@ -42,6 +42,9 @@ pub enum Action {
     PracticeLevel,
     PracticeHint,
     Help,
+    Settings,
+    SettingsBack,
+    SettingsTab(SettingsTab),
     Credits,
     ExportDatabase,
 }
@@ -90,6 +93,16 @@ impl Action {
             Self::PracticeLevel => "practice-level",
             Self::PracticeHint => "practice-hint",
             Self::Help => "help",
+            Self::Settings => "settings",
+            Self::SettingsBack => "settings-back",
+            Self::SettingsTab(tab) => match tab {
+                SettingsTab::AudioMidi => "settings-audio",
+                SettingsTab::Visuals => "settings-visuals",
+                SettingsTab::Practice => "settings-practice",
+                SettingsTab::Effects => "settings-effects",
+                SettingsTab::Accessibility => "settings-accessibility",
+                SettingsTab::Data => "settings-data",
+            },
             Self::Credits => "credits",
             Self::ExportDatabase => "export-database",
         }
@@ -149,6 +162,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         Action::Library => {
             state.panic();
             state.help = false;
+            state.settings_open = false;
             state.screen = Screen::Library;
             state.library.pending_delete = None;
             state.library.focus = None;
@@ -170,6 +184,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
                 let id = entry.id.clone();
                 state.panic();
                 state.help = false;
+                state.settings_open = false;
                 state.screen = Screen::Session;
                 state.mode = Mode::Play;
                 state.status = "Opening piece…".into();
@@ -190,6 +205,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         Action::Main | Action::Train => {
             state.panic();
             state.help = false;
+            state.settings_open = false;
             state.screen = if matches!(action, Action::Main) {
                 Screen::Main
             } else {
@@ -199,6 +215,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         Action::StartPlay | Action::FreeForm | Action::TrainNotes | Action::TrainChords => {
             state.panic();
             state.help = false;
+            state.settings_open = false;
             state.screen = Screen::Session;
             state.mode = match action {
                 Action::FreeForm => Mode::FreeForm,
@@ -211,7 +228,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.live_bursts.clear();
         }
         Action::Play => {
-            if state.screen != Screen::Session {
+            if state.screen != Screen::Session || state.settings_open {
                 return;
             }
             state.help = false;
@@ -278,11 +295,29 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             .unwrap()
         }
         Action::Help => {
-            state.help = !state.help;
-            if state.help {
-                state.panic();
+            if state.settings_open {
+                state.settings_open = false;
+                state.help = state.screen == Screen::Session;
+            } else {
+                state.help = !state.help;
+                if state.help {
+                    state.panic();
+                }
             }
         }
+        Action::Settings => {
+            if !state.help {
+                state.panic();
+            }
+            state.help = true;
+            state.settings_open = true;
+            state.settings_tab = SettingsTab::AudioMidi;
+        }
+        Action::SettingsBack => {
+            state.settings_open = false;
+            state.help = state.screen == Screen::Session;
+        }
+        Action::SettingsTab(tab) => state.settings_tab = tab,
         Action::Import | Action::Sample => {
             state.help = state.screen != Screen::Library;
             state.panic();
@@ -404,7 +439,9 @@ pub fn input(
     }
     if state.screen != Screen::Session {
         if keys.just_pressed(KeyCode::F1) {
-            activate(&mut state, Action::Help, false);
+            activate(&mut state,
+                if state.help { Action::SettingsBack } else { Action::Settings },
+                false);
         }
         if keys.just_pressed(KeyCode::Escape) {
             if state.screen == Screen::Library && state.library.edit.is_some() {
@@ -413,7 +450,7 @@ pub fn input(
                 state.library.focus = None;
             } else {
                 let action = if state.help {
-                    Action::Help
+                    Action::SettingsBack
                 } else {
                     Action::Main
                 };
@@ -439,7 +476,7 @@ pub fn input(
         }
         return;
     }
-    if ctrl {
+    if ctrl && !state.help {
         for (key, action) in [
             (KeyCode::KeyO, Action::Import),
             (KeyCode::KeyB, Action::Sample),
@@ -463,7 +500,10 @@ pub fn input(
             (KeyCode::KeyR, Action::Range),
             (KeyCode::F1, Action::Help),
         ] {
-            if keys.just_pressed(key) {
+            if keys.just_pressed(key)
+                && (!state.help || matches!(action, Action::Help)
+                    || (matches!(action, Action::Play) && !state.settings_open))
+            {
                 activate(&mut state, action, shift);
             }
         }
@@ -478,12 +518,12 @@ pub fn input(
         (KeyCode::ArrowDown, Action::Quieter),
         (KeyCode::ArrowUp, Action::Louder),
     ] {
-        if keys.just_pressed(key) || (keys.pressed(key) && state.arrow_repeat <= 0.) {
+        if !state.help && (keys.just_pressed(key) || (keys.pressed(key) && state.arrow_repeat <= 0.)) {
             activate(&mut state, action, shift);
             state.arrow_repeat = 0.15;
         }
     }
-    if state.mode == Mode::Play && keys.just_pressed(KeyCode::End) {
+    if state.mode == Mode::Play && !state.help && keys.just_pressed(KeyCode::End) {
         let end = state.transport.duration_us;
         state.transport.seek(end);
         state.sync();
