@@ -22,6 +22,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - run: cargo generate-lockfile
       - run: cargo clippy -p tangent-player --target wasm32-unknown-unknown --locked -- -D warnings
       - run: cargo build -p tangent-midi-web -p tangent-player --target wasm32-unknown-unknown --release --locked
       - run: cargo install wasm-bindgen-cli --version 0.2.129 --locked
@@ -54,7 +55,6 @@ jobs:
           path: dist/piano
   native:
     name: ${{ matrix.name }}
-    needs: web
     strategy:
       fail-fast: false
       matrix:
@@ -76,17 +76,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install Linux native window/audio dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev libx11-dev pkg-config
+      - run: cargo generate-lockfile
+      - run: cargo fmt --all
       - run: cargo fmt --all -- --check
       - run: cargo test --workspace --target ${{ matrix.target }} --locked
       - run: cargo clippy --workspace --all-targets --target ${{ matrix.target }} --locked -- -D warnings
-      - uses: actions/download-artifact@v4
-        with:
-          name: tangent-piano-web
-          path: dist/piano
-      - name: Build self-contained desktop launcher
+      - name: Build native Bevy desktop (no WASM/web server)
         run: cargo build -p tangent-desktop --release --target ${{ matrix.target }} --locked
-        env:
-          TANGENT_WEB_DIST: ${{ github.workspace }}/dist/piano
       - name: Test the real platform executable
         run: python scripts/smoke_desktop.py target/${{ matrix.target }}/release/${{ matrix.binary }}
       - name: Package platform download
