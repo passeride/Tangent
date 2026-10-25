@@ -79,8 +79,11 @@ try {
   await click(page, "train");
   await click(page, "train-notes");
   await page.waitForFunction(() => tangentDiagnostics().screen === "Session");
+  assert.equal((await page.evaluate(() => tangentDiagnostics())).vfx_scale, 1.125);
   await page.keyboard.down("KeyA");
   await page.waitForFunction(() => tangentDiagnostics().practice_waiting_release === true);
+  await page.waitForFunction(() => tangentDiagnostics().vfx_particles >= 20
+    && tangentDiagnostics().vfx_ripples > 0);
   await page.keyboard.up("KeyA");
   await page.keyboard.press("Escape");
   await click(page, "main");
@@ -226,6 +229,7 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForFunction(() => tangentDiagnostics().width === 390);
   const ui = await page.evaluate(() => tangentDiagnostics());
+  assert.equal(ui.vfx_scale, 0.65, "Mobile viewport has a bounded effect scale");
   assert(
     ui.buttons.every(
       (b) =>
