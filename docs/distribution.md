@@ -75,3 +75,12 @@ the browser player. The native audio scheduler uses a 32ms lookahead and a
 not a claim of measured latency. Tune buffers and voices after device benchmarks.
 
 Web storage remains browser-local and separate from native storage.
+
+### Review regression checks
+
+- Hold notes, rescan MIDI with Ctrl+M, release and play again. Held notes must
+  clear, and exclusive Windows MIDI ports must reopen without restarting.
+- Adjust volume while a note sounds, then play another note at the same velocity.
+  Existing and new voices must use the same volume scale.
+- Native imports enforce the 16 MiB limit on bytes read as well as metadata;
+  automated tests exercise an unbounded input reader without opening devices.

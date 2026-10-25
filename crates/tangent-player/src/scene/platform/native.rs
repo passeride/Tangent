@@ -3,6 +3,7 @@
 use std::{
     collections::HashMap,
     env, fs,
+    io::Read,
     path::{Path, PathBuf},
     process::Command,
     sync::{mpsc::{self, Receiver, Sender}, Mutex, OnceLock, atomic::{AtomicBool, Ordering}},
@@ -103,7 +104,8 @@ impl Audio {
         if self.voices.len() >= MAX_VOICES { return; }
         let freq = 440.0 * 2.0_f32.powf((f32::from(key) - 69.0) / 12.0);
         let p = Player::connect_new(stream.mixer());
-        let level = self.transport.volume.clamp(0., 1.) * (f32::from(velocity) / 127.) * 0.16;
+        let level = (f32::from(velocity) / 127.) * 0.16;
+        p.set_volume(self.transport.volume.clamp(0., 1.));
         // Soft harmonic voice. All DSP is performed by the audio device's mixer,
         // never by the Bevy rendering thread.
         let source = SineWave::new(freq)
@@ -234,11 +236,22 @@ fn export(conn: &Connection, path: &Path) -> Result<PathBuf, String> {
         .map_err(|e| e.to_string())?;
     Ok(dest)
 }
+fn read_music(reader: impl Read) -> Result<Vec<u8>, String> {
+    // Enforce the limit while reading: metadata can be stale if a file grows.
+    let mut bytes = Vec::new();
+    reader.take(MAX_FILE_BYTES + 1).read_to_end(&mut bytes).map_err(|e| e.to_string())?;
+    if bytes.len() as u64 > MAX_FILE_BYTES {
+        return Err("Music file exceeds 16 MiB".into());
+    }
+    Ok(bytes)
+}
 fn import_path(path: &Path, files: &Sender<(Vec<u8>, String)>, out: &Sender<Value>) {
     let result = (|| -> Result<(), String> {
-        let metadata = fs::metadata(path).map_err(|e| e.to_string())?;
+        let file = fs::File::open(path).map_err(|e| e.to_string())?;
+        let metadata = file.metadata().map_err(|e| e.to_string())?;
+        if !metadata.is_file() { return Err("Select a regular music file".into()); }
         if metadata.len() > MAX_FILE_BYTES { return Err("Music file exceeds 16 MiB".into()); }
-        let bytes = fs::read(path).map_err(|e| e.to_string())?;
+        let bytes = read_music(file)?;
         let title = path.file_stem().and_then(|x| x.to_str()).unwrap_or("Score").into();
         files.send((bytes, title)).map_err(|e| e.to_string())
     })();
@@ -320,7 +333,14 @@ fn backend(rx: Receiver<(String,String)>, out: Sender<Value>, files: Sender<(Vec
                     };
                     let _ = out.send(json!({"type":"storage-status","text":info}));
                 },
-                "midi" => { midi = connect_midi(&out); },
+                "midi" => {
+                    // Release exclusive OS ports before attempting to reopen them.
+                    // Clear held keys because a note-off may be lost during rescan.
+                    midi.clear();
+                    audio.silence();
+                    let _ = out.send(json!({"type":"pause"}));
+                    midi = connect_midi(&out);
+                },
                 "import" => {
                     let tx = rx_sender_file(files.clone(), out.clone());
                     thread::spawn(move || { if let Some(path) = pick_file() { tx(&path); } });
@@ -361,6 +381,13 @@ mod tests {
         assert_eq!(version, 1);
         let rows: i64 = db.query_row("SELECT count(*) FROM scores",[],|r|r.get(0)).unwrap();
         assert_eq!(rows,0);
+    }
+    #[test]
+    fn import_read_is_bounded_even_without_file_metadata() {
+        let bytes = read_music(&b"score bytes"[..]).unwrap();
+        assert_eq!(bytes, b"score bytes");
+        let error = read_music(std::io::repeat(0)).unwrap_err();
+        assert!(error.contains("16 MiB"));
     }
     #[test]
     fn missing_import_does_not_enqueue_a_song() {
