@@ -140,9 +140,13 @@ mod tests {
             assert_eq!(f.register(Grade::Correct), Preset::Correct);
         }
         assert_eq!(f.register(Grade::Correct), Preset::Streak5);
-        for _ in 0..4 { f.register(Grade::Correct); }
+        for _ in 0..4 {
+            f.register(Grade::Correct);
+        }
         assert_eq!(f.register(Grade::Correct), Preset::Streak10);
-        for _ in 0..14 { f.register(Grade::Correct); }
+        for _ in 0..14 {
+            f.register(Grade::Correct);
+        }
         assert_eq!(f.register(Grade::Correct), Preset::Streak25);
         assert_eq!(f.register(Grade::Wrong), Preset::Wrong);
         assert_eq!(f.streak(), 0);
@@ -161,9 +165,17 @@ mod tests {
     #[test]
     fn song_matches_only_within_timing_window() {
         let song = import::study();
-        let n = song.notes.iter().find(|n| !song.parts[n.part].percussion).unwrap();
+        let n = song
+            .notes
+            .iter()
+            .find(|n| !song.parts[n.part].percussion)
+            .unwrap();
         assert!(expected_song_hit(&song, n.start_us, n.key));
-        assert!(expected_song_hit(&song, n.start_us.saturating_sub(100_000), n.key));
+        assert!(expected_song_hit(
+            &song,
+            n.start_us.saturating_sub(100_000),
+            n.key
+        ));
     }
 }
 #[cfg(not(target_arch = "wasm32"))]
@@ -200,13 +212,15 @@ pub(super) mod gpu {
         };
         let init_vel = SetVelocitySphereModifier {
             center: writer.lit(Vec3::ZERO).expr(),
-            speed: writer.lit(match preset {
-                Preset::Wrong => 40.,
-                Preset::FreePlay => 32.,
-                Preset::Streak25 => 140.,
-                Preset::Streak10 => 115.,
-                _ => 75.,
-            }).expr(),
+            speed: writer
+                .lit(match preset {
+                    Preset::Wrong => 40.,
+                    Preset::FreePlay => 32.,
+                    Preset::Streak25 => 140.,
+                    Preset::Streak10 => 115.,
+                    _ => 75.,
+                })
+                .expr(),
         };
         let gravity = AccelModifier::new(writer.lit(Vec3::new(0., -110., 0.)).expr());
         let [r, g, b] = preset.rgb();
@@ -214,16 +228,22 @@ pub(super) mod gpu {
         gradient.add_key(0., Vec4::new(r, g, b, 0.98));
         gradient.add_key(0.72, Vec4::new(r, g, b, 0.70));
         gradient.add_key(1., Vec4::new(r, g, b, 0.));
-        EffectAsset::new(128, SpawnerSettings::once((preset.count() as f32).into()), writer.finish())
-            .with_name(preset.name())
-            .init(init_age)
-            .init(init_lifetime)
-            .init(init_pos)
-            .init(init_vel)
-            .update(gravity)
-            .render(ColorOverLifetimeModifier::new(gradient))
-            .render(SetSizeModifier { size: Vec3::splat(3.5).into() })
-            .render(ScreenSpaceSizeModifier)
+        EffectAsset::new(
+            128,
+            SpawnerSettings::once((preset.count() as f32).into()),
+            writer.finish(),
+        )
+        .with_name(preset.name())
+        .init(init_age)
+        .init(init_lifetime)
+        .init(init_pos)
+        .init(init_vel)
+        .update(gravity)
+        .render(ColorOverLifetimeModifier::new(gradient))
+        .render(SetSizeModifier {
+            size: Vec3::splat(3.5).into(),
+        })
+        .render(ScreenSpaceSizeModifier)
     }
     fn flush(
         mut commands: Commands,
@@ -241,7 +261,9 @@ pub(super) mod gpu {
             }
         }
         let events = std::mem::take(&mut state.gpu_bursts);
-        if !state.effects || state.screen != Screen::Session { return; }
+        if !state.effects || state.screen != Screen::Session {
+            return;
+        }
         let Ok(window) = windows.single() else { return };
         for event in events.into_iter().take(32) {
             // Bevy's Camera2d uses centered world coordinates; UI uses top-left pixels.

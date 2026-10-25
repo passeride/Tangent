@@ -193,9 +193,18 @@ pub fn render(
                 state.particles.push(Particle {
                     x,
                     y: l.strike - 12.,
-                    vx: (seed - 50.) * (if preset == effects::Preset::Wrong { 0.5 } else { 1. }),
+                    vx: (seed - 50.)
+                        * (if preset == effects::Preset::Wrong {
+                            0.5
+                        } else {
+                            1.
+                        }),
                     vy: -35. - seed,
-                    life: if preset == effects::Preset::Wrong { 0.32 } else { 0.7 },
+                    life: if preset == effects::Preset::Wrong {
+                        0.32
+                    } else {
+                        0.7
+                    },
                     color,
                 });
             }
@@ -219,7 +228,13 @@ pub fn render(
         keyboard(&mut d, &state, &l, t);
         if state.feedback.streak() >= 2 {
             let streak = state.feedback.streak();
-            d.text(l.margin, 14., format!("{streak} note streak · best {}", state.feedback.best()), 14., t.colors[0]);
+            d.text(
+                l.margin,
+                14.,
+                format!("{streak} note streak · best {}", state.feedback.best()),
+                14.,
+                t.colors[0],
+            );
         }
         if matches!(state.mode, Mode::Notes | Mode::Chords) {
             super::menu::exercise(&mut d, &mut state, &l, t);

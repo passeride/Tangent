@@ -191,13 +191,13 @@ impl State {
             // Never judge backing-track playback as a player hit. A partial
             // chord is not wrong merely because the other fingers are pending.
             let grade = match self.mode {
-                Mode::Play if self.transport.playing => Some(if effects::expected_song_hit(
-                    &self.song, self.transport.position_us, key,
-                ) {
-                    effects::Grade::Correct
-                } else {
-                    effects::Grade::Wrong
-                }),
+                Mode::Play if self.transport.playing => Some(
+                    if effects::expected_song_hit(&self.song, self.transport.position_us, key) {
+                        effects::Grade::Correct
+                    } else {
+                        effects::Grade::Wrong
+                    },
+                ),
                 Mode::Play | Mode::FreeForm => Some(effects::Grade::Neutral),
                 Mode::Notes | Mode::Chords => {
                     let target_member = effects::belongs_to_target(&self.practice, key);
