@@ -82,15 +82,7 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
     let half = (usable - gap) * 0.5;
     let view_label = format!("View: {}", state.view.name());
     let sound_label = format!("Song audio: {}", if state.hear { "On" } else { "Off" });
-    d.button(
-        state,
-        inner,
-        y + 178.,
-        half,
-        view_label,
-        Action::View,
-        t,
-    );
+    d.button(state, inner, y + 178., half, view_label, Action::View, t);
     d.button(
         state,
         inner + half + gap,
@@ -145,7 +137,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     let pad = if compact { 12. } else { 28. };
     let full_w = (l.width - 2. * pad).max(0.);
     d.text(pad, 18., "Settings", 25., t.ink);
-    let back_label = if state.screen == Screen::Session { "Back to pause" } else { "Close" };
+    let back_label = if state.screen == Screen::Session {
+        "Back to pause"
+    } else {
+        "Close"
+    };
     d.button(
         state,
         l.width - pad - 106.,
