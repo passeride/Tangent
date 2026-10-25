@@ -169,3 +169,27 @@ and mixed clefs, stepwise/mixed/chromatic levels and an optional answer hint. Re
 the staff and match its exact octave; correct notes remain until full release.
 Advanced key signatures, score engraving and progress/scoring remain future work.
 See ADR-0015 and `web/piano/practice-midi-smoke.mjs` for scope and verification.
+
+## UI v2 and practice integration — 2026-10-25
+
+The approved UI v2 main/pause/settings structure is implemented. Play has compact
+Play/Pause, title, time and output context; Tab/Shift+Tab and Enter navigate menu
+controls with a visible focus border. Native Main has Exit through Bevy shutdown.
+
+Train → Hear target auditions without answering. Your actual held pitch appears
+in the pressed-key colour beside the target, on a continuous grand staff; a
+single-note response includes semitone distance. Releasing a wrong finger
+rechecks any remaining held answer. Clef/difficulty persist between sessions.
+Settings includes saved Soft/Full/Punchy effect intensity and Reduced motion;
+the latter removes bursts/rings while preserving key and notation feedback.
+Song target identity prevents repeated presses inflating cosmetic streaks.
+See [ADR-0017](adr/0017-practice-reference-and-motion.md).
+
+Validation: all 74 workspace tests, formatting, native/WASM warnings-denied
+Clippy, native release executable/self-test, release WASM, complete real Bevy
+browser tests (including actual reference audio energy, MIDI reference on/off,
+no self-answer/echo, rapid held-note correction, saved practice/motion preferences),
+MusicXML/MIDI browser import and packaged `/Tangent/` smoke pass locally. Actual
+app screenshots are refreshed with capture.mjs. Upstream Hanabi/transitive
+notices are included. Physical P-45 speakers/latency, native GPU appearance and
+4K hardware performance remain manual verification, not claims of these tests.

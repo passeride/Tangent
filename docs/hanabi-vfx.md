@@ -17,7 +17,8 @@ Neither backend requires external art assets or an extra canvas.
 | 10 correct hits | `streak-10` | Violet 96-particle celebration |
 | 25, 50, 75… correct hits | `streak-25` | Wide gold 144-particle celebration |
 
-All other correct hits use `correct`. Partially played chords emit neither
+All other correct hits use `correct`. A song target can award a hit only once
+until seek/restart; repeated presses on it are neutral. Partially played chords emit neither
 a success nor a failure until the chord is complete or an unrelated note is
 pressed. In reading practice an incorrect octave counts as a mistake.
 The visible streak is session-local and deliberately **not** persisted as a
