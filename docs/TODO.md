@@ -49,7 +49,7 @@ this file tracks the remaining work, not an authorization gate.
 ## MusicXML follow-up (ADR-0006)
 
 - [x] Uncompressed partwise adapter, rational rhythm, voices/staves, sound ties/tempo.
-- [ ] Bounded compressed MXL support through META-INF/container.xml.
+- [x] Bounded compressed MXL support through META-INF/container.xml (ADR-0010).
 - [x] Retain inherited key/time, written rhythm values/dots and tempo; initial clefs.
 - [ ] Full clef/attribute changes, tuplets/beams and engraving detail.
 - [x] Authored measure layout, clefs/rests, barlines/houses and repeat-visit mapping.

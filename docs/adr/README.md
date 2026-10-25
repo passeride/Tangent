@@ -37,4 +37,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 
 - [ADR-0009: Local SQLite persistence](0009-local-sqlite-storage.md) — accepted; settings, export and future score schema.
 
-- [ADR-0010: Symbolic music fingerprinting](0010-symbolic-fingerprinting.md) — accepted; Rust matching, SQLite inverted index and FreeForm lookup MVP.
+- [ADR-0010: Bounded MXL container import](0010-bounded-mxl-container-import.md) — accepted; compressed MusicXML ZIP reading and limits.
+- [ADR-0011: Symbolic music fingerprinting](0011-symbolic-fingerprinting.md) — accepted; Rust matching, SQLite inverted index and FreeForm lookup MVP.

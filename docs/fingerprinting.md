@@ -47,4 +47,4 @@ Compressed MXL import is a separate branch, not a dependency of this patch.
 - `cd web/piano && npm test` (requires WASM app and Playwright browser setup)
 - `cd web/piano && node fingerprint-schema.test.mjs` (SQLite unit test)
 
-See [ADR-0010](adr/0010-symbolic-fingerprinting.md) for boundaries.
+See [ADR-0010](adr/0011-symbolic-fingerprinting.md) for boundaries.

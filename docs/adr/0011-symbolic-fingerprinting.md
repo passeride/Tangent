@@ -1,4 +1,4 @@
-# ADR-0010: Symbolic fingerprint search and local recognition
+# ADR-0011: Symbolic fingerprint search and local recognition
 
 - Status: Accepted
 - Decision date: 2026-10-25
@@ -51,8 +51,7 @@ no audio capture, cloud service or backend.
   calibration must precede confidence percentages in the UI.
 - A note index (not a notation measure) is reported. Written measure mapping
   through repeat visits is future work.
-- The existing separate MXL branch is not included in this change; compressed
-  file support depends on that branch being merged separately.
+- Compressed MusicXML import is available through ADR-0010.
 
 ## Verification
 

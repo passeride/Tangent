@@ -73,7 +73,7 @@ export async function installPlatform() {
         throw Error("Music files must be 16 MiB or smaller.");
       await load(
         new Uint8Array(await selected.arrayBuffer()),
-        selected.name.replace(/\.(midi?|musicxml|xml)$/i, ""),
+        selected.name.replace(/\.(midi?|musicxml|xml|mxl)$/i, ""),
         ticket,
       );
     } catch (e) {
