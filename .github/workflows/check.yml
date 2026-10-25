@@ -24,6 +24,7 @@ jobs:
           python-version: '3.12'
       - run: cargo fmt --all -- --check
       - run: cargo test -p tangent-musicxml --locked
+      - run: cargo test -p tangent-core --locked
       - run: cargo clippy -p tangent-player --target wasm32-unknown-unknown --locked -- -D warnings
       - run: cargo build -p tangent-midi-web -p tangent-player --target wasm32-unknown-unknown --release --locked
       - run: cargo install wasm-bindgen-cli --version 0.2.129 --locked

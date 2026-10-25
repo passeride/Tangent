@@ -18,7 +18,9 @@ this file tracks the remaining work, not an authorization gate.
 - Index long sustained notes and visible windows; frame JSON and prefix scanning
   are prototype boundaries and need dense/long-song profiling.
 - [x] Save user settings in local SQLite; export a portable database (ADR-0009).
+- [x] Add a local SQLite symbolic fingerprint index and FreeForm MIDI identification (ADR-0010); original score files still are not persisted.
 - Add music-library persistence, database backup restore and meaningful score/session recording.
+- Extend fingerprint search with polyphonic voices, multiple arrangements per work, calibrated match confidence and large-library performance.
 - Add true native input, audio and renderer adapters. Desktop downloads now use
   browser-backed launchers; they do not implement a native Bevy/audio view.
 - Add managed desktop lifecycle/quit UI, signing and macOS notarization.
