@@ -6,6 +6,7 @@ mod library;
 mod menu;
 mod platform;
 mod score;
+mod settings;
 mod theme;
 use super::{import, preferences::Preferences};
 use bevy::{prelude::*, window::WindowResolution};
@@ -43,6 +44,32 @@ enum Mode {
     Notes,
     Chords,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SettingsTab {
+    AudioMidi,
+    Visuals,
+    Practice,
+    Effects,
+    Accessibility,
+    Data,
+}
+impl SettingsTab {
+    const ALL: [Self; 6] = [
+        Self::AudioMidi, Self::Visuals, Self::Practice,
+        Self::Effects, Self::Accessibility, Self::Data,
+    ];
+    fn title(self) -> &'static str {
+        match self {
+            Self::AudioMidi => "Audio & MIDI",
+            Self::Visuals => "Visuals",
+            Self::Practice => "Practice",
+            Self::Effects => "Effects",
+            Self::Accessibility => "Accessibility",
+            Self::Data => "Data & About",
+        }
+    }
+}
+
 #[derive(serde::Deserialize)]
 struct MidiPort {
     id: String,
@@ -64,6 +91,8 @@ pub struct State {
     instrument: usize,
     hear: bool,
     help: bool,
+    settings_open: bool,
+    settings_tab: SettingsTab,
     status: String,
     midi_outputs: Vec<MidiPort>,
     midi_output: String,
@@ -113,6 +142,8 @@ impl State {
             instrument: 0,
             hear: true,
             help: false,
+            settings_open: false,
+            settings_tab: SettingsTab::AudioMidi,
             status: "Tap a key or press Space to enable sound. F1: shortcuts".into(),
             midi_outputs: vec![],
             midi_output: String::new(),
