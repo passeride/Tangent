@@ -1,4 +1,4 @@
-//! One Bevy window, camera and UI renderer. Browser code is a capability adapter.
+//! One shared Bevy/wgpu window and UI renderer for native desktop and web.
 mod controls;
 mod draw;
 mod layout;
@@ -180,15 +180,20 @@ impl State {
     }
 }
 pub fn run() {
-    let state = State::new();
+    let mut state = State::new();
+    #[cfg(not(target_arch = "wasm32"))]
+    { state.status = "Native MIDI/audio ready; press F1 for settings".into(); }
     platform::action("song", &serde_json::to_string(&state.song).unwrap());
-    App::new()
+    let mut app = App::new();
+    app
         .insert_resource(state)
         .insert_resource(draw::Pool::default())
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Tangent".into(),
+                #[cfg(target_arch = "wasm32")]
                 canvas: Some("#tangent".into()),
+                #[cfg(target_arch = "wasm32")]
                 fit_canvas_to_parent: true,
                 resolution: WindowResolution::new(1280, 800),
                 prevent_default_event_handling: true,
@@ -206,8 +211,10 @@ pub fn run() {
                 ))));
             },
         )
-        .add_systems(Update, (update, controls::input, draw::render).chain())
-        .run();
+        .add_systems(Update, (update, controls::input, draw::render).chain());
+    #[cfg(not(target_arch = "wasm32"))]
+    app.add_systems(Update, platform::native_window);
+    app.run();
 }
 fn update(mut state: ResMut<State>, time: Res<Time>) {
     let now = platform::clock_us();
@@ -244,32 +251,9 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
             "file" => {
                 let bytes: Vec<u8> = m["bytes"]
                     .as_array()
-                    .map(|a| {
-                        a.iter()
-                            .filter_map(|v| v.as_u64().and_then(|n| u8::try_from(n).ok()))
-                            .collect()
-                    })
+                    .map(|a| a.iter().filter_map(|v| v.as_u64().and_then(|n| u8::try_from(n).ok())).collect())
                     .unwrap_or_default();
-                match import::song(&bytes, m["title"].as_str().unwrap_or("MIDI").into()) {
-                    Ok(song) => {
-                        state.panic();
-                        state.transport = Transport {
-                            duration_us: song.duration_us,
-                            ..default()
-                        };
-                        state.status = format!(
-                            "{} notes loaded. {}",
-                            song.notes.len(),
-                            song.warnings.join(" ")
-                        );
-                        state.song = song;
-                        platform::action("song", &serde_json::to_string(&state.song).unwrap());
-                        state.previous.clear();
-                        state.particles.clear();
-                        state.sync();
-                    }
-                    Err(e) => state.status = e,
-                }
+                load_song(&mut state, &bytes, m["title"].as_str().unwrap_or("MIDI").into());
             }
             "note" => {
                 let id = m["id"].as_str().unwrap_or("midi").to_string();
@@ -288,6 +272,10 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
             _ => {}
         }
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    while let Some((bytes, title)) = platform::take_file() {
+        load_song(&mut state, &bytes, title);
+    }
     if state.storage_ready {
         let p = state.preferences();
         if state.saved_preferences.as_ref() != Some(&p) {
@@ -302,5 +290,24 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.vy += 65. * dt;
+    }
+}
+
+fn load_song(state: &mut State, bytes: &[u8], title: String) {
+    match import::song(bytes, title) {
+        Ok(song) => {
+            state.panic();
+            state.transport = Transport {
+                duration_us: song.duration_us,
+                ..default()
+            };
+            state.status = format!("{} notes loaded. {}", song.notes.len(), song.warnings.join(" "));
+            state.song = song;
+            platform::action("song", &serde_json::to_string(&state.song).unwrap());
+            state.previous.clear();
+            state.particles.clear();
+            state.sync();
+        }
+        Err(e) => state.status = e,
     }
 }
