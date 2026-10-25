@@ -58,6 +58,9 @@ not a browser wrapper. Desktop MIDI (midir), audio (rodio) and SQLite
 (rusqlite with bundled SQLite) run natively. See
 [desktop builds and limitations](docs/distribution.md). Android/iOS use the web version.
 
+Choose **Library** from the main menu to import, reopen and remove locally saved pieces.
+See [music library](docs/music-library.md) for limits and backup behavior.
+
 ## Project status
 
 **Playable web player and native desktop implementation (pending hardware validation).** The Rust workspace has a format-neutral
@@ -73,8 +76,8 @@ audio scheduler thread, a local SQLite file and OS file dialogs.
 Partwise MusicXML (.xml/.musicxml/.mxl) import is an [explicit subset](docs/musicxml-import.md).
 Desktop build and MIDI/audio behavior require physical machine verification,
 especially low-latency playing. The native instrument is currently an efficient
-harmonic voice, not the same timbre as the browser synthesizer. The persistent
-music library and recording meaningful scores remain future work.
+harmonic voice, not the same timbre as the browser synthesizer. The local
+music library now saves original imports locally; recording meaningful scores remains future work.
 
 The implementation is not certified as a completed clean room process. Prior
 source exposure remains documented in [PROVENANCE.md](PROVENANCE.md).

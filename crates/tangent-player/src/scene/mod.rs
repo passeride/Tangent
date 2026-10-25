@@ -2,6 +2,7 @@
 mod controls;
 mod draw;
 mod layout;
+mod library;
 mod menu;
 mod platform;
 mod score;
@@ -32,6 +33,7 @@ impl View {
 enum Screen {
     Main,
     Train,
+    Library,
     Session,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -44,6 +46,7 @@ enum Mode {
 #[derive(Resource)]
 pub struct State {
     screen: Screen,
+    library: library::Library,
     mode: Mode,
     practice: tangent_core::practice::Practice,
     song: Song,
@@ -87,6 +90,7 @@ impl State {
         let duration_us = song.duration_us;
         Self {
             screen: Screen::Main,
+            library: library::Library::default(),
             mode: Mode::Play,
             practice: tangent_core::practice::Practice::default(),
             song,
@@ -317,6 +321,26 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
                     m["title"].as_str().unwrap_or("MIDI").into(),
                 );
             }
+            "library-list" => {
+                if m["ticket"].as_u64() == Some(state.library.ticket) {
+                    state.library.items =
+                        serde_json::from_value(m["items"].clone()).unwrap_or_default();
+                    state.library.total = m["total"].as_u64().unwrap_or(0) as usize;
+                    if state.library.offset > 0 && state.library.items.is_empty() {
+                        state.library.offset =
+                            state.library.offset.saturating_sub(state.library.page_size);
+                        state.library.refresh();
+                    }
+                }
+            }
+            "library-status" => {
+                state.library.status = m["text"].as_str().unwrap_or("").into();
+                state.status = state.library.status.clone();
+            }
+            "library-updated" => {
+                state.library.status = m["text"].as_str().unwrap_or("").into();
+                state.library.refresh();
+            }
             "fingerprint-candidates" => {
                 if state.mode != Mode::FreeForm
                     || state.screen != Screen::Session
@@ -395,6 +419,8 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
 fn load_song(state: &mut State, bytes: &[u8], title: String) {
     match import::song(bytes, title) {
         Ok(song) => {
+            let metadata = crate::library::ImportMetadata::from_song(&song, bytes);
+            platform::store_import(bytes, &serde_json::to_string(&metadata).unwrap());
             state.panic();
             state.transport = Transport {
                 duration_us: song.duration_us,

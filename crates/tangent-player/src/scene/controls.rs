@@ -2,6 +2,11 @@ use super::*;
 #[derive(Clone, Copy, Debug)]
 pub enum Action {
     Main,
+    Library,
+    LibraryOpen(usize),
+    LibraryRemove(usize),
+    LibraryPrevious,
+    LibraryNext,
     Train,
     StartPlay,
     FreeForm,
@@ -32,6 +37,11 @@ impl Action {
     pub fn id(self) -> &'static str {
         match self {
             Self::Main => "main",
+            Self::Library => "library",
+            Self::LibraryOpen(_) => "library-open",
+            Self::LibraryRemove(_) => "library-remove",
+            Self::LibraryPrevious => "library-previous",
+            Self::LibraryNext => "library-next",
             Self::Train => "train",
             Self::StartPlay => "start-play",
             Self::FreeForm => "freeform",
@@ -67,6 +77,44 @@ fn activate(state: &mut State, action: Action, shift: bool) {
     }
     let step = if shift { 15_000_000 } else { 5_000_000 };
     match action {
+        Action::Library => {
+            state.panic();
+            state.help = false;
+            state.screen = Screen::Library;
+            state.library.pending_delete = None;
+            state.library.refresh();
+        }
+        Action::LibraryPrevious | Action::LibraryNext => {
+            let page_size = state.library.page_size;
+            if matches!(action, Action::LibraryPrevious) {
+                state.library.offset = state.library.offset.saturating_sub(page_size);
+            } else if state.library.offset + page_size < state.library.total {
+                state.library.offset += page_size;
+            }
+            state.library.pending_delete = None;
+            state.library.refresh();
+        }
+        Action::LibraryOpen(index) => {
+            if let Some(entry) = state.library.items.get(index) {
+                let id = entry.id.clone();
+                state.panic();
+                state.help = false;
+                state.screen = Screen::Session;
+                state.mode = Mode::Play;
+                platform::action("library-open", &id);
+            }
+        }
+        Action::LibraryRemove(index) => {
+            if let Some(entry) = state.library.items.get(index) {
+                let id = entry.id.clone();
+                if state.library.pending_delete.as_ref() == Some(&id) {
+                    platform::action("library-remove", &id);
+                    state.library.pending_delete = None;
+                } else {
+                    state.library.pending_delete = Some(id);
+                }
+            }
+        }
         Action::Main | Action::Train => {
             state.panic();
             state.help = false;
@@ -164,7 +212,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             }
         }
         Action::Import | Action::Sample => {
-            state.help = true;
+            state.help = state.screen != Screen::Library;
             state.panic();
             platform::action(
                 if matches!(action, Action::Import) {

@@ -32,10 +32,12 @@ export async function installPlatform() {
     storageStatus("Local saving unavailable; existing data preserved.");
     console.warn("Tangent storage:", error);
   }
-  async function fingerprintId(song) {
-    const bytes = new TextEncoder().encode(JSON.stringify(song));
+  async function sourceId(bytes) {
     const hash = await crypto.subtle.digest("SHA-256", bytes);
     return [...new Uint8Array(hash)].map(n => n.toString(16).padStart(2, "0")).join("");
+  }
+  function fingerprintId(song) {
+    return sourceId(new TextEncoder().encode(JSON.stringify(song)));
   }
   function reset() {
     audio.stopSong();
@@ -145,6 +147,15 @@ export async function installPlatform() {
     }
   });
   window.tangentPlatform = {
+    store_import(bytes, metadata) {
+      // wasm-bindgen passes a borrowed view: copy before starting async work.
+      const source = new Uint8Array(bytes);
+      const details = JSON.parse(metadata);
+      if (storage) sourceId(source).then(id => storage.saveLibrarySong(id, source, details))
+        .then(() => queue.push({ type: "library-updated", text: "Saved in library." }))
+        .catch(error => queue.push({ type: "library-status", text: `Could not save piece: ${error.message ?? error}` }));
+      else queue.push({ type: "library-status", text: "Piece loaded; local library is unavailable." });
+    },
     clock_us: () => audio.now * 1e6,
     pull: () => {
       schedule();
@@ -171,6 +182,24 @@ export async function installPlatform() {
               link.href = url; link.download = "tangent.sqlite"; link.click();
               setTimeout(() => URL.revokeObjectURL(url), 30_000);
             }).catch(() => storageStatus("Could not export database."));
+            break;
+          case "library-list": {
+            const request = JSON.parse(data);
+            if (storage) storage.listLibrary(request.offset, request.limit)
+              .then(result => queue.push({ type: "library-list", ticket: request.ticket, ...result }))
+              .catch(error => queue.push({ type: "library-status", text: String(error.message ?? error) }));
+            else queue.push({ type: "library-status", text: "Local library is unavailable on this device." });
+            break;
+          }
+          case "library-open":
+            if (storage) {
+              const ticket = ++generation;
+              storage.readLibrarySource(data).then(entry => load(entry.source, entry.title, ticket)).catch(fail);
+            }
+            break;
+          case "library-remove":
+            if (storage) storage.removeLibrarySong(data)
+              .then(() => queue.push({ type: "library-updated", text: "Piece removed from library." })).catch(fail);
             break;
           case "fingerprint-index":
             if (storage) {

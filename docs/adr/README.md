@@ -40,3 +40,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0010: Bounded MXL container import](0010-bounded-mxl-container-import.md) — accepted; compressed MusicXML ZIP reading and limits.
 - [ADR-0011: Symbolic music fingerprinting](0011-symbolic-fingerprinting.md) — accepted; Rust matching, SQLite inverted index and FreeForm lookup MVP.
 - [ADR-0012: Native desktop runtime](0012-native-desktop-runtime.md) — accepted; shared Bevy/wgpu scene, MIDI, audio worker and SQLite on desktop.
+
+- [ADR-0013: Local music library](0013-local-music-library.md) — accepted; source-byte persistence, metadata paging and reopen on web/native.
