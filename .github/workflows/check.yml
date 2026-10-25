@@ -23,6 +23,12 @@ jobs:
         with:
           python-version: '3.12'
       - run: cargo generate-lockfile
+      # Resolved on the CI runner to allow us to pin the lockfile in the PR.
+      - name: Capture resolved Cargo.lock
+        run: |
+          echo TANGENT_LOCK_BEGIN
+          cat Cargo.lock
+          echo TANGENT_LOCK_END
       - run: cargo clippy -p tangent-player --target wasm32-unknown-unknown --locked -- -D warnings
       - run: cargo build -p tangent-midi-web -p tangent-player --target wasm32-unknown-unknown --release --locked
       - run: cargo install wasm-bindgen-cli --version 0.2.129 --locked
