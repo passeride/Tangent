@@ -201,8 +201,7 @@ pub fn render(
             let speed = preset.burst_radius() * scale / lifetime;
             for i in 0..count {
                 let jitter = ((id.wrapping_mul(17) + i * 31) % 101) as f32 / 101.;
-                let angle = std::f32::consts::TAU * (i as f32 + jitter * 0.45)
-                    / count as f32;
+                let angle = std::f32::consts::TAU * (i as f32 + jitter * 0.45) / count as f32;
                 let radial = 0.62 + ((i * 13) % 11) as f32 / 25.;
                 let (sin, cos) = angle.sin_cos();
                 let mut vx = cos * speed * radial;
@@ -259,11 +258,9 @@ pub fn render(
             // The ring communicates the hit immediately, even if Hanabi
             // takes a frame to spawn its GPU emitter.
             for ripple in &state.ripples {
-                let fraction = (ripple.age / (ripple.preset.lifetime() * 0.8))
-                    .clamp(0., 1.);
+                let fraction = (ripple.age / (ripple.preset.lifetime() * 0.8)).clamp(0., 1.);
                 let fade = (1. - fraction) * (1. - fraction);
-                let radius = (12. + ripple.preset.burst_radius() * fraction * 0.75)
-                    * ripple.scale;
+                let radius = (12. + ripple.preset.burst_radius() * fraction * 0.75) * ripple.scale;
                 let count = if ripple.preset.count() >= 60 { 24 } else { 16 };
                 let [r, g, b] = ripple.preset.rgb();
                 let tint = Color::srgb(r, g, b);
@@ -272,8 +269,14 @@ pub fn render(
                     let theta = std::f32::consts::TAU * i as f32 / count as f32;
                     let x = ripple.x + theta.cos() * radius;
                     let y = ripple.y + theta.sin() * radius;
-                    d.rect(x - dot * 0.5, y - dot * 0.5, dot, dot,
-                        tint.with_alpha(fade * 0.75), dot);
+                    d.rect(
+                        x - dot * 0.5,
+                        y - dot * 0.5,
+                        dot,
+                        dot,
+                        tint.with_alpha(fade * 0.75),
+                        dot,
+                    );
                 }
                 let flash = (16. + 40. * (1. - fraction)) * ripple.scale;
                 d.rect(

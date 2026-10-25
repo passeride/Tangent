@@ -166,8 +166,7 @@ mod tests {
     }
     #[test]
     fn larger_milestones_have_more_particles_and_reach() {
-        for pair in [Preset::Correct, Preset::Streak5, Preset::Streak10]
-            .windows(2) {
+        for pair in [Preset::Correct, Preset::Streak5, Preset::Streak10].windows(2) {
             assert!(pair[0].count() < pair[1].count());
             assert!(pair[0].burst_radius() < pair[1].burst_radius());
         }
@@ -252,15 +251,13 @@ pub(super) mod gpu {
             center: writer.lit(Vec3::ZERO).expr(),
             speed: (writer.lit(preset.burst_radius() * 1.8) * zoom_value.clone()).expr(),
         };
-        let gravity = AccelModifier::new(
-            (writer.lit(Vec3::new(0., -135., 0.)) * zoom_value.clone()).expr(),
-        );
+        let gravity =
+            AccelModifier::new((writer.lit(Vec3::new(0., -135., 0.)) * zoom_value.clone()).expr());
         // Initialize size as a particle attribute to support per-instance
         // scaling. SetSizeModifier overrides particle size with a fixed value.
         let init_size = SetAttributeModifier::new(
             Attribute::SIZE,
-            (writer.lit(if preset == Preset::Streak25 { 11. } else { 8. }) * zoom_value)
-                .expr(),
+            (writer.lit(if preset == Preset::Streak25 { 11. } else { 8. }) * zoom_value).expr(),
         );
         let [r, g, b] = preset.rgb();
         let mut gradient = bevy_hanabi::Gradient::new();
@@ -307,7 +304,10 @@ pub(super) mod gpu {
             let x = event.x - window.width() * 0.5;
             let y = window.height() * 0.5 - event.y;
             let mut properties = EffectProperties::default();
-            properties.set("vfx_scale", viewport_scale(window.width(), window.height()).into());
+            properties.set(
+                "vfx_scale",
+                viewport_scale(window.width(), window.height()).into(),
+            );
             commands.spawn((
                 ParticleEffect::new(catalog.0[event.preset as usize].clone()),
                 properties,
