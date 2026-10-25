@@ -15,17 +15,25 @@ without importing Neothesia or code from its forks.
 The browser link becomes available after the first successful Pages deployment.
 The bundled **First light** MusicXML piano study includes bass/treble staves,
 16 written measures, first/second endings, repeats, meter and tempo changes.
-Press **Space** to play, **V** for the note views, or choose **XML demo** in the
+Choose **Play** from the new main menu, then press **Space** to play, **V** for the note views, or choose **XML demo** in the
 corner-gear pause screen. The original demo is [CC0 1.0](web/piano/samples/ATTRIBUTION.md).
 
 During play, only the corner gear and timeline remain; the pause screen contains
 transport, volume, file import, fullscreen and every setting. Opening it stops
 playback and releases live notes; returning leaves playback paused until Resume.
 
+The app opens at a logo-first main menu: **Play**, **Train**, **FreeForm**, and
+**Settings**. Train offers note reading and diatonic chord exercises; FreeForm
+keeps song playback silent. Return home from the corner-gear pause screen.
+
 ## Screenshots
 
 Actual running app, captured with Chromium at 1440 px width using Tangent's
 original demonstration study. These are app screenshots, not design mockups.
+
+![Main menu](docs/screenshots/main-menu.png)
+
+![Note practice](docs/screenshots/train-notes.png)
 
 ![Piano with falling blocks](docs/screenshots/piano-blocks.png)
 
@@ -116,7 +124,7 @@ notation layout, sampled sound and further formats require separate decisions.
 4. Expand into practice, library and scored performance after those foundations work.
 
 The importer and initial web piano/playback slice are delivered. Persistence,
-full notation and product modes remain open in [the backlog](docs/TODO.md).
+full notation and advanced practice/performance modes remain open in [the backlog](docs/TODO.md).
 
 ## Contributing
 

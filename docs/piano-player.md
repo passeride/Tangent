@@ -111,3 +111,18 @@ The MusicXML demo and note display are described in ADR-0007: real Bravura G/F
 clefs, translucent clef watermarks on rotated staves, measure/beat guides,
 barlines, meter, tempo, repeat signs and first/second houses. The score playhead
 uses explicit performance visits when returning to a repeated written measure.
+
+## Main menu and practice
+
+Start at Main; choose Play for the loaded song, FreeForm for live piano, or
+Train → Notes/Chords for untimed exercises. Notes require the displayed octave;
+chords accept inversions and octave doublings. Release all keys between answers.
+Settings opens from Main or the session gear; Main menu in pause returns home.
+All menus use the same Bevy GPU canvas. Browser-backed builds omit Exit.
+See [ADR-0008](adr/0008-navigation-and-practice.md) for scope and boundaries.
+
+Verification for this update: 44 native tests, formatting, native/WASM
+warnings-denied Clippy, release WASM, real Chromium navigation/practice/audio
+smoke, packaged `/Tangent/` smoke and embedded Linux launcher smoke pass.
+Actual main-menu, Train and note-exercise screenshots are reproducible through
+`web/piano/capture.mjs`. Physical MIDI remains unverified.

@@ -11,6 +11,39 @@ try {
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await ready(page, server.url);
+  assert.equal((await page.evaluate(() => tangentDiagnostics())).screen, "Main");
+  await page.keyboard.press("KeyA");
+  assert.equal((await page.evaluate(() => tangentDiagnostics())).live.length, 0);
+  await click(page, "help");
+  await page.keyboard.press("Escape");
+  await click(page, "train");
+  await click(page, "train-notes");
+  await page.waitForFunction(() => tangentDiagnostics().screen === "Session");
+  await page.keyboard.down("KeyA");
+  await page.waitForFunction(() => tangentDiagnostics().completed === 1);
+  await page.keyboard.up("KeyA");
+  await page.keyboard.press("Escape");
+  await click(page, "main");
+  await click(page, "train");
+  await click(page, "train-chords");
+  await page.waitForFunction(() => tangentDiagnostics().screen === "Session");
+  await page.keyboard.down("KeyA");
+  await page.keyboard.down("KeyD");
+  await page.keyboard.down("KeyG");
+  await page.waitForFunction(() => tangentDiagnostics().completed === 1);
+  await page.keyboard.up("KeyA");
+  await page.keyboard.up("KeyD");
+  await page.keyboard.up("KeyG");
+  await page.keyboard.press("Escape");
+  await click(page, "main");
+  await click(page, "freeform");
+  await page.waitForFunction(() => tangentDiagnostics().screen === "Session");
+  await page.keyboard.press("Space");
+  assert.equal((await page.evaluate(() => tangentDiagnostics())).playing, false);
+  await page.keyboard.press("Escape");
+  await click(page, "main");
+  await click(page, "start-play");
+  await page.waitForFunction(() => tangentDiagnostics().screen === "Session");
   assert.equal(await page.locator("canvas").count(), 1);
   assert.equal(await page.locator("button,select").count(), 0);
   assert.equal(await page.locator("#startup").isHidden(), true);
@@ -141,6 +174,18 @@ try {
     ),
     true,
   );
+  await click(page, "help");
+  await click(page, "main");
+  await page.waitForFunction(() => tangentDiagnostics().screen === "Main");
+  for (const id of ["train", "train-notes"]) {
+    const screen = await page.evaluate(() => tangentDiagnostics());
+    assert(screen.buttons.every(b => b.x >= 0 && b.y >= 0 && b.x + b.w <= screen.width && b.y + b.h <= screen.height));
+    await click(page, id);
+  }
+  await page.waitForFunction(() => tangentDiagnostics().screen === "Session");
+  await page.keyboard.down("KeyA");
+  await page.waitForFunction(() => tangentDiagnostics().completed === 1);
+  await page.keyboard.up("KeyA");
   const noGpu = await browser.newPage();
   await noGpu.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;

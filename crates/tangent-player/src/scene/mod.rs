@@ -2,6 +2,7 @@
 mod controls;
 mod draw;
 mod layout;
+mod menu;
 mod platform;
 mod score;
 mod theme;
@@ -27,8 +28,24 @@ impl View {
         }
     }
 }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Screen {
+    Main,
+    Train,
+    Session,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Mode {
+    Play,
+    FreeForm,
+    Notes,
+    Chords,
+}
 #[derive(Resource)]
 pub struct State {
+    screen: Screen,
+    mode: Mode,
+    practice: tangent_core::practice::Practice,
     song: Song,
     transport: Transport,
     piano: PianoLayout,
@@ -62,6 +79,9 @@ impl State {
         let song = import::study();
         let duration_us = song.duration_us;
         Self {
+            screen: Screen::Main,
+            mode: Mode::Play,
+            practice: tangent_core::practice::Practice::default(),
             song,
             transport: Transport {
                 duration_us,
@@ -95,10 +115,20 @@ impl State {
         }
         if self.held.remove(&id).is_some() {
             platform::action("off", &id);
+            if self.held.is_empty() {
+                self.practice.answer(&[]);
+            }
         }
         if let Some(key) = key {
+            if self.screen != Screen::Session || self.help {
+                return;
+            }
             self.held.insert(id.clone(), key);
             self.live_bursts.push(key);
+            if matches!(self.mode, Mode::Notes | Mode::Chords) {
+                let held: Vec<_> = self.held.values().copied().collect();
+                self.practice.answer(&held);
+            }
             platform::action(
                 "on",
                 &serde_json::json!({"id":id,"key":key,"velocity":velocity}).to_string(),
@@ -107,6 +137,8 @@ impl State {
     }
     fn panic(&mut self) {
         self.held.clear();
+        self.practice.answer(&[]);
+        self.live_bursts.clear();
         self.transport.playing = false;
         platform::action("panic", "");
         self.sync();
@@ -191,7 +223,10 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
             }
             "note" => {
                 let id = m["id"].as_str().unwrap_or("midi").to_string();
-                let key = if !state.help && m["down"].as_bool() == Some(true) {
+                let key = if state.screen == Screen::Session
+                    && !state.help
+                    && m["down"].as_bool() == Some(true)
+                {
                     m["key"].as_u64().filter(|k| *k < 128).map(|k| k as u8)
                 } else {
                     None

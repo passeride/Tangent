@@ -114,3 +114,10 @@ repository at the pinned commit in the asset register, SIL OFL 1.1. It is embedd
 in Bevy. First light MusicXML is original synthetic demonstration music (CC0 1.0);
 it replaces, rather than transcribes, the Mutopia MIDI. The retired MIDI credit
 record remains in docs/retired-midi-sample.md. ADR-0007 records repeat/score mapping.
+
+## Navigation and practice — 2026-10-25
+
+Original Bevy navigation, piano-key wordmark geometry and independent core
+exercise rules implement the owner’s main-menu/Train request. No legacy source
+was consulted or imported, and no new dependency or external asset was added.
+The disclosed prior exposure remains unchanged; see ADR-0008.

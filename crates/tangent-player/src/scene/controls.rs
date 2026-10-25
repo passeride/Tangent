@@ -1,6 +1,12 @@
 use super::*;
 #[derive(Clone, Copy, Debug)]
 pub enum Action {
+    Main,
+    Train,
+    StartPlay,
+    FreeForm,
+    TrainNotes,
+    TrainChords,
     Play,
     Restart,
     Back,
@@ -23,6 +29,12 @@ pub enum Action {
 impl Action {
     pub fn id(self) -> &'static str {
         match self {
+            Self::Main => "main",
+            Self::Train => "train",
+            Self::StartPlay => "start-play",
+            Self::FreeForm => "freeform",
+            Self::TrainNotes => "train-notes",
+            Self::TrainChords => "train-chords",
             Self::Play => "play",
             Self::Restart => "restart",
             Self::Back => "back",
@@ -45,10 +57,44 @@ impl Action {
     }
 }
 fn activate(state: &mut State, action: Action, shift: bool) {
+    if state.mode != Mode::Play
+        && matches!(action, Action::Restart | Action::Back | Action::Forward)
+    {
+        return;
+    }
     let step = if shift { 15_000_000 } else { 5_000_000 };
     match action {
-        Action::Play => {
+        Action::Main | Action::Train => {
+            state.panic();
             state.help = false;
+            state.screen = if matches!(action, Action::Main) {
+                Screen::Main
+            } else {
+                Screen::Train
+            };
+        }
+        Action::StartPlay | Action::FreeForm | Action::TrainNotes | Action::TrainChords => {
+            state.panic();
+            state.help = false;
+            state.screen = Screen::Session;
+            state.mode = match action {
+                Action::FreeForm => Mode::FreeForm,
+                Action::TrainNotes => Mode::Notes,
+                Action::TrainChords => Mode::Chords,
+                _ => Mode::Play,
+            };
+            state.practice = tangent_core::practice::Practice::new(state.mode == Mode::Chords);
+            state.particles.clear();
+            state.live_bursts.clear();
+        }
+        Action::Play => {
+            if state.screen != Screen::Session {
+                return;
+            }
+            state.help = false;
+            if state.mode != Mode::Play {
+                return;
+            }
             if state.transport.position_us >= state.transport.duration_us {
                 state.transport.seek(0);
             }
@@ -160,6 +206,37 @@ pub fn input(
         || keys.just_pressed(KeyCode::ControlRight)
         || keys.just_pressed(KeyCode::SuperLeft)
         || keys.just_pressed(KeyCode::SuperRight);
+    if state.screen != Screen::Session {
+        if keys.just_pressed(KeyCode::F1) {
+            activate(&mut state, Action::Help, false);
+        }
+        if keys.just_pressed(KeyCode::Escape) {
+            let action = if state.help {
+                Action::Help
+            } else {
+                Action::Main
+            };
+            activate(&mut state, action, false);
+        }
+        if keys.just_pressed(KeyCode::F11) {
+            activate(&mut state, Action::Fullscreen, false);
+        }
+        let pos = window.cursor_position();
+        let touch = touches.iter_just_pressed().next();
+        let pressed = mouse.just_pressed(MouseButton::Left) || touch.is_some();
+        let pos = touch.map(|t| t.position()).or(pos);
+        if pressed
+            && let Some(pos) = pos
+            && let Some((_, action)) = state
+                .buttons
+                .iter()
+                .find(|(r, _)| r.contains(pos.x, pos.y))
+                .copied()
+        {
+            activate(&mut state, action, false);
+        }
+        return;
+    }
     if ctrl {
         for (key, action) in [
             (KeyCode::KeyO, Action::Import),
@@ -204,7 +281,7 @@ pub fn input(
             state.arrow_repeat = 0.15;
         }
     }
-    if keys.just_pressed(KeyCode::End) {
+    if state.mode == Mode::Play && keys.just_pressed(KeyCode::End) {
         let end = state.transport.duration_us;
         state.transport.seek(end);
         state.sync();
@@ -251,7 +328,7 @@ pub fn input(
             activate(&mut state, action, shift);
             return;
         }
-        if !state.help && layout.progress.contains(pos.x, pos.y) {
+        if state.mode == Mode::Play && !state.help && layout.progress.contains(pos.x, pos.y) {
             let at = ((pos.x - layout.progress.x) / layout.progress.w).clamp(0., 1.)
                 * state.transport.duration_us as f32;
             state.transport.seek(at as u64);

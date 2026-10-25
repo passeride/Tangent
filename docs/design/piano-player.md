@@ -8,8 +8,9 @@
 ## Experience
 
 The piano anchors the bottom of a quiet, dark stage. Colored notes arrive at a
-thin strike line, illuminate their keys and create brief upward sparks. An
-original two-hand study makes the first screen useful before importing a file.
+thin strike line, illuminate their keys and create brief upward sparks. The app opens at a centered logo-first main menu. Play opens the original
+two-hand study; Train offers note/chord exercises, FreeForm opens live piano,
+and Settings returns to the menu when closed. See ADR-0008.
 Only a small gear in the top-right corner remains during play. It opens a pause
 screen containing every setting and transport/file/fullscreen control. No score/combo is invented in this slice;
 those are separate practice/performance rules.

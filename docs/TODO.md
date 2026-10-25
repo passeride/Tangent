@@ -36,8 +36,10 @@ this file tracks the remaining work, not an authorization gate.
 
 ## Product layers
 
-- Practice matching and scoring consume performed notes; they do not belong in
-  renderers or the import parser. Add their own requirements/ADRs before rules.
+- Main/Train menus, FreeForm and basic note/chord matching are delivered in
+  ADR-0008. Extend the fixed C-major exercises with bass-clef targets, curriculum
+  options and feedback. Timed scoring, progress persistence and adaptive exercise
+  selection remain future work in the domain layer.
 - Add full reduced-motion preferences, contrast checks and accessible Bevy UI semantics for
   note/event information. Effects can already be disabled manually.
 

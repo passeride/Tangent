@@ -32,3 +32,5 @@ existed. Small local refactors do not require an ADR.
 
 Remaining questions include GPU rendering, off-main-thread audio, authored-score
 layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
+
+- [ADR-0008: Navigation and practice](0008-navigation-and-practice.md) — accepted; main menu, mode routing and independent exercise rules.

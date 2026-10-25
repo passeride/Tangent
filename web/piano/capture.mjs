@@ -9,6 +9,19 @@ try {
     deviceScaleFactor: 1,
   });
   await ready(page, server.url);
+  await page.screenshot({ path: new URL("../../docs/screenshots/main-menu.png", import.meta.url).pathname });
+  await click(page, "train");
+  await page.waitForFunction(() => tangentDiagnostics().screen === "Train");
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: new URL("../../docs/screenshots/train-menu.png", import.meta.url).pathname });
+  await click(page, "train-notes");
+  await page.waitForFunction(() => tangentDiagnostics().screen === "Session");
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: new URL("../../docs/screenshots/train-notes.png", import.meta.url).pathname });
+  await page.keyboard.press("Escape");
+  await click(page, "main");
+  await click(page, "start-play");
+  await page.waitForFunction(() => tangentDiagnostics().screen === "Session");
   await page.keyboard.press("ArrowRight");
   for (const [mode, view] of [["blocks","Blocks"],["staff","Staff"],["notes","Notes"],["score","Score"]]) {
     if (mode !== "blocks") {
