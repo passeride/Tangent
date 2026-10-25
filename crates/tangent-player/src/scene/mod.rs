@@ -100,6 +100,10 @@ pub struct State {
     status: String,
     midi_outputs: Vec<MidiPort>,
     midi_output: String,
+    preferred_midi_output: Option<String>,
+    midi_restore_pending: bool,
+    midi_dropdown_open: bool,
+    midi_dropdown_page: usize,
     clock: f64,
     held: BTreeMap<String, u8>,
     previous: BTreeSet<usize>,
@@ -151,6 +155,10 @@ impl State {
             status: "Tap a key or press Space to enable sound. F1: shortcuts".into(),
             midi_outputs: vec![],
             midi_output: String::new(),
+            preferred_midi_output: None,
+            midi_restore_pending: false,
+            midi_dropdown_open: false,
+            midi_dropdown_page: 0,
             clock: platform::clock_us(),
             held: BTreeMap::new(),
             previous: BTreeSet::new(),
@@ -184,6 +192,7 @@ impl State {
             hear: self.hear,
             first_key: self.piano.keys.first().unwrap().key,
             last_key: self.piano.keys.last().unwrap().key,
+            midi_output_name: self.preferred_midi_output.clone(),
         }
     }
     fn restore_preferences(&mut self, p: Preferences) {
@@ -193,9 +202,34 @@ impl State {
         self.volume = p.volume;
         self.instrument = p.instrument;
         self.hear = p.hear;
+        self.preferred_midi_output = p.midi_output_name;
+        self.midi_restore_pending = self.preferred_midi_output.is_some();
         self.piano = PianoLayout::new(p.first_key, p.last_key).unwrap();
         self.viewport_set = true;
         self.sync();
+        self.restore_midi_output();
+    }
+    /// Only a unique, currently reported name can be restored. Native port IDs
+    /// are transient scan indices, never suitable for persistent preferences.
+    fn restore_midi_output(&mut self) {
+        if !self.midi_restore_pending {
+            return;
+        }
+        let Some(name) = self.preferred_midi_output.as_ref() else {
+            self.midi_restore_pending = false;
+            return;
+        };
+        let matches: Vec<_> = self.midi_outputs.iter().filter(|p| &p.name == name).collect();
+        if matches.len() > 1 {
+            self.midi_restore_pending = false;
+            self.status = format!("Multiple MIDI outputs named {name}; select one manually.");
+        } else if let Some(port) = matches.first() {
+            let id = port.id.clone();
+            self.midi_restore_pending = false;
+            self.panic();
+            platform::action("midi-output", &id);
+        }
+        // Zero matches: retain the preference and let a future Rescan retry.
     }
     fn sync(&self) {
         platform::action("transport",&serde_json::json!({"position":self.transport.position_us,"playing":self.transport.playing && self.mode==Mode::Play && self.screen==Screen::Session && !self.help,"volume":self.volume,"hear":self.hear,"instrument":self.instrument}).to_string());
@@ -340,6 +374,7 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
             "midi-outputs" => {
                 state.midi_outputs = serde_json::from_value(m["ports"].clone()).unwrap_or_default();
                 state.midi_output = m["selected"].as_str().unwrap_or("").into();
+                state.restore_midi_output();
             }
             "preferences" => {
                 if !m["data"].is_null() {
