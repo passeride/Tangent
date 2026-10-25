@@ -13,7 +13,11 @@ try {
       async open(){this.connection='open';return this;},clear(){window.midiSent.push(['clear']);},
       send(bytes){window.midiSent.push([...bytes]);}};
     const input={id:'p45-in',state:'connected',onmidimessage:null};
-    window.fakeMidi={outputs:new Map([[port.id,port]]),inputs:new Map([[input.id,input]]),onstatechange:null};
+    const outputs = sessionStorage.getItem('test-missing-output')==='yes' ? [] : [[port.id,port]];
+    if(sessionStorage.getItem('test-duplicate-output')==='yes') {
+      outputs.push(['p45-duplicate',{...port,id:'p45-duplicate'}]);
+    }
+    window.fakeMidi={outputs:new Map(outputs),inputs:new Map([[input.id,input]]),onstatechange:null};
     Object.defineProperty(navigator,'requestMIDIAccess',{value:async()=>window.fakeMidi});
     Object.defineProperty(navigator,'permissions',{configurable:true,value:{query:async()=>({state:'granted'})}});
   });
@@ -32,6 +36,21 @@ try {
   await page.reload(); await ready(page,server.url);
   await page.waitForFunction(()=>tangentDiagnostics().midi_output==='p45-test');
   assert.equal((await page.evaluate(()=>tangentDiagnostics())).preferences.midi_output_name,'Yamaha P-45');
+
+  // An unavailable port keeps the preference but never selects a random port.
+  await page.evaluate(()=>sessionStorage.setItem('test-missing-output','yes'));
+  await page.reload(); await ready(page,server.url);
+  await page.waitForFunction(()=>tangentDiagnostics().midi_outputs.length===0);
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).midi_output,'');
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).preferences.midi_output_name,'Yamaha P-45');
+  await page.evaluate(()=>{sessionStorage.removeItem('test-missing-output');sessionStorage.setItem('test-duplicate-output','yes');});
+  await page.reload(); await ready(page,server.url);
+  await page.waitForFunction(()=>tangentDiagnostics().midi_outputs.length===2);
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).midi_output,'','Duplicate device names must not auto-route playback');
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).preferences.midi_output_name,'Yamaha P-45');
+  await page.evaluate(()=>sessionStorage.removeItem('test-duplicate-output'));
+  await page.reload(); await ready(page,server.url);
+  await page.waitForFunction(()=>tangentDiagnostics().midi_output==='p45-test');
 
   // Explicit computer output persists too (not a stale Yamaha selection).
   await click(page,'settings');
