@@ -240,8 +240,7 @@ pub fn run() {
         &serde_json::to_string(&fingerprint::index_song(&state.song)).unwrap(),
     );
     let mut app = App::new();
-    app
-        .insert_resource(state)
+    app.insert_resource(state)
         .insert_resource(draw::Pool::default())
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -306,9 +305,17 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
             "file" => {
                 let bytes: Vec<u8> = m["bytes"]
                     .as_array()
-                    .map(|a| a.iter().filter_map(|v| v.as_u64().and_then(|n| u8::try_from(n).ok())).collect())
+                    .map(|a| {
+                        a.iter()
+                            .filter_map(|v| v.as_u64().and_then(|n| u8::try_from(n).ok()))
+                            .collect()
+                    })
                     .unwrap_or_default();
-                load_song(&mut state, &bytes, m["title"].as_str().unwrap_or("MIDI").into());
+                load_song(
+                    &mut state,
+                    &bytes,
+                    m["title"].as_str().unwrap_or("MIDI").into(),
+                );
             }
             "fingerprint-candidates" => {
                 if state.mode != Mode::FreeForm
@@ -393,7 +400,11 @@ fn load_song(state: &mut State, bytes: &[u8], title: String) {
                 duration_us: song.duration_us,
                 ..default()
             };
-            state.status = format!("{} notes loaded. {}", song.notes.len(), song.warnings.join(" "));
+            state.status = format!(
+                "{} notes loaded. {}",
+                song.notes.len(),
+                song.warnings.join(" ")
+            );
             state.song = song;
             platform::action("song", &serde_json::to_string(&state.song).unwrap());
             platform::action(

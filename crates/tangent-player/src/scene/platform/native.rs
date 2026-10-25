@@ -1,21 +1,26 @@
 //! Desktop capability adapter. No browser, loopback HTTP or webview.
 //! The Bevy/render thread never opens devices, blocks on SQLite, or parses files.
+#[path = "native/fingerprints.rs"]
 mod fingerprints;
+use midir::{Ignore, MidiInput, MidiInputConnection};
+use rodio::{DeviceSinkBuilder, MixerDeviceSink, Player, Source, source::SineWave};
+use rusqlite::{Connection, OptionalExtension};
+use serde::Deserialize;
+use serde_json::{Value, json};
 use std::{
     collections::HashMap,
     env, fs,
     io::Read,
     path::{Path, PathBuf},
     process::Command,
-    sync::{mpsc::{self, Receiver, Sender}, Mutex, OnceLock, atomic::{AtomicBool, Ordering}},
+    sync::{
+        Mutex, OnceLock,
+        atomic::{AtomicBool, Ordering},
+        mpsc::{self, Receiver, Sender},
+    },
     thread,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
-use midir::{Ignore, MidiInput, MidiInputConnection};
-use rodio::{DeviceSinkBuilder, MixerDeviceSink, Player, Source, source::SineWave};
-use rusqlite::{Connection, OptionalExtension};
-use serde::Deserialize;
-use serde_json::{Value, json};
 
 const MAX_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_VOICES: usize = 64;
@@ -34,10 +39,15 @@ fn bus() -> &'static Bus {
         let (actions, rx) = mpsc::channel();
         let (updates, messages) = mpsc::channel();
         let (file_tx, files) = mpsc::channel();
-        thread::Builder::new().name("tangent-native-io".into())
+        thread::Builder::new()
+            .name("tangent-native-io".into())
             .spawn(move || backend(rx, updates, file_tx))
             .expect("spawn native audio/MIDI/storage worker");
-        Bus { actions, updates: Mutex::new(messages), files: Mutex::new(files) }
+        Bus {
+            actions,
+            updates: Mutex::new(messages),
+            files: Mutex::new(files),
+        }
     })
 }
 pub fn clock_us() -> f64 {
@@ -53,7 +63,9 @@ pub fn action(name: &str, data: &str) {
 pub fn pull() -> String {
     let mut messages = Vec::new();
     if let Ok(rx) = bus().updates.lock() {
-        for event in rx.try_iter().take(512) { messages.push(event); }
+        for event in rx.try_iter().take(512) {
+            messages.push(event);
+        }
     }
     serde_json::to_string(&messages).unwrap_or_else(|_| "[]".into())
 }
@@ -72,11 +84,22 @@ struct Note {
     end_us: u64,
 }
 #[derive(Deserialize, Default)]
-struct Part { percussion: bool }
+struct Part {
+    percussion: bool,
+}
 #[derive(Deserialize, Default)]
-struct Song { notes: Vec<Note>, parts: Vec<Part> }
+struct Song {
+    notes: Vec<Note>,
+    parts: Vec<Part>,
+}
 #[derive(Deserialize, Default)]
-struct Transport { position: u64, playing: bool, volume: f32, hear: bool, instrument: usize }
+struct Transport {
+    position: u64,
+    playing: bool,
+    volume: f32,
+    hear: bool,
+    instrument: usize,
+}
 struct Audio {
     stream: Option<MixerDeviceSink>,
     voices: HashMap<String, Player>,
@@ -89,20 +112,44 @@ impl Audio {
     fn new(out: &Sender<Value>) -> Self {
         let stream = DeviceSinkBuilder::open_default_sink().ok();
         if stream.is_none() {
-            let _ = out.send(json!({"type":"status","text":"No audio device; visual player still available."}));
+            let _ = out.send(
+                json!({"type":"status","text":"No audio device; visual player still available."}),
+            );
         }
-        Self { stream, voices: HashMap::new(), song: Song::default(),
-               transport: Transport::default(), anchor: Instant::now(), next: 0 }
+        Self {
+            stream,
+            voices: HashMap::new(),
+            song: Song::default(),
+            transport: Transport::default(),
+            anchor: Instant::now(),
+            next: 0,
+        }
     }
-    fn silence(&mut self) { for (_, voice) in self.voices.drain() { voice.stop(); } }
+    fn silence(&mut self) {
+        for (_, voice) in self.voices.drain() {
+            voice.stop();
+        }
+    }
     fn reset(&mut self) {
         self.silence();
-        self.next = self.song.notes.partition_point(|n| n.start_us < self.transport.position);
+        self.next = self
+            .song
+            .notes
+            .partition_point(|n| n.start_us < self.transport.position);
         self.anchor = Instant::now();
     }
-    fn play_note(&mut self, id: String, key: u8, velocity: u8, duration: Duration, delay: Duration) {
+    fn play_note(
+        &mut self,
+        id: String,
+        key: u8,
+        velocity: u8,
+        duration: Duration,
+        delay: Duration,
+    ) {
         let Some(stream) = &self.stream else { return };
-        if self.voices.len() >= MAX_VOICES { return; }
+        if self.voices.len() >= MAX_VOICES {
+            return;
+        }
         let freq = 440.0 * 2.0_f32.powf((f32::from(key) - 69.0) / 12.0);
         let p = Player::connect_new(stream.mixer());
         let level = (f32::from(velocity) / 127.) * 0.16;
@@ -110,7 +157,13 @@ impl Audio {
         // Soft harmonic voice. All DSP is performed by the audio device's mixer,
         // never by the Bevy rendering thread.
         let source = SineWave::new(freq)
-            .mix(SineWave::new(freq * 2.).amplify(if self.transport.instrument == 0 { 0.22 } else { 0.36 }))
+            .mix(
+                SineWave::new(freq * 2.).amplify(if self.transport.instrument == 0 {
+                    0.22
+                } else {
+                    0.36
+                }),
+            )
             .mix(SineWave::new(freq * 3.).amplify(0.08))
             .take_duration(duration)
             .fade_in(Duration::from_millis(6))
@@ -122,14 +175,29 @@ impl Audio {
     }
     fn tick(&mut self) {
         self.voices.retain(|_, p| !p.empty());
-        if !self.transport.playing || !self.transport.hear { return; }
-        let position = self.transport.position.saturating_add(self.anchor.elapsed().as_micros() as u64);
+        if !self.transport.playing || !self.transport.hear {
+            return;
+        }
+        let position = self
+            .transport
+            .position
+            .saturating_add(self.anchor.elapsed().as_micros() as u64);
         let horizon = position.saturating_add(LOOKAHEAD_US);
         while let Some(note) = self.song.notes.get(self.next) {
-            if note.start_us > horizon { break; }
-            let (key, velocity, part, begin, end) = (note.key, note.velocity, note.part, note.start_us, note.end_us);
+            if note.start_us > horizon {
+                break;
+            }
+            let (key, velocity, part, begin, end) = (
+                note.key,
+                note.velocity,
+                note.part,
+                note.start_us,
+                note.end_us,
+            );
             self.next += 1;
-            if self.song.parts.get(part).is_some_and(|p| p.percussion) || end <= position { continue; }
+            if self.song.parts.get(part).is_some_and(|p| p.percussion) || end <= position {
+                continue;
+            }
             let delay = Duration::from_micros(begin.saturating_sub(position));
             let length = Duration::from_micros(end.saturating_sub(begin.max(position)).max(50_000));
             self.play_note(format!("song:{}", self.next), key, velocity, length, delay);
@@ -137,25 +205,48 @@ impl Audio {
     }
     fn handle(&mut self, name: &str, value: &str) {
         match name {
-            "song" => if let Ok(song) = serde_json::from_str::<Song>(value) {
-                self.song = song; self.reset();
-            },
-            "transport" => if let Ok(t) = serde_json::from_str::<Transport>(value) {
-                self.transport = t; self.reset();
-            },
-            "volume" => if let Ok(v) = value.parse::<f32>() {
-                self.transport.volume = v;
-                for p in self.voices.values() { p.set_volume(v.clamp(0., 1.)); }
-            },
-            "on" => if let Ok(n) = serde_json::from_str::<Value>(value)
-                && let (Some(id), Some(key), Some(velocity)) =
-                    (n["id"].as_str(), n["key"].as_u64(), n["velocity"].as_u64())
+            "song" => {
+                if let Ok(song) = serde_json::from_str::<Song>(value) {
+                    self.song = song;
+                    self.reset();
+                }
+            }
+            "transport" => {
+                if let Ok(t) = serde_json::from_str::<Transport>(value) {
+                    self.transport = t;
+                    self.reset();
+                }
+            }
+            "volume" => {
+                if let Ok(v) = value.parse::<f32>() {
+                    self.transport.volume = v;
+                    for p in self.voices.values() {
+                        p.set_volume(v.clamp(0., 1.));
+                    }
+                }
+            }
+            "on" => {
+                if let Ok(n) = serde_json::from_str::<Value>(value)
+                    && let (Some(id), Some(key), Some(velocity)) =
+                        (n["id"].as_str(), n["key"].as_u64(), n["velocity"].as_u64())
                 {
-                    if let Some(old) = self.voices.remove(id) { old.stop(); }
-                    self.play_note(id.into(), key as u8, velocity as u8,
-                                   Duration::from_secs(10), Duration::ZERO);
-                },
-            "off" => { if let Some(voice) = self.voices.remove(value) { voice.stop(); } },
+                    if let Some(old) = self.voices.remove(id) {
+                        old.stop();
+                    }
+                    self.play_note(
+                        id.into(),
+                        key as u8,
+                        velocity as u8,
+                        Duration::from_secs(10),
+                        Duration::ZERO,
+                    );
+                }
+            }
+            "off" => {
+                if let Some(voice) = self.voices.remove(value) {
+                    voice.stop();
+                }
+            }
             "panic" => self.silence(),
             _ => {}
         }
@@ -182,7 +273,8 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
         return Err(rusqlite::Error::InvalidQuery);
     }
     if version == 0 {
-        conn.execute_batch("BEGIN;
+        conn.execute_batch(
+            "BEGIN;
             CREATE TABLE settings (id INTEGER PRIMARY KEY CHECK (id = 1),
                 payload TEXT NOT NULL, updated_at TEXT NOT NULL);
             CREATE TABLE practice_sessions (id TEXT PRIMARY KEY NOT NULL,
@@ -191,10 +283,12 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
                 session_id TEXT NOT NULL REFERENCES practice_sessions(id) ON DELETE CASCADE,
                 metric TEXT NOT NULL, value REAL NOT NULL, created_at TEXT NOT NULL);
             CREATE INDEX scores_by_session ON scores(session_id);
-            PRAGMA user_version = 1; COMMIT;")?;
+            PRAGMA user_version = 1; COMMIT;",
+        )?;
     }
     if version < 2 {
-        conn.execute_batch("BEGIN;
+        conn.execute_batch(
+            "BEGIN;
       CREATE TABLE fingerprint_songs (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
@@ -217,7 +311,8 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
       );
       CREATE INDEX fingerprint_signature_lookup ON fingerprint_ngrams(signature);
       PRAGMA user_version = 2;
-      COMMIT;")?;
+      COMMIT;",
+        )?;
     }
     Ok(())
 }
@@ -226,18 +321,22 @@ fn storage(out: &Sender<Value>) -> Option<(Connection, PathBuf)> {
         let path = data_dir()?.join("tangent.sqlite");
         let conn = Connection::open(&path).map_err(|e| e.to_string())?;
         migrate(&conn).map_err(|e| e.to_string())?;
-        let payload: Option<String> = conn.query_row(
-            "SELECT payload FROM settings WHERE id=1", [], |r| r.get(0)
-        ).optional().map_err(|e| e.to_string())?;
+        let payload: Option<String> = conn
+            .query_row("SELECT payload FROM settings WHERE id=1", [], |r| r.get(0))
+            .optional()
+            .map_err(|e| e.to_string())?;
         let data = payload.and_then(|s| serde_json::from_str::<Value>(&s).ok());
         let _ = out.send(json!({"type":"preferences","data":data}));
-        let _ = out.send(json!({"type":"storage-status","text":format!("Local SQLite: {}",path.display())}));
+        let _ = out.send(
+            json!({"type":"storage-status","text":format!("Local SQLite: {}",path.display())}),
+        );
         Ok((conn, path))
     })();
     match res {
         Ok(db) => Some(db),
         Err(e) => {
-            let _ = out.send(json!({"type":"storage-status","text":format!("SQLite unavailable: {e}")}));
+            let _ = out
+                .send(json!({"type":"storage-status","text":format!("SQLite unavailable: {e}")}));
             // Let the UI continue with defaults, without pretending a save succeeded.
             let _ = out.send(json!({"type":"preferences","data":null}));
             None
@@ -254,11 +353,17 @@ fn save(conn: &Connection, json: &str) -> rusqlite::Result<()> {
     Ok(())
 }
 fn export(conn: &Connection, path: &Path) -> Result<PathBuf, String> {
-    let base = env::var_os("USERPROFILE").or_else(|| env::var_os("HOME"))
-        .map(PathBuf::from).unwrap_or_else(|| path.to_owned());
-    let seconds = SystemTime::now().duration_since(UNIX_EPOCH)
-        .unwrap_or_default().as_secs();
-    let dest = base.join("Downloads").join(format!("tangent-{seconds}.sqlite"));
+    let base = env::var_os("USERPROFILE")
+        .or_else(|| env::var_os("HOME"))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| path.to_owned());
+    let seconds = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let dest = base
+        .join("Downloads")
+        .join(format!("tangent-{seconds}.sqlite"));
     conn.execute("VACUUM INTO ?1", [dest.to_string_lossy().as_ref()])
         .map_err(|e| e.to_string())?;
     Ok(dest)
@@ -266,7 +371,10 @@ fn export(conn: &Connection, path: &Path) -> Result<PathBuf, String> {
 fn read_music(reader: impl Read) -> Result<Vec<u8>, String> {
     // Enforce the limit while reading: metadata can be stale if a file grows.
     let mut bytes = Vec::new();
-    reader.take(MAX_FILE_BYTES + 1).read_to_end(&mut bytes).map_err(|e| e.to_string())?;
+    reader
+        .take(MAX_FILE_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|e| e.to_string())?;
     if bytes.len() as u64 > MAX_FILE_BYTES {
         return Err("Music file exceeds 16 MiB".into());
     }
@@ -276,10 +384,18 @@ fn import_path(path: &Path, files: &Sender<(Vec<u8>, String)>, out: &Sender<Valu
     let result = (|| -> Result<(), String> {
         let file = fs::File::open(path).map_err(|e| e.to_string())?;
         let metadata = file.metadata().map_err(|e| e.to_string())?;
-        if !metadata.is_file() { return Err("Select a regular music file".into()); }
-        if metadata.len() > MAX_FILE_BYTES { return Err("Music file exceeds 16 MiB".into()); }
+        if !metadata.is_file() {
+            return Err("Select a regular music file".into());
+        }
+        if metadata.len() > MAX_FILE_BYTES {
+            return Err("Music file exceeds 16 MiB".into());
+        }
         let bytes = read_music(file)?;
-        let title = path.file_stem().and_then(|x| x.to_str()).unwrap_or("Score").into();
+        let title = path
+            .file_stem()
+            .and_then(|x| x.to_str())
+            .unwrap_or("Score")
+            .into();
         files.send((bytes, title)).map_err(|e| e.to_string())
     })();
     if let Err(e) = result {
@@ -291,12 +407,25 @@ fn pick_file() -> Option<PathBuf> {
     let output = Command::new("powershell").args(["-NoProfile","-Command",
         "Add-Type -AssemblyName System.Windows.Forms; $d=New-Object System.Windows.Forms.OpenFileDialog; $d.Filter='Music files|*.mid;*.midi;*.xml;*.musicxml;*.mxl|All files|*.*'; if($d.ShowDialog() -eq 'OK'){$d.FileName}"]).output().ok()?;
     #[cfg(target_os = "macos")]
-    let output = Command::new("osascript").args(["-e",
-        "POSIX path of (choose file with prompt \"Open music score\")"]).output().ok()?;
+    let output = Command::new("osascript")
+        .args([
+            "-e",
+            "POSIX path of (choose file with prompt \"Open music score\")",
+        ])
+        .output()
+        .ok()?;
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    let output = Command::new("zenity").args(["--file-selection","--title=Open music score",
-        "--file-filter=Music | *.mid *.midi *.xml *.musicxml *.mxl"]).output().ok()?;
-    if !output.status.success() { return None; }
+    let output = Command::new("zenity")
+        .args([
+            "--file-selection",
+            "--title=Open music score",
+            "--file-filter=Music | *.mid *.midi *.xml *.musicxml *.mxl",
+        ])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
     let path = String::from_utf8(output.stdout).ok()?;
     let path = path.trim();
     (!path.is_empty()).then(|| PathBuf::from(path))
@@ -311,69 +440,98 @@ fn connect_midi(out: &Sender<Value>) -> Vec<MidiInputConnection<()>> {
     };
     let mut connections = Vec::new();
     for index in 0..count {
-        let Ok(mut input) = MidiInput::new("Tangent") else { continue };
+        let Ok(mut input) = MidiInput::new("Tangent") else {
+            continue;
+        };
         input.ignore(Ignore::None);
         let ports = input.ports();
-        let Some(port) = ports.get(index) else { continue };
-        let name = input.port_name(port).unwrap_or_else(|_| format!("Port {index}"));
+        let Some(port) = ports.get(index) else {
+            continue;
+        };
+        let name = input
+            .port_name(port)
+            .unwrap_or_else(|_| format!("Port {index}"));
         let tx = out.clone();
-        let connect = input.connect(port, "Tangent piano input", move |_, bytes, _| {
-            if bytes.len() < 3 { return; }
-            let kind = bytes[0] & 0xf0;
-            let channel = bytes[0] & 0x0f;
-            let key = bytes[1];
-            let velocity = bytes[2];
-            if kind == 0x90 || kind == 0x80 {
-                let _ = tx.send(json!({"type":"note",
+        let connect = input.connect(
+            port,
+            "Tangent piano input",
+            move |_, bytes, _| {
+                if bytes.len() < 3 {
+                    return;
+                }
+                let kind = bytes[0] & 0xf0;
+                let channel = bytes[0] & 0x0f;
+                let key = bytes[1];
+                let velocity = bytes[2];
+                if kind == 0x90 || kind == 0x80 {
+                    let _ = tx.send(json!({"type":"note",
                     "id":format!("midi:{index}:{channel}:{key}"),"key":key,
                     "velocity":velocity,"down":kind==0x90 && velocity>0}));
-            } else if kind == 0xb0 && (key==120 || key==123) {
-                let _ = tx.send(json!({"type":"pause"}));
-            }
-        }, ());
+                } else if kind == 0xb0 && (key == 120 || key == 123) {
+                    let _ = tx.send(json!({"type":"pause"}));
+                }
+            },
+            (),
+        );
         if let Ok(conn) = connect {
             connections.push(conn);
             let _ = out.send(json!({"type":"status","text":format!("MIDI connected: {name}")}));
         }
     }
     if connections.is_empty() {
-        let _ = out.send(json!({"type":"status","text":"No MIDI inputs; use keyboard or Ctrl+M to rescan."}));
+        let _ = out.send(
+            json!({"type":"status","text":"No MIDI inputs; use keyboard or Ctrl+M to rescan."}),
+        );
     }
     connections
 }
-fn backend(rx: Receiver<(String,String)>, out: Sender<Value>, files: Sender<(Vec<u8>,String)>) {
+fn backend(rx: Receiver<(String, String)>, out: Sender<Value>, files: Sender<(Vec<u8>, String)>) {
     let mut audio = Audio::new(&out);
     let db = storage(&out);
     let mut midi = connect_midi(&out);
     loop {
         match rx.recv_timeout(Duration::from_millis(4)) {
-            Ok((name,value)) => match name.as_str() {
-                "save-settings" => if let Some((conn,_)) = &db
-                    && let Err(e) = save(conn, &value)
-                {
-                    let _ = out.send(json!({"type":"storage-status","text":format!("Save failed: {e}")}));
-                },
-                "export-database" => if let Some((conn,path)) = &db {
-                    let info = match export(conn,path) {
-                        Ok(p) => format!("SQLite backup: {}",p.display()),
-                        Err(e) => format!("Export failed: {e}"),
-                    };
-                    let _ = out.send(json!({"type":"storage-status","text":info}));
-                },
-                "fingerprint-index" => if let Some((conn,_)) = &db {
-                    if let Err(e) = fingerprints::index(conn, &value) {
-                        let _ = out.send(json!({"type":"storage-status","text":format!("Index failed: {e}")}));
+            Ok((name, value)) => match name.as_str() {
+                "save-settings" => {
+                    if let Some((conn, _)) = &db
+                        && let Err(e) = save(conn, &value)
+                    {
+                        let _ = out.send(
+                            json!({"type":"storage-status","text":format!("Save failed: {e}")}),
+                        );
                     }
-                },
-                "fingerprint-query" => if let Some((conn,_)) = &db {
-                    if let Ok(request) = serde_json::from_str::<Value>(&value) {
-                        match fingerprints::candidates(conn, &request["signatures"]) {
-                            Ok(candidates) => { let _ = out.send(json!({"type":"fingerprint-candidates",
-                                "ticket":request["ticket"],"keys":request["keys"],"candidates":candidates})); },
-                            Err(e) => { let _ = out.send(json!({"type":"status","text":format!("Search failed: {e}")})); },
+                }
+                "export-database" => {
+                    if let Some((conn, path)) = &db {
+                        let info = match export(conn, path) {
+                            Ok(p) => format!("SQLite backup: {}", p.display()),
+                            Err(e) => format!("Export failed: {e}"),
+                        };
+                        let _ = out.send(json!({"type":"storage-status","text":info}));
+                    }
+                }
+                "fingerprint-index" => {
+                    if let Some((conn, _)) = &db {
+                        if let Err(e) = fingerprints::index(conn, &value) {
+                            let _ = out.send(json!({"type":"storage-status","text":format!("Index failed: {e}")}));
                         }
                     }
-                },
+                }
+                "fingerprint-query" => {
+                    if let Some((conn, _)) = &db {
+                        if let Ok(request) = serde_json::from_str::<Value>(&value) {
+                            match fingerprints::candidates(conn, &request["signatures"]) {
+                                Ok(candidates) => {
+                                    let _ = out.send(json!({"type":"fingerprint-candidates",
+                                "ticket":request["ticket"],"keys":request["keys"],"candidates":candidates}));
+                                }
+                                Err(e) => {
+                                    let _ = out.send(json!({"type":"status","text":format!("Search failed: {e}")}));
+                                }
+                            }
+                        }
+                    }
+                }
                 "midi" => {
                     // Release exclusive OS ports before attempting to reopen them.
                     // Clear held keys because a note-off may be lost during rescan.
@@ -381,21 +539,29 @@ fn backend(rx: Receiver<(String,String)>, out: Sender<Value>, files: Sender<(Vec
                     audio.silence();
                     let _ = out.send(json!({"type":"pause"}));
                     midi = connect_midi(&out);
-                },
+                }
                 "import" => {
                     let tx = rx_sender_file(files.clone(), out.clone());
-                    thread::spawn(move || { if let Some(path) = pick_file() { tx(&path); } });
-                },
+                    thread::spawn(move || {
+                        if let Some(path) = pick_file() {
+                            tx(&path);
+                        }
+                    });
+                }
                 "path" => import_path(Path::new(&value), &files, &out),
                 "sample" => {
-                    let _ = files.send((include_bytes!("../../../../../web/piano/samples/first-light.musicxml").to_vec(), "First light".into()));
-                },
+                    let _ = files.send((
+                        include_bytes!("../../../../../web/piano/samples/first-light.musicxml")
+                            .to_vec(),
+                        "First light".into(),
+                    ));
+                }
                 "credits" => {
                     let _ = out.send(json!({"type":"status","text":"First light is CC0 1.0; see web/piano/samples/ATTRIBUTION.md"}));
-                },
-                _ => audio.handle(&name,&value)
+                }
+                _ => audio.handle(&name, &value),
             },
-            Err(mpsc::RecvTimeoutError::Timeout) => {},
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
             Err(mpsc::RecvTimeoutError::Disconnected) => break,
         }
         audio.tick();
@@ -403,8 +569,10 @@ fn backend(rx: Receiver<(String,String)>, out: Sender<Value>, files: Sender<(Vec
         let _ = &midi;
     }
 }
-fn rx_sender_file(files: Sender<(Vec<u8>,String)>, out: Sender<Value>)
-    -> impl Fn(&Path) + Send + 'static {
+fn rx_sender_file(
+    files: Sender<(Vec<u8>, String)>,
+    out: Sender<Value>,
+) -> impl Fn(&Path) + Send + 'static {
     move |path| import_path(path, &files, &out)
 }
 #[cfg(test)]
@@ -416,12 +584,18 @@ mod tests {
         migrate(&db).unwrap();
         migrate(&db).unwrap();
         save(&db, r#"{"version":1,"view":0}"#).unwrap();
-        let value: String = db.query_row("SELECT payload FROM settings",[],|r|r.get(0)).unwrap();
+        let value: String = db
+            .query_row("SELECT payload FROM settings", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(serde_json::from_str::<Value>(&value).unwrap()["version"], 1);
-        let version: i64 = db.query_row("PRAGMA user_version",[],|r|r.get(0)).unwrap();
+        let version: i64 = db
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(version, 2);
-        let rows: i64 = db.query_row("SELECT count(*) FROM scores",[],|r|r.get(0)).unwrap();
-        assert_eq!(rows,0);
+        let rows: i64 = db
+            .query_row("SELECT count(*) FROM scores", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(rows, 0);
     }
     #[test]
     fn import_read_is_bounded_even_without_file_metadata() {
@@ -432,9 +606,9 @@ mod tests {
     }
     #[test]
     fn missing_import_does_not_enqueue_a_song() {
-        let (tx,rx) = mpsc::channel();
-        let (status_tx,_) = mpsc::channel();
-        import_path(Path::new("/missing-tangent-score.mid"),&tx,&status_tx);
+        let (tx, rx) = mpsc::channel();
+        let (status_tx, _) = mpsc::channel();
+        import_path(Path::new("/missing-tangent-score.mid"), &tx, &status_tx);
         assert!(rx.try_recv().is_err());
     }
 }

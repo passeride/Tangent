@@ -25,7 +25,9 @@ pub use web::*;
 #[cfg(not(target_arch = "wasm32"))]
 pub fn native_window(mut windows: bevy::prelude::Query<&mut bevy::window::Window>) {
     use bevy::window::{MonitorSelection, WindowMode};
-    if !take_fullscreen_request() { return; }
+    if !take_fullscreen_request() {
+        return;
+    }
     if let Ok(mut window) = windows.single_mut() {
         window.mode = match window.mode {
             WindowMode::Windowed => WindowMode::BorderlessFullscreen(MonitorSelection::Current),
