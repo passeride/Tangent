@@ -210,14 +210,8 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     let mut entries: Vec<(String, Action)> = vec![];
     let explanation = match state.settings_tab {
         SettingsTab::AudioMidi => {
-            let output = state
-                .midi_outputs
-                .iter()
-                .find(|p| p.id == state.midi_output)
-                .map_or("Computer audio", |p| p.name.as_str());
             entries.extend([
                 ("Rescan / connect MIDI".into(), Action::Midi),
-                (format!("Output: {output}"), Action::MidiOutput),
                 (
                     format!("Volume - ({}%)", (state.volume * 100.).round()),
                     Action::Quieter,
@@ -302,7 +296,62 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     let cols = if content_w >= 500. { 2 } else { 1 };
     let gap = 10.;
     let btn_w = (content_w - (cols - 1) as f32 * gap) / cols as f32;
-    let start = content_y + 72.;
+    let mut start = content_y + 72.;
+    if state.settings_tab == SettingsTab::AudioMidi {
+        let selected_name = state.midi_outputs.iter().find(|p| p.id == state.midi_output)
+            .map(|p| p.name.as_str());
+        let label = if let Some(name) = selected_name {
+            format!("MIDI output: {name}  v")
+        } else if let Some(name) = &state.preferred_midi_output {
+            format!("Computer audio  (saved: {name} unavailable)  v")
+        } else {
+            "MIDI output: Computer audio  v".to_string()
+        };
+        let max_chars = ((content_w - 24.) / 7.).max(12.) as usize;
+        let label: String = label.chars().take(max_chars).collect();
+        d.button(state, content_x, start, content_w, label, Action::MidiOutput, t);
+        start += 46.;
+        if state.midi_dropdown_open {
+            // The dropdown lives entirely inside Bevy and replaces other audio
+            // controls while open; it never leaks over/behind adjacent widgets.
+            let panel_h = 46. + 5. * 36. + 42.;
+            d.rect(content_x, start - 6., content_w, panel_h, t.panel, 10.);
+            d.button(state, content_x + 8., start, content_w - 16.,
+                if state.midi_output.is_empty() { "Selected: Computer audio" }
+                else { "Computer audio" },
+                Action::MidiOutputSelect(None), t);
+            let page = state.midi_dropdown_page;
+            for (offset, port) in state.midi_outputs.iter()
+                .enumerate().skip(page * 5).take(5) {
+                let max_chars = ((content_w - 44.) / 7.).max(10.) as usize;
+                let name: String = port.name.chars().take(max_chars).collect();
+                let marker = if port.id == state.midi_output { "[selected] " }
+                    else if state.preferred_midi_output.as_deref() == Some(&port.name) { "[saved] " }
+                    else { "" };
+                d.button(state, content_x + 8.,
+                    start + 36. * (offset - page * 5 + 1) as f32,
+                    content_w - 16., format!("{marker}{name}"),
+                    Action::MidiOutputSelect(Some(offset)), t);
+            }
+            if state.midi_outputs.is_empty() {
+                d.text(content_x + 12., start + 43.,
+                    "No MIDI outputs found. Select Rescan after closing.", 11., t.muted);
+            }
+            if state.midi_outputs.len() > 5 {
+                let nav_y = start + 36. * 6.;
+                let half = (content_w - 26.) / 2.;
+                if page > 0 {
+                    d.button(state, content_x + 8., nav_y, half,
+                        "Previous", Action::MidiOutputPage(false), t);
+                }
+                if (page + 1) * 5 < state.midi_outputs.len() {
+                    d.button(state, content_x + content_w - half - 8., nav_y,
+                        half, "Next", Action::MidiOutputPage(true), t);
+                }
+            }
+            return;
+        }
+    }
     let step = if l.height < 430. { 36. } else { 44. };
     for (i, (label, action)) in entries.into_iter().enumerate() {
         let x = content_x + (i % cols) as f32 * (btn_w + gap);
