@@ -40,7 +40,9 @@ try {
   // An unavailable port keeps the preference but never selects a random port.
   await page.evaluate(()=>sessionStorage.setItem('test-missing-output','yes'));
   await page.reload(); await page.waitForFunction(()=>tangentDiagnostics()?.renderer==='bevy-wgpu');
-  await page.waitForFunction(()=>tangentDiagnostics().midi_outputs.length===0);
+  await page.waitForFunction(()=>tangentDiagnostics().storage.ready
+    && tangentDiagnostics().preferences.midi_output_name==='Yamaha P-45'
+    && tangentDiagnostics().midi_outputs.length===0);
   assert.equal((await page.evaluate(()=>tangentDiagnostics())).midi_output,'');
   assert.equal((await page.evaluate(()=>tangentDiagnostics())).preferences.midi_output_name,'Yamaha P-45');
   await page.evaluate(()=>{sessionStorage.removeItem('test-missing-output');sessionStorage.setItem('test-duplicate-output','yes');});
@@ -59,6 +61,8 @@ try {
   await page.waitForFunction(()=>tangentDiagnostics().midi_output==='' && tangentDiagnostics().preferences.midi_output_name===null);
   await page.waitForFunction(()=>tangentDiagnostics().storage.pending===0);
   await page.reload(); await page.waitForFunction(()=>tangentDiagnostics()?.renderer==='bevy-wgpu');
+  await page.waitForFunction(()=>tangentDiagnostics().storage.ready
+    && tangentDiagnostics().preferences.midi_output_name===null);
   assert.equal((await page.evaluate(()=>tangentDiagnostics())).midi_output,'');
   await click(page,'settings');await click(page,'midi');
   await page.waitForFunction(()=>tangentDiagnostics().midi_outputs.length===1);
