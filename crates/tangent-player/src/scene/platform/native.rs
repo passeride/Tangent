@@ -58,9 +58,6 @@ pub fn pull() -> String {
 pub fn take_file() -> Option<(Vec<u8>, String)> {
     bus().files.lock().ok()?.try_recv().ok()
 }
-pub fn open_dropped_file(path: PathBuf) {
-    let _ = bus().actions.send(("path".into(), path.to_string_lossy().into()));
-}
 pub fn take_fullscreen_request() -> bool {
     FULLSCREEN.swap(false, Ordering::AcqRel)
 }
@@ -95,7 +92,7 @@ impl Audio {
         Self { stream, voices: HashMap::new(), song: Song::default(),
                transport: Transport::default(), anchor: Instant::now(), next: 0 }
     }
-    fn silence(&mut self) { self.voices.clear(); }
+    fn silence(&mut self) { for (_, voice) in self.voices.drain() { voice.stop(); } }
     fn reset(&mut self) {
         self.silence();
         self.next = self.song.notes.partition_point(|n| n.start_us < self.transport.position);
@@ -110,7 +107,7 @@ impl Audio {
         // Soft harmonic voice. All DSP is performed by the audio device's mixer,
         // never by the Bevy rendering thread.
         let source = SineWave::new(freq)
-            .mix(SineWave::new(freq * 2.).amplify(0.22))
+            .mix(SineWave::new(freq * 2.).amplify(if self.transport.instrument == 0 { 0.22 } else { 0.36 }))
             .mix(SineWave::new(freq * 3.).amplify(0.08))
             .take_duration(duration)
             .fade_in(Duration::from_millis(6))
@@ -147,16 +144,15 @@ impl Audio {
                 self.transport.volume = v;
                 for p in self.voices.values() { p.set_volume(v.clamp(0., 1.)); }
             },
-            "on" => if let Ok(n) = serde_json::from_str::<Value>(value) {
-                if let (Some(id), Some(key), Some(velocity)) =
+            "on" => if let Ok(n) = serde_json::from_str::<Value>(value)
+                && let (Some(id), Some(key), Some(velocity)) =
                     (n["id"].as_str(), n["key"].as_u64(), n["velocity"].as_u64())
                 {
-                    self.voices.remove(id);
+                    if let Some(old) = self.voices.remove(id) { old.stop(); }
                     self.play_note(id.into(), key as u8, velocity as u8,
                                    Duration::from_secs(10), Duration::ZERO);
-                }
-            },
-            "off" => { self.voices.remove(value); },
+                },
+            "off" => { if let Some(voice) = self.voices.remove(value) { voice.stop(); } },
             "panic" => self.silence(),
             _ => {}
         }
@@ -312,10 +308,10 @@ fn backend(rx: Receiver<(String,String)>, out: Sender<Value>, files: Sender<(Vec
     loop {
         match rx.recv_timeout(Duration::from_millis(4)) {
             Ok((name,value)) => match name.as_str() {
-                "save-settings" => if let Some((conn,_)) = &db {
-                    if let Err(e) = save(conn, &value) {
-                        let _ = out.send(json!({"type":"storage-status","text":format!("Save failed: {e}")}));
-                    }
+                "save-settings" => if let Some((conn,_)) = &db
+                    && let Err(e) = save(conn, &value)
+                {
+                    let _ = out.send(json!({"type":"storage-status","text":format!("Save failed: {e}")}));
                 },
                 "export-database" => if let Some((conn,path)) = &db {
                     let info = match export(conn,path) {

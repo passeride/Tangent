@@ -28,6 +28,7 @@ pub enum Action {
     ExportDatabase,
 }
 impl Action {
+    #[cfg(target_arch = "wasm32")]
     pub fn id(self) -> &'static str {
         match self {
             Self::Main => "main",
