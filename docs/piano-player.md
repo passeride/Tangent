@@ -155,7 +155,12 @@ Select the P-45/Digital Piano port to send playback to its speakers. Local Contr
 must stay On: hardware input is displayed/evaluated but not echoed. Computer and
 onscreen keys are sent on channel 16. The piano's volume/timbre controls apply to
 external output; Tangent volume/profile controls affect computer synthesis.
-Output selection is session-only. Rescan on desktop resets it to Computer audio.
+Output selection is persisted by device name in SQLite (ADR-0016). On startup
+or after rescan, a uniquely matching available output reconnects automatically;
+if missing or ambiguous, Computer audio remains active while the saved name is
+retained. Web MIDI requires already-granted permission to reconnect without a
+gesture; otherwise use Settings → Audio & MIDI → Rescan / connect MIDI. The
+Bevy dropdown includes Computer audio and available devices, with pagination.
 Pause, seek, switching outputs and exiting silence the MIDI destination.
 
 Song notes glow around unfilled keys; your actual key presses fill them. These
