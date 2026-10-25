@@ -533,7 +533,7 @@ pub fn input(
         ] {
             if keys.just_pressed(key)
                 && (!state.help
-                    || matches!(action, Action::Help)
+                    || matches!(action, Action::Help | Action::Fullscreen)
                     || (matches!(action, Action::Play) && !state.settings_open))
             {
                 activate(&mut state, action, shift);
