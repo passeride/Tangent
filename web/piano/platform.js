@@ -177,6 +177,7 @@ export async function installPlatform() {
     if (
       [
         "Space",
+        "Tab",
         "ArrowUp",
         "ArrowDown",
         "ArrowLeft",
@@ -362,7 +363,7 @@ export async function installPlatform() {
       }
     },
     report: (data) => {
-      state = JSON.parse(data);
+      state = { ...JSON.parse(data), frame: (state?.frame ?? 0) + 1 };
       document.getElementById("startup").hidden = true;
     },
   };

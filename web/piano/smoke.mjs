@@ -72,6 +72,11 @@ try {
   page.on("pageerror", (e) => errors.push(e.message));
   await ready(page, server.url);
   assert.equal((await page.evaluate(() => tangentDiagnostics())).screen, "Main");
+  await page.keyboard.press("Tab");
+  await page.waitForFunction(()=>tangentDiagnostics().focused_control==='start-play');
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(()=>tangentDiagnostics().screen==='Session');
+  await page.keyboard.press("Escape"); await click(page, "main");
   await page.keyboard.press("KeyA");
   assert.equal((await page.evaluate(() => tangentDiagnostics())).live.length, 0);
   await click(page, "settings");
@@ -168,8 +173,8 @@ try {
     (await page.evaluate(() => tangentDiagnostics())).position,
     position,
   );
-  // The playing surface keeps only a corner gear; Settings is a separate page.
-  assert.deepEqual((await page.evaluate(() => tangentDiagnostics())).buttons.map(b => b.id), ["help"]);
+  // Common transport remains reachable; Settings is a separate page.
+  assert.deepEqual((await page.evaluate(() => tangentDiagnostics())).buttons.map(b => b.id), ["play", "help"]);
   await page.keyboard.press("Space");
   await page.waitForFunction(() => tangentDiagnostics().playing);
   await click(page, "help");

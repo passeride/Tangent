@@ -31,6 +31,13 @@ try {
   }
   let expected = await page.evaluate(() => tangentDiagnostics().preferences);
   await page.waitForFunction(() => tangentDiagnostics().storage.pending === 0 && tangentDiagnostics().storage.revision >= 7);
+  await click(page, "settings-accessibility");
+  await click(page, "reduced-motion");
+  await click(page, "settings-effects");
+  await click(page, "effect-strength");
+  await page.waitForFunction(()=>tangentDiagnostics().preferences.reduced_motion && tangentDiagnostics().preferences.effect_strength===2);
+  expected = await page.evaluate(()=>tangentDiagnostics().preferences);
+  await page.waitForFunction(()=>tangentDiagnostics().storage.pending===0);
   // A full browser restart uses the same durable profile and origin.
   await context.close();
   context = await chromium.launchPersistentContext(profile, { headless: true, args: gpuArgs });

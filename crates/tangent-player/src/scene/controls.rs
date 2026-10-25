@@ -121,6 +121,7 @@ impl Action {
     }
 }
 fn activate(state: &mut State, action: Action, shift: bool) {
+    state.focused_button = None;
     if state.mode != Mode::Play
         && matches!(action, Action::Restart | Action::Back | Action::Forward)
     {
@@ -458,6 +459,26 @@ pub fn input(
             state.panic();
         }
         state.library.clear_modifiers();
+    }
+    if !typing && keys.just_pressed(KeyCode::Tab) && !state.buttons.is_empty() {
+        let count = state.buttons.len();
+        state.focused_button = Some(match (state.focused_button, shift) {
+            (None, false) => 0,
+            (None, true) => count - 1,
+            (Some(i), false) => (i + 1) % count,
+            (Some(i), true) => (i + count - 1) % count,
+        });
+        return;
+    }
+    if !typing
+        && (keys.just_pressed(KeyCode::Enter) || keys.just_pressed(KeyCode::NumpadEnter))
+        && let Some((_, action)) = state
+            .focused_button
+            .and_then(|i| state.buttons.get(i))
+            .copied()
+    {
+        activate(&mut state, action, shift);
+        return;
     }
     if state.screen == Screen::Library {
         state.library.tick(time.delta_secs());

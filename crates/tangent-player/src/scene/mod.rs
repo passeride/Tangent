@@ -8,6 +8,7 @@ mod menu;
 mod platform;
 mod practice_view;
 mod score;
+mod session_hud;
 mod settings;
 mod theme;
 use super::{import, preferences::Preferences};
@@ -124,6 +125,7 @@ pub struct State {
     particles: Vec<Particle>,
     ripples: Vec<Ripple>,
     buttons: Vec<(layout::Rect, controls::Action)>,
+    focused_button: Option<usize>,
     arrow_repeat: f32,
     viewport_set: bool,
     storage_ready: bool,
@@ -196,6 +198,7 @@ impl State {
             particles: vec![],
             ripples: vec![],
             buttons: vec![],
+            focused_button: None,
             arrow_repeat: 0.,
             viewport_set: false,
             storage_ready: false,

@@ -101,7 +101,7 @@ fn staff(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme, chords
     } else {
         30
     };
-    let staff_bottom = if bottom_step == 18 { 14. } else { 4. };
+    let staff_bottom = if bottom_step == 18 { 10. } else { 4. };
     let unit = |key| {
         staff_bottom - (tangent_core::notation::reading_pitch(key).step - bottom_step) as f32 * 0.5
     };
@@ -110,7 +110,7 @@ fn staff(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme, chords
     // Include every played pitch in the vertical extent, even outside the
     // visible piano range. Never clamp a wrong octave onto another staff line.
     let mut lo = -1.5_f32;
-    let mut hi = 16._f32;
+    let mut hi = 12.0_f32;
     for &key in targets.iter().chain(held.iter()) {
         lo = lo.min(unit(key) - 4.);
         hi = hi.max(unit(key) + 1.);
@@ -119,7 +119,9 @@ fn staff(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme, chords
     let gap = ((l.strike - 65. - top) / (hi - lo)).clamp(2., 14.);
     let origin = top - lo * gap;
     let treble = origin + 4. * gap;
-    let bass = origin + 14. * gap;
+    // Six staff spaces between E4 and G2 keep pitch height continuous
+    // across both clefs, including wrong-octave pointers.
+    let bass = origin + 10. * gap;
     for bottom in [treble, bass] {
         for i in 0..5 {
             d.line(
