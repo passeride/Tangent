@@ -27,7 +27,7 @@ impl Preferences {
             return Err("Invalid volume");
         }
         if self.midi_output_name.as_ref().is_some_and(|name| {
-            name.is_empty() || name.len() > 256 || name.trim() != name || name.chars().any(char::is_control)
+            name.trim().is_empty() || name.len() > 256 || name.chars().any(char::is_control)
         }) {
             return Err("Invalid MIDI output preference");
         }
