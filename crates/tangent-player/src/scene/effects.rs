@@ -265,7 +265,7 @@ pub(super) mod gpu {
         gradient.add_key(0.72, Vec4::new(r, g, b, 0.70));
         gradient.add_key(1., Vec4::new(r, g, b, 0.));
         EffectAsset::new(
-            128,
+            256,
             SpawnerSettings::once((preset.count() as f32).into()),
             writer.finish(),
         )
