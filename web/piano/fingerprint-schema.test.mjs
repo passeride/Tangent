@@ -34,6 +34,18 @@ assert.equal(candidate[0].title, "Für Elise");
 assert.deepEqual(candidate[0].keys, keys);
 assert.equal(candidate[0].hits, signatures.length);
 
+// A wrong note can erase the target's exact windows while a decoy has one hit.
+// Both lanes must reach Rust's fuzzy reranker in a small catalog.
+writeFingerprintedSong(db, { ...entry, id: "b".repeat(64), title: "Decoy" });
+const decoySignature = "80818283";
+db.run("UPDATE fingerprint_ngrams SET signature=? WHERE song_id=?", [decoySignature, "b".repeat(64)]);
+const mixed = findFingerprintCandidates(db, [decoySignature]);
+assert.equal(mixed.length, 2);
+assert.equal(mixed[0].title, "Decoy");
+assert.equal(mixed.find(row => row.title === "Für Elise").hits, 0);
+assert.equal(findFingerprintCandidates(db, [decoySignature], 1).length, 1);
+db.run("DELETE FROM fingerprint_songs WHERE id=?", ["b".repeat(64)]);
+
 // Repeated imports replace the same content without orphaning n-grams.
 writeFingerprintedSong(db, entry);
 assert.equal(db.exec("SELECT count(*) FROM fingerprint_ngrams")[0].values[0][0], signatures.length);

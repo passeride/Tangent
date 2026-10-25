@@ -120,15 +120,20 @@ export function findFingerprintCandidates(db, signatures, limit = 30) {
   } finally {
     stmt.free();
   }
-  // If one wrong note destroys every exact window, scan a bounded small library.
-  // This is deliberately capped; larger catalogs need an approximate index.
-  if (!rows.length) {
+  // Fill spare slots even when an unrelated lane has an exact n-gram hit.
+  // Otherwise that incidental hit prevents fuzzy matching the correct melody.
+  // Small catalogs are fully covered; larger catalogs still need an approximate index.
+  if (rows.length < max) {
     const fallback = db.exec(`SELECT m.song_id, m.part, s.title, m.keys_json, m.onsets_json, 0 AS hits
       FROM fingerprint_melodies m JOIN fingerprint_songs s ON s.id = m.song_id
       ORDER BY m.song_id, m.part LIMIT ${max}`);
     if (fallback.length) {
       const cols = fallback[0].columns;
-      for (const values of fallback[0].values) rows.push(Object.fromEntries(cols.map((k, i) => [k, values[i]])));
+      for (const values of fallback[0].values) {
+        const row = Object.fromEntries(cols.map((k, i) => [k, values[i]]));
+        if (rows.length >= max) break;
+        if (!rows.some(existing => existing.song_id === row.song_id && existing.part === row.part)) rows.push(row);
+      }
     }
   }
   return rows.map(row => ({

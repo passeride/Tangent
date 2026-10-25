@@ -26,8 +26,9 @@ A transposition-independent, weighted edit-distance alignment over interval
 sequences reranks candidates. The first score position is returned in performance
 note order with a microsecond onset. Similarity is **not a calibrated
 probability**. No composition/arrangement identity is inferred from the title:
-each imported score is a content-addressed local entry. With no exact fingerprint
-hit, scan a bounded 30-lane fallback to admit noisy query segments.
+each imported score is a content-addressed local entry. Fill the remaining slots in the bounded 30-lane shortlist with fallback lanes
+even if other lanes have exact hits, so incidental hits cannot exclude noisy
+segments in a small catalog. Larger catalogs still need an approximate index.
 
 The Bevy FreeForm session maintains the most recent 24 live key onsets, reduces
 near-simultaneous (40ms) notes to the highest key, queries SQLite at most every
