@@ -14,8 +14,8 @@ Kjør gjerne `Test-Tangent.ps1` med PowerShell, eller start `Tangent.exe` direkt
 7. **Lyd og belastning:** Prøv svakere/sterkere anslag og volum med opp/ned-pil. Spill et tettere stykke og bytt visning: noter, lyd og grensesnitt skal henge med uten tydelig hakking.
 8. **MIDI-utgang:** Settings → Audio & MIDI → Rescan / connect MIDI → åpne MIDI output-nedtrekksmenyen og velg P-45/Digital Piano. Spill et stykke: lyden skal komme fra pianoet. I FreeForm skal egne anslag ikke gi doble toner. Pause/spoling/bytte til Computer audio og lukking skal stoppe appens toner. La Local Control være på; bruk pianoets eget volum.
 9. **Lagring og gjenoppretting:** Avslutt og start Tangent på nytt. MIDI-utgangen skal velges automatisk når bare én tilkoblet port har samme navn. Koble fra pianoet, start appen og sjekk at datamaskinlyd brukes uten at den lagrede preferansen forsvinner. Koble til og kjør Rescan / connect MIDI for å gjenopprette. Prøv å velge Computer audio i nedtrekksmenyen, start på nytt og bekreft at dette er valgt.
-9. **Noteøving og farger:** Train → Notes: prøv Treble/Bass/Both og nivåene. Ingen bokstavfasit før Show hint. Riktig note blir stående til du slipper; feil oktav går ikke videre. I Play er sangens forventede taster bare glød, mens egne trykk er solide, også med Sparkles av.
-10. **Sletting:** Library → Remove → Confirm på ett stykke. Bare dette stykket skal forsvinne, også etter omstart. Settings → Export database skal lage en `.sqlite`-fil.
+10. **Noteøving og farger:** Train → Notes: prøv Treble/Bass/Both og nivåene. Ingen bokstavfasit før Show hint. Riktig note blir stående til du slipper; feil oktav går ikke videre. I Play er sangens forventede taster bare glød, mens egne trykk er solide, også med Sparkles av.
+11. **Sletting:** Library → Remove → Confirm på ett stykke. Bare dette stykket skal forsvinne, også etter omstart. Settings → Export database skal lage en `.sqlite`-fil.
 
 Noter **OK/FEIL**, hvilket steg, og hva du så/hørte. Ved forsinkelse: si gjerne om
 du brukte PC-høyttalere, kabel eller Bluetooth. Sustainpedal vurderes ikke i denne
