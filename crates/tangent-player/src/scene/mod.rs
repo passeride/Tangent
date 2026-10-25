@@ -1,6 +1,7 @@
 //! One shared Bevy/wgpu window and UI renderer for native desktop and web.
 mod controls;
 mod draw;
+mod effects;
 mod layout;
 mod library;
 mod menu;
@@ -70,7 +71,9 @@ pub struct State {
     clock: f64,
     held: BTreeMap<String, u8>,
     previous: BTreeSet<usize>,
-    live_bursts: Vec<u8>,
+    live_bursts: Vec<effects::Burst>,
+    gpu_bursts: Vec<effects::ScreenBurst>,
+    feedback: effects::Feedback,
     recognition_notes: Vec<(u64, u8)>,
     recognition_status: String,
     recognition_ticket: u64,
@@ -120,6 +123,8 @@ impl State {
             held: BTreeMap::new(),
             previous: BTreeSet::new(),
             live_bursts: vec![],
+            gpu_bursts: vec![],
+            feedback: effects::Feedback::default(),
             recognition_notes: vec![],
             recognition_status: String::new(),
             recognition_ticket: 0,
@@ -180,11 +185,33 @@ impl State {
                 return;
             }
             self.held.insert(id.clone(), key);
-            self.live_bursts.push(key);
             self.capture_for_recognition(key);
-            if matches!(self.mode, Mode::Notes | Mode::Chords) {
-                let held: Vec<_> = self.held.values().copied().collect();
-                self.practice.answer(&held);
+            // Never judge backing-track playback as a player hit. A partial
+            // chord is not wrong merely because the other fingers are pending.
+            let grade = match self.mode {
+                Mode::Play if self.transport.playing => Some(if effects::expected_song_hit(
+                    &self.song, self.transport.position_us, key,
+                ) {
+                    effects::Grade::Correct
+                } else {
+                    effects::Grade::Wrong
+                }),
+                Mode::Play | Mode::FreeForm => Some(effects::Grade::Neutral),
+                Mode::Notes | Mode::Chords => {
+                    let target_member = effects::belongs_to_target(&self.practice, key);
+                    let held: Vec<_> = self.held.values().copied().collect();
+                    if self.practice.answer(&held) {
+                        Some(effects::Grade::Correct)
+                    } else if !self.practice.waiting_release && !target_member {
+                        Some(effects::Grade::Wrong)
+                    } else {
+                        None
+                    }
+                }
+            };
+            if let Some(grade) = grade {
+                let preset = self.feedback.register(grade);
+                self.live_bursts.push(effects::Burst { key, preset });
             }
             platform::action(
                 "on",
@@ -230,6 +257,8 @@ impl State {
         self.held.clear();
         self.practice.answer(&[]);
         self.live_bursts.clear();
+        self.gpu_bursts.clear();
+        self.feedback.reset();
         self.recognition_notes.clear();
         self.recognition_status.clear();
         self.recognition_ticket += 1;
@@ -279,6 +308,8 @@ pub fn run() {
             },
         )
         .add_systems(Update, (update, controls::input, draw::render).chain());
+    #[cfg(not(target_arch = "wasm32"))]
+    effects::gpu::install(&mut app);
     #[cfg(not(target_arch = "wasm32"))]
     app.add_systems(Update, platform::native_window);
     app.run();
@@ -462,6 +493,8 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
             platform::action("song", &serde_json::to_string(&state.song).unwrap());
             state.previous.clear();
             state.particles.clear();
+            state.gpu_bursts.clear();
+            state.feedback.reset();
             state.sync();
             true
         }
