@@ -18,6 +18,7 @@ pub(super) enum Preset {
     Streak25,
 }
 impl Preset {
+    #[cfg(not(target_arch = "wasm32"))]
     pub const ALL: [Self; 6] = [
         Self::Correct,
         Self::Wrong,
@@ -26,6 +27,7 @@ impl Preset {
         Self::Streak10,
         Self::Streak25,
     ];
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn name(self) -> &'static str {
         match self {
             Self::Correct => "correct",
@@ -63,6 +65,7 @@ pub(super) struct Burst {
     pub key: u8,
     pub preset: Preset,
 }
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Clone, Copy)]
 pub(super) struct ScreenBurst {
     pub x: f32,
