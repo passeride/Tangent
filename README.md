@@ -67,9 +67,12 @@ sort/filter, reopen and remove saved pieces. Windows packages include a short
 [P-45 test](docs/test-p45.md) and PowerShell report starter.
 See [music library](docs/music-library.md) for limits and backup behavior.
 
-To hear playback through your piano, open **Settings → Rescan MIDI → Output**
-and cycle to its MIDI port (for example Digital Piano / P-45). The selected output
-replaces computer audio; leave the piano's Local Control On. Physical piano input
+To hear playback through your piano, open **Settings → Audio & MIDI**, select
+**Rescan / connect MIDI**, then choose your piano from the **MIDI output dropdown**.
+The selected device name is saved in local SQLite and restored on later launches
+when it matches exactly one connected port. Browser reconnection requires prior MIDI
+permission; if the device is unavailable, Computer audio is used until reconnection.
+The selected output replaces computer audio; leave the piano's Local Control On. Physical piano input
 is not echoed. **Solid keys mean played input; glowing edges mean expected song
 notes.** Train → Notes offers treble, bass or both clefs, three levels and Show hint.
 The answer stays visible until all keys are released. See [MIDI and practice details](docs/adr/0015-midi-output-and-reading-practice.md).
