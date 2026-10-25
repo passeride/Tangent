@@ -10,7 +10,19 @@ let context;
 const options={ headless:true,args:gpuArgs,viewport:{width:1100,height:800} };
 try {
   context=await chromium.launchPersistentContext(profile,options);
-  let page=await context.newPage();await ready(page,server.url);await click(page,"library");
+  let page=await context.newPage();
+  page.on("console",message=>console.log("LIBRARY BROWSER",message.text()));
+  page.on("pageerror",error=>console.error("LIBRARY PAGE ERROR",error.message));
+  await page.addInitScript(()=>{
+    Object.defineProperty(window,"tangentPlatform",{configurable:true,set(platform){
+      const action=platform.action,store=platform.store_import,pull=platform.pull;
+      platform.action=function(name,data){if(["import-result","library-list"].includes(name)) console.log("adapter action",name,data);return action.call(this,name,data);};
+      platform.store_import=function(bytes,data){const meta=JSON.parse(data);console.log("adapter save",bytes.length,meta.title,Boolean(meta.fingerprint));return store.call(this,bytes,data);};
+      platform.pull=function(){const value=pull.call(this);for(const item of JSON.parse(value)) if(item.type.startsWith("library")||item.type==="file") console.log("adapter event",item.type,item.text??item.title??item.total,item.import_ticket??item.ticket??"");return value;};
+      delete window.tangentPlatform;window.tangentPlatform=platform;
+    }});
+  });
+  await ready(page,server.url);await click(page,"library");
   const buffer=await readFile(new URL("samples/first-light.musicxml",import.meta.url));
   const second=Buffer.from(buffer.toString().replace("First light - Tangent piano study","Second test study"));
   const firstFile={name:"first.musicxml",mimeType:"application/xml",buffer};
@@ -43,6 +55,7 @@ try {
   await click(page,"help");await click(page,"main");await click(page,"library");
   await page.waitForFunction(()=>tangentDiagnostics().library_total===1);
   await click(page,"library-remove");
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   assert(await page.evaluate(()=>tangentDiagnostics().buttons.some(b=>b.id==="library-open")));
   await click(page,"library-remove");await page.waitForFunction(()=>tangentDiagnostics().library_total===0);
   await click(page,"library-clear-search");await page.waitForFunction(()=>tangentDiagnostics().library_total===1);
@@ -51,4 +64,12 @@ try {
   const buttons=await page.evaluate(()=>tangentDiagnostics().buttons);
   for(const button of buttons) assert(button.x>=0&&button.y>=0&&button.x+button.w<=390&&button.y+button.h<=720,JSON.stringify(button));
   console.log("Library browser passed: batch import, real Bevy search/edit/filter, reimport preservation, full restart, edited reopen, deletion and mobile layout.");
+} catch(error) {
+  if(context) for(const page of context.pages()) {
+    try { console.error("LIBRARY FAILURE STATE",JSON.stringify(await page.evaluate(()=>({
+      diagnostics:window.tangentDiagnostics?.(),fileValue:document.querySelector("#midi-file")?.value,
+      startup:document.querySelector("#startup")?.textContent
+    })))); } catch {}
+  }
+  throw error;
 } finally {await context?.close();await server.close();await rm(profile,{recursive:true,force:true});}

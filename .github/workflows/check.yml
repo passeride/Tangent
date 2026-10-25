@@ -42,6 +42,14 @@ jobs:
       - run: cd web/piano && npx playwright install --with-deps chromium
       - run: npm test --prefix web/midi-import
       - run: npm test --prefix web/piano
+      - name: Preserve browser build for failed-test reproduction
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: tangent-web-debug
+          path: web/piano/pkg
+          if-no-files-found: ignore
+          retention-days: 3
       - run: python scripts/package_web.py
       - name: Test packaged site under the GitHub Pages project path
         run: node web/piano/site-smoke.mjs dist/piano
