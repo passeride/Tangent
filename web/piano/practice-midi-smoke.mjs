@@ -33,23 +33,23 @@ try {
   await page.waitForFunction(()=>tangentDiagnostics().storage.pending===0);
 
   // Reload the real Bevy app: the saved name resolves against a new port list.
-  await page.reload(); await ready(page,server.url);
+  await page.reload(); await page.waitForFunction(()=>tangentDiagnostics()?.renderer==='bevy-wgpu');
   await page.waitForFunction(()=>tangentDiagnostics().midi_output==='p45-test');
   assert.equal((await page.evaluate(()=>tangentDiagnostics())).preferences.midi_output_name,'Yamaha P-45');
 
   // An unavailable port keeps the preference but never selects a random port.
   await page.evaluate(()=>sessionStorage.setItem('test-missing-output','yes'));
-  await page.reload(); await ready(page,server.url);
+  await page.reload(); await page.waitForFunction(()=>tangentDiagnostics()?.renderer==='bevy-wgpu');
   await page.waitForFunction(()=>tangentDiagnostics().midi_outputs.length===0);
   assert.equal((await page.evaluate(()=>tangentDiagnostics())).midi_output,'');
   assert.equal((await page.evaluate(()=>tangentDiagnostics())).preferences.midi_output_name,'Yamaha P-45');
   await page.evaluate(()=>{sessionStorage.removeItem('test-missing-output');sessionStorage.setItem('test-duplicate-output','yes');});
-  await page.reload(); await ready(page,server.url);
+  await page.reload(); await page.waitForFunction(()=>tangentDiagnostics()?.renderer==='bevy-wgpu');
   await page.waitForFunction(()=>tangentDiagnostics().midi_outputs.length===2);
   assert.equal((await page.evaluate(()=>tangentDiagnostics())).midi_output,'','Duplicate device names must not auto-route playback');
   assert.equal((await page.evaluate(()=>tangentDiagnostics())).preferences.midi_output_name,'Yamaha P-45');
   await page.evaluate(()=>sessionStorage.removeItem('test-duplicate-output'));
-  await page.reload(); await ready(page,server.url);
+  await page.reload(); await page.waitForFunction(()=>tangentDiagnostics()?.renderer==='bevy-wgpu');
   await page.waitForFunction(()=>tangentDiagnostics().midi_output==='p45-test');
 
   // Explicit computer output persists too (not a stale Yamaha selection).
@@ -58,7 +58,7 @@ try {
   await click(page,'midi-output-computer');
   await page.waitForFunction(()=>tangentDiagnostics().midi_output==='' && tangentDiagnostics().preferences.midi_output_name===null);
   await page.waitForFunction(()=>tangentDiagnostics().storage.pending===0);
-  await page.reload(); await ready(page,server.url);
+  await page.reload(); await page.waitForFunction(()=>tangentDiagnostics()?.renderer==='bevy-wgpu');
   assert.equal((await page.evaluate(()=>tangentDiagnostics())).midi_output,'');
   await click(page,'settings');await click(page,'midi');
   await page.waitForFunction(()=>tangentDiagnostics().midi_outputs.length===1);
