@@ -88,6 +88,34 @@ impl Drawing {
         self.text(x + 9., y + 7., label, size, t.ink);
         state.buttons.push((Rect { x, y, w, h: 30. }, action));
     }
+    /// A large, single-action navigation target for menu screens.
+    pub(super) fn menu_card(
+        &mut self,
+        state: &mut State,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        title: &str,
+        subtitle: &str,
+        action: Action,
+        primary: bool,
+        t: theme::Theme,
+    ) {
+        self.rect(
+            x, y, w, h,
+            if primary { t.colors[0].with_alpha(0.18) } else { t.panel },
+            10.,
+        );
+        if primary {
+            self.rect(x, y + 4., 3., h - 8., t.colors[0], 2.);
+        }
+        self.text(x + 16., y + if h < 52. { 12. } else { 10. }, title, 16., t.ink);
+        if h >= 52. && !subtitle.is_empty() {
+            self.text(x + 16., y + 34., subtitle, 11., t.muted);
+        }
+        state.buttons.push((Rect { x, y, w, h }, action));
+    }
     pub(super) fn note(
         &mut self,
         x: f32,
