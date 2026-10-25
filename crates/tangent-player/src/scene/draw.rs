@@ -222,6 +222,14 @@ pub fn render(
                 5.,
             );
         }
+        // Symbolic recognition is visible during FreeForm, not only in Settings.
+        if state.mode == Mode::FreeForm && !state.recognition_status.is_empty() {
+            let width = (l.width - l.margin * 2.).min(690.);
+            d.rect(l.margin, 48., width, 32., t.panel, 7.);
+            let max_chars = ((width - 20.) / 7.).max(12.) as usize;
+            let label: String = state.recognition_status.chars().take(max_chars).collect();
+            d.text(l.margin + 10., 56., label, 12., t.ink);
+        }
         // HUD goes above every musical layer, including moving ending brackets.
         gear(&mut d, &mut state, &l, t);
     } else {
