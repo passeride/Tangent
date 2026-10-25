@@ -55,8 +55,12 @@ enum SettingsTab {
 }
 impl SettingsTab {
     const ALL: [Self; 6] = [
-        Self::AudioMidi, Self::Visuals, Self::Practice,
-        Self::Effects, Self::Accessibility, Self::Data,
+        Self::AudioMidi,
+        Self::Visuals,
+        Self::Practice,
+        Self::Effects,
+        Self::Accessibility,
+        Self::Data,
     ];
     fn title(self) -> &'static str {
         match self {
