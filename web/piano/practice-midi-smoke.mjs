@@ -15,12 +15,37 @@ try {
     const input={id:'p45-in',state:'connected',onmidimessage:null};
     window.fakeMidi={outputs:new Map([[port.id,port]]),inputs:new Map([[input.id,input]]),onstatechange:null};
     Object.defineProperty(navigator,'requestMIDIAccess',{value:async()=>window.fakeMidi});
+    Object.defineProperty(navigator,'permissions',{configurable:true,value:{query:async()=>({state:'granted'})}});
   });
   await ready(page,server.url);
   await click(page,'settings');await click(page,'midi');
   await page.waitForFunction(()=>tangentDiagnostics().status.includes('MIDI input'));
   await click(page,'midi-output');
+  await page.waitForFunction(()=>tangentDiagnostics().midi_dropdown_open);
+  assert((await page.evaluate(()=>tangentDiagnostics().buttons)).some(b=>b.id==='midi-output-computer'));
+  await click(page,'midi-output-choice');
+  await page.waitForFunction(()=>tangentDiagnostics().midi_output==='p45-test'
+    && tangentDiagnostics().preferences.midi_output_name==='Yamaha P-45');
+  await page.waitForFunction(()=>tangentDiagnostics().storage.pending===0);
+
+  // Reload the real Bevy app: the saved name resolves against a new port list.
+  await page.reload(); await ready(page,server.url);
   await page.waitForFunction(()=>tangentDiagnostics().midi_output==='p45-test');
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).preferences.midi_output_name,'Yamaha P-45');
+
+  // Explicit computer output persists too (not a stale Yamaha selection).
+  await click(page,'settings');
+  await click(page,'midi-output');
+  await click(page,'midi-output-computer');
+  await page.waitForFunction(()=>tangentDiagnostics().midi_output==='' && tangentDiagnostics().preferences.midi_output_name===null);
+  await page.waitForFunction(()=>tangentDiagnostics().storage.pending===0);
+  await page.reload(); await ready(page,server.url);
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).midi_output,'');
+  await click(page,'settings');await click(page,'midi');
+  await page.waitForFunction(()=>tangentDiagnostics().midi_outputs.length===1);
+  await click(page,'midi-output');await click(page,'midi-output-choice');
+  await page.waitForFunction(()=>tangentDiagnostics().midi_output==='p45-test');
+  await page.waitForFunction(()=>tangentDiagnostics().storage.pending===0);
   await page.keyboard.press('Escape');await click(page,'freeform');
   await page.evaluate(()=>window.midiSent=[]);
   await page.evaluate(()=>fakeMidi.inputs.get('p45-in').onmidimessage({data:[0x90,60,100]}));
@@ -67,6 +92,7 @@ try {
   // Disconnect is reported, clears output selection and leaves playback paused.
   await page.evaluate(()=>{const p=fakeMidi.outputs.get('p45-test');p.state='disconnected';fakeMidi.onstatechange({port:p});});
   await page.waitForFunction(()=>tangentDiagnostics().midi_output==='');
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).preferences.midi_output_name,'Yamaha P-45');
   assert.equal((await page.evaluate(()=>tangentDiagnostics())).playing,false);
   assert.deepEqual(errors,[]);
   console.log('Real Bevy practice, MIDI output/no echo, glow/solid, pause/disconnect and 390px layout passed.');
