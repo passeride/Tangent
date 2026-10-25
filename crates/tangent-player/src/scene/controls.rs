@@ -38,6 +38,8 @@ pub enum Action {
     Sample,
     Midi,
     MidiOutput,
+    MidiOutputSelect(Option<usize>),
+    MidiOutputPage(bool),
     PracticeClef,
     PracticeLevel,
     PracticeHint,
@@ -89,6 +91,10 @@ impl Action {
             Self::Sample => "sample",
             Self::Midi => "midi",
             Self::MidiOutput => "midi-output",
+            Self::MidiOutputSelect(Some(_)) => "midi-output-choice",
+            Self::MidiOutputSelect(None) => "midi-output-computer",
+            Self::MidiOutputPage(true) => "midi-output-next",
+            Self::MidiOutputPage(false) => "midi-output-prev",
             Self::PracticeClef => "practice-clef",
             Self::PracticeLevel => "practice-level",
             Self::PracticeHint => "practice-hint",
@@ -311,13 +317,18 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             }
             state.help = true;
             state.settings_open = true;
+            state.midi_dropdown_open = false;
             state.settings_tab = SettingsTab::AudioMidi;
         }
         Action::SettingsBack => {
+            state.midi_dropdown_open = false;
             state.settings_open = false;
             state.help = state.screen == Screen::Session;
         }
-        Action::SettingsTab(tab) => state.settings_tab = tab,
+        Action::SettingsTab(tab) => {
+            state.midi_dropdown_open = false;
+            state.settings_tab = tab;
+        },
         Action::Import | Action::Sample => {
             state.help = state.screen != Screen::Library;
             state.panic();
@@ -346,19 +357,36 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         }
         Action::PracticeHint => state.practice.hint = !state.practice.hint,
         Action::MidiOutput => {
-            let next = state
-                .midi_outputs
-                .iter()
-                .position(|p| p.id == state.midi_output)
-                .map_or(0, |i| i + 1);
-            let id = state
-                .midi_outputs
-                .get(next)
-                .map_or(String::new(), |p| p.id.clone());
-            state.panic();
-            platform::action("midi-output", &id);
+            state.midi_dropdown_open = !state.midi_dropdown_open;
+            state.midi_dropdown_page = 0;
+        }
+        Action::MidiOutputSelect(index) => {
+            // Persist a human-stable device name, never the scan-local port ID.
+            // A missing device is not silently mapped to a different output.
+            let selection = match index {
+                None => Some((String::new(), None)),
+                Some(i) => state.midi_outputs.get(i)
+                    .map(|p| (p.id.clone(), Some(p.name.clone()))),
+            };
+            if let Some((id, name)) = selection {
+                state.midi_dropdown_open = false;
+                state.preferred_midi_output = name;
+                state.midi_restore_pending = false;
+                state.panic();
+                platform::action("midi-output", &id);
+            }
+        }
+        Action::MidiOutputPage(next) => {
+            let pages = state.midi_outputs.len().div_ceil(5).max(1);
+            if next {
+                state.midi_dropdown_page = (state.midi_dropdown_page + 1).min(pages - 1);
+            } else {
+                state.midi_dropdown_page = state.midi_dropdown_page.saturating_sub(1);
+            }
         }
         Action::Midi => {
+            state.midi_dropdown_open = false;
+            state.midi_restore_pending = state.preferred_midi_output.is_some();
             state.panic();
             platform::action("midi", "");
         }
