@@ -1,9 +1,11 @@
 //! Bevy application state, with explicit browser rendering/audio adapters.
 mod import;
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 mod preferences;
-#[cfg(target_arch = "wasm32")]
 mod scene;
+#[cfg(not(target_arch = "wasm32"))]
+pub fn run_native_player() {
+    scene::run();
+}
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn run_player() {
