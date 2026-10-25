@@ -151,6 +151,8 @@ pub fn render(
         } else if state.mode == Mode::Play {
             falling(&mut d, &state, &l, t);
         }
+        let scale = effects::viewport_scale(l.width, l.height);
+        let burst_y = l.strike - 16. * scale;
         let mut ids = BTreeSet::new();
         let mut bursts = vec![];
         for n in state.song.notes.iter().filter(|_| state.mode == Mode::Play) {
@@ -183,45 +185,104 @@ pub fn render(
             #[cfg(not(target_arch = "wasm32"))]
             state.gpu_bursts.push(effects::ScreenBurst {
                 x,
-                y: l.strike - 12.,
+                y: burst_y,
                 preset,
             });
-            // Lightweight UI particles also work on WebGL2 (which has no
-            // compute shaders). Native renders Hanabi on top of this accent.
-            for i in 0..preset.count().min(24) {
-                let seed = ((id * 17 + i * 31) % 101) as f32;
+            // A soft, expanding shockwave remains visible across backends.
+            state.ripples.push(Ripple {
+                x,
+                y: burst_y,
+                age: 0.,
+                scale,
+                preset,
+            });
+            let count = preset.count().min(56);
+            let lifetime = preset.lifetime();
+            let speed = preset.burst_radius() * scale / lifetime;
+            for i in 0..count {
+                let jitter = ((id.wrapping_mul(17) + i * 31) % 101) as f32 / 101.;
+                let angle = std::f32::consts::TAU * (i as f32 + jitter * 0.45)
+                    / count as f32;
+                let radial = 0.62 + ((i * 13) % 11) as f32 / 25.;
+                let (sin, cos) = angle.sin_cos();
+                let mut vx = cos * speed * radial;
+                let mut vy = sin * speed * radial - speed * 0.30;
+                if preset == effects::Preset::Wrong {
+                    vx *= 0.78;
+                    vy += speed * 0.5;
+                }
+                let size = scale * (5.5 + ((i * 7) % 5) as f32);
                 state.particles.push(Particle {
                     x,
-                    y: l.strike - 12.,
-                    vx: (seed - 50.)
-                        * (if preset == effects::Preset::Wrong {
-                            0.5
-                        } else {
-                            1.
-                        }),
-                    vy: -35. - seed,
-                    life: if preset == effects::Preset::Wrong {
-                        0.32
-                    } else {
-                        0.7
-                    },
+                    y: burst_y,
+                    vx,
+                    vy,
+                    life: lifetime,
+                    duration: lifetime,
+                    size,
                     color,
                 });
             }
         }
-        if state.particles.len() > 600 {
-            let extra = state.particles.len() - 600;
+        // Keep the UI fallback cheap even during dense passages on WebGL2.
+        if state.particles.len() > 520 {
+            let extra = state.particles.len() - 520;
             state.particles.drain(..extra);
         }
+        if state.ripples.len() > 24 {
+            let extra = state.ripples.len() - 24;
+            state.ripples.drain(..extra);
+        }
         if state.effects {
+            // Bloom-like broad halos and bright central sparks.
             for p in &state.particles {
+                let opacity = (p.life / p.duration).clamp(0., 1.);
+                let size = p.size * (0.40 + opacity * 0.60);
+                let glow = size * 2.8;
                 d.rect(
-                    p.x,
-                    p.y,
-                    3.,
-                    3.,
-                    p.color.with_alpha(p.life.clamp(0., 1.)),
-                    3.,
+                    p.x - glow * 0.5,
+                    p.y - glow * 0.5,
+                    glow,
+                    glow,
+                    p.color.with_alpha(0.18 * opacity * opacity),
+                    glow,
+                );
+                d.rect(
+                    p.x - size * 0.5,
+                    p.y - size * 0.5,
+                    size,
+                    size,
+                    p.color.with_alpha(0.88 * opacity),
+                    size,
+                );
+            }
+            // The ring communicates the hit immediately, even if Hanabi
+            // takes a frame to spawn its GPU emitter.
+            for ripple in &state.ripples {
+                let fraction = (ripple.age / (ripple.preset.lifetime() * 0.8))
+                    .clamp(0., 1.);
+                let fade = (1. - fraction) * (1. - fraction);
+                let radius = (12. + ripple.preset.burst_radius() * fraction * 0.75)
+                    * ripple.scale;
+                let count = if ripple.preset.count() >= 60 { 24 } else { 16 };
+                let [r, g, b] = ripple.preset.rgb();
+                let tint = Color::srgb(r, g, b);
+                let dot = (7. * ripple.scale * (1. - fraction * 0.55)).max(1.);
+                for i in 0..count {
+                    let theta = std::f32::consts::TAU * i as f32 / count as f32;
+                    let x = ripple.x + theta.cos() * radius;
+                    let y = ripple.y + theta.sin() * radius;
+                    d.rect(x - dot * 0.5, y - dot * 0.5, dot, dot,
+                        tint.with_alpha(fade * 0.75), dot);
+                }
+                let flash = (16. + 40. * (1. - fraction)) * ripple.scale;
+                d.rect(
+                    ripple.x - flash * 0.5,
+                    ripple.y - flash * 0.5,
+                    flash,
+                    flash,
+                    tint.with_alpha(0.25 * fade),
+                    flash,
                 );
             }
         }
@@ -289,7 +350,7 @@ pub fn render(
             })
             .collect();
         let mut report = serde_json::json!({"status":state.status,"title":state.song.title,"library_total":state.library.total,"library_items":state.library.items,"library_editing":state.library.edit.is_some(),"library_focus":state.library.focus.map(|f|match f {library::Field::Search=>"search",library::Field::Title=>"title",library::Field::Composer=>"composer"}),"library_query":state.library.query,"library_sort":library::SORTS[state.library.sort],"library_format":library::FORMATS[state.library.format],"library_status":state.library.status,"screen":format!("{:?}",state.screen),"mode":format!("{:?}",state.mode),"completed":state.practice.completed,"preferences":state.preferences(),"storage_status":state.storage_status,"target":state.practice.target(),"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())});
-        report.as_object_mut().unwrap().extend(serde_json::json!({"practice_waiting_release":state.practice.waiting_release,"streak":state.feedback.streak(),"best_streak":state.feedback.best(),"effects_backend":if cfg!(target_arch="wasm32") {"webgl2-fallback"} else {"hanabi+ui"},"practice_wrong":state.practice.wrong,"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output}).as_object().unwrap().clone());
+        report.as_object_mut().unwrap().extend(serde_json::json!({"vfx_scale":effects::viewport_scale(l.width,l.height),"vfx_particles":state.particles.len(),"vfx_ripples":state.ripples.len(),"practice_waiting_release":state.practice.waiting_release,"streak":state.feedback.streak(),"best_streak":state.feedback.best(),"effects_backend":if cfg!(target_arch="wasm32") {"webgl2-fallback"} else {"hanabi+ui"},"practice_wrong":state.practice.wrong,"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output}).as_object().unwrap().clone());
         platform::report(&report.to_string());
     }
     apply(&mut commands, &mut pool, d, &music_font.0);
