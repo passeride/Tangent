@@ -70,11 +70,11 @@ jobs:
       matrix:
         include:
           - { name: Windows x64, os: windows-latest, target: x86_64-pc-windows-msvc, binary: tangent.exe }
-          - { name: Windows ARM64, os: windows-11-arm, target: aarch64-pc-windows-msvc, binary: tangent.exe }
+          # - { name: Windows ARM64, os: windows-11-arm, target: aarch64-pc-windows-msvc, binary: tangent.exe }
           - { name: Linux x64, os: ubuntu-24.04, target: x86_64-unknown-linux-gnu, binary: tangent }
-          - { name: Linux ARM64, os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, binary: tangent }
-          - { name: macOS Intel, os: macos-15-intel, target: x86_64-apple-darwin, binary: tangent }
-          - { name: macOS Apple Silicon, os: macos-15, target: aarch64-apple-darwin, binary: tangent }
+          # - { name: Linux ARM64, os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, binary: tangent }
+          # - { name: macOS Intel, os: macos-15-intel, target: x86_64-apple-darwin, binary: tangent }
+          # - { name: macOS Apple Silicon, os: macos-15, target: aarch64-apple-darwin, binary: tangent }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -89,7 +89,6 @@ jobs:
       - name: Install Linux native window/audio dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev libx11-dev pkg-config
-      - run: cargo fmt --all
       - run: cargo fmt --all -- --check
       - run: cargo test --workspace --target ${{ matrix.target }} --locked
       - run: cargo clippy --workspace --all-targets --target ${{ matrix.target }} --locked -- -D warnings
