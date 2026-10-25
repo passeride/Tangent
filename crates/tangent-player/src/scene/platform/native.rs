@@ -4,6 +4,7 @@
 mod fingerprints;
 #[path = "native/library.rs"]
 mod library;
+use crate::library::SourceFile;
 use midir::{Ignore, MidiInput, MidiInputConnection};
 use rodio::{DeviceSinkBuilder, MixerDeviceSink, Player, Source, source::SineWave};
 use rusqlite::{Connection, OptionalExtension};
@@ -34,14 +35,14 @@ static FULLSCREEN: AtomicBool = AtomicBool::new(false);
 struct Bus {
     actions: Sender<(String, String)>,
     updates: Mutex<Receiver<Value>>,
-    files: Mutex<Receiver<(Vec<u8>, String)>>,
+    files: Mutex<Receiver<SourceFile>>,
     imports: Sender<(Vec<u8>, String)>,
 }
 fn bus() -> &'static Bus {
     BUS.get_or_init(|| {
         let (actions, rx) = mpsc::channel();
         let (updates, messages) = mpsc::channel();
-        let (file_tx, files) = mpsc::channel();
+        let (file_tx, files) = mpsc::sync_channel(2);
         let (imports, import_rx) = mpsc::channel();
         thread::Builder::new()
             .name("tangent-native-io".into())
@@ -77,7 +78,7 @@ pub fn pull() -> String {
 pub fn store_import(bytes: &[u8], metadata: &str) {
     let _ = bus().imports.send((bytes.to_vec(), metadata.into()));
 }
-pub fn take_file() -> Option<(Vec<u8>, String)> {
+pub fn take_file() -> Option<SourceFile> {
     bus().files.lock().ok()?.try_recv().ok()
 }
 pub fn take_fullscreen_request() -> bool {
@@ -277,7 +278,7 @@ fn data_dir() -> Result<PathBuf, String> {
 fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch("PRAGMA foreign_keys = ON;")?;
     let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-    if version > 3 {
+    if version > 4 {
         return Err(rusqlite::Error::InvalidQuery);
     }
     if version == 0 {
@@ -325,6 +326,11 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     if version < 3 {
         conn.execute_batch("BEGIN;")?;
         conn.execute_batch(library::MIGRATION)?;
+        conn.execute_batch("COMMIT;")?;
+    }
+    if version < 4 {
+        conn.execute_batch("BEGIN;")?;
+        library::migrate_v4(conn)?;
         conn.execute_batch("COMMIT;")?;
     }
     Ok(())
@@ -393,7 +399,7 @@ fn read_music(reader: impl Read) -> Result<Vec<u8>, String> {
     }
     Ok(bytes)
 }
-fn import_path(path: &Path, files: &Sender<(Vec<u8>, String)>, out: &Sender<Value>) {
+fn import_path(path: &Path, files: &mpsc::SyncSender<SourceFile>, out: &Sender<Value>) {
     let result = (|| -> Result<(), String> {
         let file = fs::File::open(path).map_err(|e| e.to_string())?;
         let metadata = file.metadata().map_err(|e| e.to_string())?;
@@ -409,39 +415,58 @@ fn import_path(path: &Path, files: &Sender<(Vec<u8>, String)>, out: &Sender<Valu
             .and_then(|x| x.to_str())
             .unwrap_or("Score")
             .into();
-        files.send((bytes, title)).map_err(|e| e.to_string())
+        files
+            .send(SourceFile {
+                bytes,
+                title,
+                from_library: false,
+            })
+            .map_err(|e| e.to_string())
     })();
     if let Err(e) = result {
-        let _ = out.send(json!({"type":"status","text":format!("Import failed: {e}")}));
+        let _ = out.send(json!({"type":"library-status","text":format!("Import failed: {e}")}));
     }
 }
-fn pick_file() -> Option<PathBuf> {
+fn pick_files() -> Result<Vec<PathBuf>, String> {
     #[cfg(target_os = "windows")]
-    let output = Command::new("powershell").args(["-NoProfile","-Command",
-        "Add-Type -AssemblyName System.Windows.Forms; $d=New-Object System.Windows.Forms.OpenFileDialog; $d.Filter='Music files|*.mid;*.midi;*.xml;*.musicxml;*.mxl|All files|*.*'; if($d.ShowDialog() -eq 'OK'){$d.FileName}"]).output().ok()?;
+    let output=Command::new("powershell").args(["-NoProfile","-STA","-Command",
+        "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); Add-Type -AssemblyName System.Windows.Forms; $d=New-Object System.Windows.Forms.OpenFileDialog; $d.Multiselect=$true; $d.Filter='Music files|*.mid;*.midi;*.xml;*.musicxml;*.mxl|All files|*.*'; if($d.ShowDialog() -eq 'OK'){ConvertTo-Json -Compress -InputObject @($d.FileNames)}"])
+        .output().map_err(|e|format!("Could not open file picker: {e}"))?;
     #[cfg(target_os = "macos")]
-    let output = Command::new("osascript")
-        .args([
-            "-e",
-            "POSIX path of (choose file with prompt \"Open music score\")",
-        ])
-        .output()
-        .ok()?;
+    let output=Command::new("osascript").args(["-e", "set picked to choose file with prompt \"Open music scores\" with multiple selections allowed\nset paths to \"\"\nrepeat with f in picked\nset paths to paths & POSIX path of f & linefeed\nend repeat\nreturn paths"])
+        .output().map_err(|e|format!("Could not open file picker: {e}"))?;
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     let output = Command::new("zenity")
         .args([
             "--file-selection",
-            "--title=Open music score",
+            "--multiple",
+            "--separator=\n",
+            "--title=Open music scores",
             "--file-filter=Music | *.mid *.midi *.xml *.musicxml *.mxl",
         ])
         .output()
-        .ok()?;
+        .map_err(|e| format!("Could not open file picker (install Zenity): {e}"))?;
     if !output.status.success() {
-        return None;
+        return Ok(vec![]);
     }
-    let path = String::from_utf8(output.stdout).ok()?;
-    let path = path.trim();
-    (!path.is_empty()).then(|| PathBuf::from(path))
+    let text = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
+    let text = text.trim().trim_start_matches('\u{feff}');
+    if text.is_empty() {
+        return Ok(vec![]);
+    }
+    #[cfg(target_os = "windows")]
+    let paths: Vec<PathBuf> =
+        serde_json::from_str(text).map_err(|e| format!("Invalid file picker result: {e}"))?;
+    #[cfg(not(target_os = "windows"))]
+    let paths: Vec<PathBuf> = text
+        .lines()
+        .filter(|p| !p.is_empty())
+        .map(PathBuf::from)
+        .collect();
+    if paths.len() > 20 {
+        return Err("Choose at most 20 files at once.".into());
+    }
+    Ok(paths)
 }
 fn connect_midi(out: &Sender<Value>) -> Vec<MidiInputConnection<()>> {
     let count = match MidiInput::new("Tangent probe") {
@@ -501,7 +526,7 @@ fn connect_midi(out: &Sender<Value>) -> Vec<MidiInputConnection<()>> {
 fn backend(
     rx: Receiver<(String, String)>,
     out: Sender<Value>,
-    files: Sender<(Vec<u8>, String)>,
+    files: mpsc::SyncSender<SourceFile>,
     imports: Receiver<(Vec<u8>, String)>,
 ) {
     let mut audio = Audio::new(&out);
@@ -560,11 +585,26 @@ fn backend(
                             );
                         }
                     }
+                    "library-edit" => {
+                        if let Some((conn, _)) = &db {
+                            let message = match library::edit(conn, &value) {
+                                Ok(()) => {
+                                    json!({"type":"library-updated","text":"Metadata saved.","metadata":true})
+                                }
+                                Err(e) => json!({"type":"library-status","text":e}),
+                            };
+                            let _ = out.send(message);
+                        }
+                    }
                     "library-open" => {
                         if let Some((conn, _)) = &db {
                             match library::open(conn, &value) {
-                                Ok(entry) => {
-                                    let _ = files.send(entry);
+                                Ok((bytes, title)) => {
+                                    let _ = files.send(SourceFile {
+                                        bytes,
+                                        title,
+                                        from_library: true,
+                                    });
                                 }
                                 Err(e) => {
                                     let _ = out.send(json!({"type":"library-status","text":format!("Could not open piece: {e}")}));
@@ -615,19 +655,29 @@ fn backend(
                     }
                     "import" => {
                         let tx = rx_sender_file(files.clone(), out.clone());
-                        thread::spawn(move || {
-                            if let Some(path) = pick_file() {
-                                tx(&path);
+                        let picker_out = out.clone();
+                        thread::spawn(move || match pick_files() {
+                            Ok(paths) => {
+                                for path in paths {
+                                    tx(&path);
+                                }
+                            }
+                            Err(error) => {
+                                let _ =
+                                    picker_out.send(json!({"type":"library-status","text":error}));
                             }
                         });
                     }
                     "path" => import_path(Path::new(&value), &files, &out),
                     "sample" => {
-                        let _ = files.send((
-                            include_bytes!("../../../../../web/piano/samples/first-light.musicxml")
-                                .to_vec(),
-                            "First light".into(),
-                        ));
+                        let _ = files.send(SourceFile {
+                            bytes: include_bytes!(
+                                "../../../../../web/piano/samples/first-light.musicxml"
+                            )
+                            .to_vec(),
+                            title: "First light".into(),
+                            from_library: false,
+                        });
                     }
                     "credits" => {
                         let _ = out.send(json!({"type":"status","text":"First light is CC0 1.0; see web/piano/samples/ATTRIBUTION.md"}));
@@ -644,7 +694,7 @@ fn backend(
     }
 }
 fn rx_sender_file(
-    files: Sender<(Vec<u8>, String)>,
+    files: mpsc::SyncSender<SourceFile>,
     out: Sender<Value>,
 ) -> impl Fn(&Path) + Send + 'static {
     move |path| import_path(path, &files, &out)
@@ -665,7 +715,7 @@ mod tests {
         let version: i64 = db
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 3);
+        assert_eq!(version, 4);
         let rows: i64 = db
             .query_row("SELECT count(*) FROM scores", [], |r| r.get(0))
             .unwrap();
@@ -680,7 +730,7 @@ mod tests {
     }
     #[test]
     fn missing_import_does_not_enqueue_a_song() {
-        let (tx, rx) = mpsc::channel();
+        let (tx, rx) = mpsc::sync_channel(2);
         let (status_tx, _) = mpsc::channel();
         import_path(Path::new("/missing-tangent-score.mid"), &tx, &status_tx);
         assert!(rx.try_recv().is_err());

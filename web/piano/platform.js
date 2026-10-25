@@ -60,29 +60,33 @@ export async function installPlatform() {
       }
     }
   }
-  async function load(bytes, title, ticket) {
-    if (ticket !== generation) return;
-    if (bytes.length > 16 * 1024 * 1024)
-      throw Error("Music files must be 16 MiB or smaller.");
-    queue.push({ type: "file", bytes: [...bytes], title });
+  let importSequence=0, lastImportSave=Promise.resolve(true);
+  const importReceipts=new Map();
+  async function load(bytes, title, ticket, fromLibrary=false) {
+    if (ticket !== generation) return false;
+    if (bytes.length > 16 * 1024 * 1024) throw Error("Music files must be 16 MiB or smaller.");
+    const importTicket=++importSequence;
+    const complete=new Promise(resolve=>importReceipts.set(importTicket,resolve));
+    queue.push({ type:"file",bytes:[...bytes],title,from_library:fromLibrary,import_ticket:importTicket });
+    return complete;
   }
   file.onchange = async () => {
-    const selected = file.files[0],
-      ticket = ++generation;
-    if (!selected) return;
+    const selected=Array.from(file.files), ticket=++generation;
+    if (!selected.length) return;
     try {
-      if (selected.size > 16 * 1024 * 1024)
-        throw Error("Music files must be 16 MiB or smaller.");
-      await load(
-        new Uint8Array(await selected.arrayBuffer()),
-        selected.name.replace(/\.(midi?|musicxml|xml|mxl)$/i, ""),
-        ticket,
-      );
-    } catch (e) {
-      fail(e);
-    } finally {
-      file.value = "";
-    }
+      if (selected.length>20) throw Error("Choose at most 20 files at once.");
+      let saved=0;
+      for (const item of selected) {
+        if (ticket!==generation) break;
+        try {
+          if (item.size>16*1024*1024) throw Error(`${item.name}: exceeds 16 MiB`);
+          const ok=await load(new Uint8Array(await item.arrayBuffer()),item.name.replace(/\.(midi?|musicxml|xml|mxl)$/i,""),ticket);
+          if (ok) saved++;
+        } catch(error) { queue.push({type:"library-status",text:String(error.message??error)}); }
+      }
+      if (ticket===generation && selected.length>1) queue.push({type:"library-status",text:`Saved ${saved} of ${selected.length} files. Duplicate files update existing entries.`});
+    } catch(error) { queue.push({type:"library-status",text:String(error.message??error)}); }
+    finally { file.value=""; }
   };
   async function midi() {
     if (!navigator.requestMIDIAccess)
@@ -148,13 +152,15 @@ export async function installPlatform() {
   });
   window.tangentPlatform = {
     store_import(bytes, metadata) {
-      // wasm-bindgen passes a borrowed view: copy before starting async work.
-      const source = new Uint8Array(bytes);
-      const details = JSON.parse(metadata);
-      if (storage) sourceId(source).then(id => storage.saveLibrarySong(id, source, details))
-        .then(() => queue.push({ type: "library-updated", text: "Saved in library." }))
-        .catch(error => queue.push({ type: "library-status", text: `Could not save piece: ${error.message ?? error}` }));
-      else queue.push({ type: "library-status", text: "Piece loaded; local library is unavailable." });
+      const source=new Uint8Array(bytes), details=JSON.parse(metadata);
+      if (storage) lastImportSave=Promise.all([sourceId(source),details.fingerprint?fingerprintId(details.fingerprint):null])
+        .then(([id,fingerprint_id])=>storage.saveLibrarySong(id,source,{...details,fingerprint_id}))
+        .then(()=>{ queue.push({type:"library-updated",text:"Saved in library."});return true; })
+        .catch(error=>{queue.push({type:"library-status",text:`Could not save piece: ${error.message??error}`});return false;});
+      else {
+        lastImportSave=Promise.resolve(false);
+        queue.push({type:"library-status",text:"Piece loaded; local library is unavailable."});
+      }
     },
     clock_us: () => audio.now * 1e6,
     pull: () => {
@@ -183,9 +189,23 @@ export async function installPlatform() {
               setTimeout(() => URL.revokeObjectURL(url), 30_000);
             }).catch(() => storageStatus("Could not export database."));
             break;
+          case "import-result": {
+            const result=JSON.parse(data), resolve=importReceipts.get(result.ticket);
+            importReceipts.delete(result.ticket);
+            const saved=result.ok?lastImportSave:Promise.resolve(false);
+            saved.then(ok=>resolve?.(ok));
+            break;
+          }
+          case "library-edit": {
+            const request=JSON.parse(data);
+            if(storage) storage.editLibraryMetadata(request.id,request.title,request.composer)
+              .then(()=>queue.push({type:"library-updated",text:"Metadata saved.",metadata:true}))
+              .catch(error=>queue.push({type:"library-status",text:String(error.message??error)}));
+            break;
+          }
           case "library-list": {
             const request = JSON.parse(data);
-            if (storage) storage.listLibrary(request.offset, request.limit)
+            if (storage) storage.listLibrary(request.offset, request.limit, request.query, request.sort, request.format)
               .then(result => queue.push({ type: "library-list", ticket: request.ticket, ...result }))
               .catch(error => queue.push({ type: "library-status", text: String(error.message ?? error) }));
             else queue.push({ type: "library-status", text: "Local library is unavailable on this device." });
@@ -194,7 +214,7 @@ export async function installPlatform() {
           case "library-open":
             if (storage) {
               const ticket = ++generation;
-              storage.readLibrarySource(data).then(entry => load(entry.source, entry.title, ticket)).catch(fail);
+              storage.readLibrarySource(data).then(entry => load(entry.source, entry.title, ticket, true)).catch(fail);
             }
             break;
           case "library-remove":

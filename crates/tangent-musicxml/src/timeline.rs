@@ -213,6 +213,7 @@ pub(super) fn song(
     warnings.sort();
     warnings.dedup();
     Ok(Song {
+        composer: None,
         title,
         duration_us: time(total)?.max(notes.iter().map(|n| n.end_us).max().unwrap_or(0)),
         parts,

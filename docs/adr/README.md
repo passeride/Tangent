@@ -42,3 +42,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0012: Native desktop runtime](0012-native-desktop-runtime.md) — accepted; shared Bevy/wgpu scene, MIDI, audio worker and SQLite on desktop.
 
 - [ADR-0013: Local music library](0013-local-music-library.md) — accepted; source-byte persistence, metadata paging and reopen on web/native.
+
+- [ADR-0014: Library search and metadata](0014-library-search-and-metadata.md) — accepted; Unicode search, editing, sort/filter, batches and fingerprint ownership.

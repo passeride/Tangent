@@ -237,6 +237,7 @@ mod tests {
             }
         }
         Song {
+            composer: None,
             title: "Fixture".into(),
             duration_us: 3_000_000,
             parts,

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import initSqlJs from "sql.js";
 import { migrate, writeSettings } from "./storage-schema.js";
-import { saveLibrarySong, listLibrary, readLibrarySource, removeLibrarySong, libraryLimits } from "./library-schema.js";
+import { saveLibrarySong, listLibrary, readLibrarySource, removeLibrarySong, editLibraryMetadata, libraryMigration, libraryLimits } from "./library-schema.js";
 const SQL = await initSqlJs();
 let db = new SQL.Database();
 migrate(db);
@@ -37,7 +37,7 @@ old.run("INSERT INTO fingerprint_songs VALUES ('legacy','Preserved','now')");
 migrate(old);
 assert.equal(listLibrary(old).total, 0);
 assert.equal(old.exec("SELECT title FROM fingerprint_songs")[0].values[0][0], "Preserved");
-assert.equal(old.exec("PRAGMA user_version")[0].values[0][0], 3);
+assert.equal(old.exec("PRAGMA user_version")[0].values[0][0], 4);
 old.close();
 console.log("Library SQLite passed: v2 migration, deduplication, original bytes, pagination, export/reopen, delete and input bounds.");
 
@@ -50,3 +50,42 @@ assert.equal(listLibrary(limited).total, libraryLimits.songs);
 saveLibrarySong(limited, "0".repeat(64), source, metadata);
 assert.equal(listLibrary(limited).total, libraryLimits.songs);
 limited.close();
+
+// Search is a literal, case-insensitive substring, including Norwegian letters.
+const searchable = new SQL.Database(); migrate(searchable);
+saveLibrarySong(searchable, "a".repeat(64), source, { ...metadata, title:"Zebra", format:"MIDI", duration_us:900 });
+saveLibrarySong(searchable, "b".repeat(64), source, { ...metadata, title:"Allegro", duration_us:100 });
+editLibraryMetadata(searchable, "a".repeat(64), "Øvelse 100%_", "BACH");
+assert.equal(listLibrary(searchable,0,6,"øVELSE").total,1);
+assert.equal(listLibrary(searchable,0,6,"bach").total,1);
+assert.equal(listLibrary(searchable,0,6,"%_").total,1);
+assert.equal(listLibrary(searchable,0,6,"' OR 1=1 --").total,0);
+assert.equal(listLibrary(searchable,0,6,"","title").items[0].title,"Allegro");
+assert.equal(listLibrary(searchable,0,6,"","duration").items[0].title,"Allegro");
+assert.equal(listLibrary(searchable,0,6,"bach","title","MusicXML").total,0);
+assert.equal(listLibrary(searchable,0,6,"bach","title","MIDI").total,1);
+saveLibrarySong(searchable,"a".repeat(64),source,{...metadata,title:"Original"});
+assert.equal(listLibrary(searchable,0,6,"bach").items[0].title,"Øvelse 100%_");
+assert.throws(()=>editLibraryMetadata(searchable,"a".repeat(64),"", "Bach"));
+assert.throws(()=>editLibraryMetadata(searchable,"a".repeat(64),"x".repeat(161), "Bach"));
+searchable.close();
+// Schema-v3 libraries acquire Unicode search keys without losing source bytes.
+const v3=new SQL.Database();migrate(v3);v3.run("DROP TABLE library_songs;");v3.run(libraryMigration);
+v3.run("INSERT INTO library_songs VALUES(?,?,?,?,?,?,?,?)",["c".repeat(64),"ØVING","MusicXML",1,2,source,"now","now"]);
+migrate(v3);
+assert.equal(listLibrary(v3,0,6,"øving").total,1);
+assert.deepEqual(readLibrarySource(v3,"c".repeat(64)).source,source);
+v3.close();
+// Multiple sources may share a recognition lane; delete only its last owner.
+const owned=new SQL.Database();migrate(owned);
+const fp="d".repeat(64);
+owned.run("INSERT INTO fingerprint_songs VALUES(?,?,?)",[fp,"Old title","now"]);
+for(const id of ["a".repeat(64),"b".repeat(64)]) saveLibrarySong(owned,id,source,{...metadata,fingerprint_id:fp});
+editLibraryMetadata(owned,"a".repeat(64),"Edited title","Bach");
+assert.equal(owned.exec("SELECT title FROM fingerprint_songs")[0].values[0][0],"Edited title");
+removeLibrarySong(owned,"a".repeat(64));
+assert.equal(owned.exec("SELECT count(*) FROM fingerprint_songs")[0].values[0][0],1);
+removeLibrarySong(owned,"b".repeat(64));
+assert.equal(owned.exec("SELECT count(*) FROM fingerprint_songs")[0].values[0][0],0);
+owned.close();
+console.log("Library v4 passed: Unicode/literal search, sort/filter, persistent edits, v3 migration and shared fingerprint cleanup.");

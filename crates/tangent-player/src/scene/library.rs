@@ -1,7 +1,15 @@
-//! Paged library presentation in the shared Bevy UI.
+//! Library navigation, text editing and presentation share the Bevy surface.
 use super::{controls::Action, draw::Drawing, *};
 pub(super) const PAGE_SIZE: usize = 6;
-
+pub(super) const SORTS: [&str; 4] = ["recent", "title", "composer", "duration"];
+pub(super) const FORMATS: [&str; 4] = ["", "MIDI", "MusicXML", "MXL"];
+#[derive(Clone, Copy, PartialEq)]
+pub(super) enum Field {
+    Search,
+    Title,
+    Composer,
+}
+pub(super) type Edit = crate::library::MetadataEdit;
 pub(super) struct Library {
     pub page_size: usize,
     pub items: Vec<crate::library::Entry>,
@@ -10,6 +18,13 @@ pub(super) struct Library {
     pub ticket: u64,
     pub status: String,
     pub pending_delete: Option<String>,
+    pub query: String,
+    pub sort: usize,
+    pub format: usize,
+    pub focus: Option<Field>,
+    pub edit: Option<Edit>,
+    selected: bool,
+    search_delay: Option<f32>,
 }
 impl Default for Library {
     fn default() -> Self {
@@ -21,44 +36,133 @@ impl Default for Library {
             ticket: 0,
             status: String::new(),
             pending_delete: None,
+            query: String::new(),
+            sort: 0,
+            format: 0,
+            focus: None,
+            edit: None,
+            selected: false,
+            search_delay: None,
         }
     }
 }
 impl Library {
     pub fn refresh(&mut self) {
         self.ticket += 1;
+        self.search_delay = None;
         platform::action(
             "library-list",
             &serde_json::json!({
-                "offset":self.offset,"limit":self.page_size,"ticket":self.ticket
+                "offset":self.offset,"limit":self.page_size,"ticket":self.ticket,
+                "query":self.query,"sort":SORTS[self.sort],"format":FORMATS[self.format]
             })
             .to_string(),
         );
     }
+    pub fn reset_page(&mut self) {
+        self.offset = 0;
+        self.pending_delete = None;
+        self.refresh();
+    }
+    pub fn focus(&mut self, field: Field) {
+        self.focus = Some(field);
+        self.selected = false;
+    }
+    pub fn tick(&mut self, elapsed: f32) {
+        if let Some(delay) = &mut self.search_delay {
+            *delay -= elapsed;
+            if *delay <= 0. {
+                self.reset_page();
+            }
+        }
+    }
+    pub fn type_key(&mut self, key: KeyCode, text: Option<&str>, ctrl: bool) {
+        let Some(field) = self.focus else {
+            return;
+        };
+        if ctrl && key == KeyCode::KeyA {
+            self.selected = true;
+            return;
+        }
+        if ctrl {
+            return;
+        }
+        let target = match field {
+            Field::Search => &mut self.query,
+            Field::Title => match self.edit.as_mut() {
+                Some(edit) => &mut edit.title,
+                None => return,
+            },
+            Field::Composer => match self.edit.as_mut() {
+                Some(edit) => &mut edit.composer,
+                None => return,
+            },
+        };
+        let before = target.clone();
+        if key == KeyCode::Backspace || key == KeyCode::Delete {
+            if self.selected {
+                target.clear();
+            } else if key == KeyCode::Backspace {
+                target.pop();
+            }
+            self.selected = false;
+        } else if let Some(text) = text {
+            let visible: String = text.chars().filter(|c| !c.is_control()).collect();
+            if !visible.is_empty() {
+                if self.selected {
+                    target.clear();
+                }
+                let remaining = 160_usize.saturating_sub(target.chars().count());
+                target.extend(visible.chars().take(remaining));
+                self.selected = false;
+            }
+        }
+        if before != *target && field == Field::Search {
+            // Invalidate old results immediately, even during the debounce window.
+            self.ticket += 1;
+            self.search_delay = Some(0.2);
+            self.pending_delete = None;
+        }
+    }
+}
+fn clip(text: &str, width: f32, size: f32) -> String {
+    let max = (width / (size * 0.62)).max(4.) as usize;
+    let mut out: String = text.chars().take(max).collect();
+    if text.chars().count() > max {
+        out.pop();
+        out.push('…');
+    }
+    out
 }
 pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
-    let page_size = (((l.height - 260.).max(52.) / 52.) as usize).clamp(1, PAGE_SIZE);
+    let x = 24.;
+    let width = (l.width - 48.).max(120.);
+    if state.library.edit.is_some() {
+        render_edit(d, state, l, t);
+        return;
+    }
+    let narrow = l.width < 620.;
+    let row_height = if narrow { 88. } else { 60. };
+    let page_size = (((l.height - 310.).max(row_height) / row_height) as usize).clamp(1, PAGE_SIZE);
     if state.library.page_size != page_size {
         state.library.page_size = page_size;
         state.library.offset = 0;
         state.library.refresh();
     }
-    let x = 24.;
-    let width = (l.width - 48.).max(120.);
-    d.text(x, 25., "Music library", 28., t.ink);
+    d.text(x, 24., "Music library", 28., t.ink);
     d.text(
         x,
-        65.,
-        format!("{} pieces saved on this device", state.library.total),
+        63.,
+        format!("{} pieces · local library", state.library.total),
         13.,
         t.muted,
     );
-    let button = (width / 3. - 8.).min(180.);
-    d.button(state, x, 95., button, "Import", Action::Import, t);
+    let button = ((width - 16.) / 3.).min(180.);
+    d.button(state, x, 90., button, "Import files", Action::Import, t);
     d.button(
         state,
         x + button + 8.,
-        95.,
+        90.,
         button,
         "Refresh",
         Action::Library,
@@ -67,52 +171,104 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     d.button(
         state,
         x + (button + 8.) * 2.,
-        95.,
+        90.,
         button,
         "Back",
         Action::Main,
         t,
     );
-    let row_height = ((l.height - 260.) / state.library.page_size as f32).clamp(40., 72.);
+    let label = if state.library.query.is_empty() && state.library.focus != Some(Field::Search) {
+        "Search title or composer…".into()
+    } else {
+        format!(
+            "Search: {}{}",
+            state.library.query,
+            if state.library.focus == Some(Field::Search) {
+                "|"
+            } else {
+                ""
+            }
+        )
+    };
+    d.button(
+        state,
+        x,
+        132.,
+        width - 74.,
+        &clip(&label, width - 86., 12.),
+        Action::LibrarySearch,
+        t,
+    );
+    d.button(
+        state,
+        l.width - 90.,
+        132.,
+        66.,
+        "Clear",
+        Action::LibraryClearSearch,
+        t,
+    );
+    let sort = ["Recent", "Title A–Z", "Composer A–Z", "Duration"][state.library.sort];
+    let format = if state.library.format == 0 {
+        "All formats"
+    } else {
+        FORMATS[state.library.format]
+    };
+    d.button(
+        state,
+        x,
+        174.,
+        width * 0.56 - 4.,
+        &format!("Sort: {sort}"),
+        Action::LibrarySort,
+        t,
+    );
+    d.button(
+        state,
+        x + width * 0.56 + 4.,
+        174.,
+        width * 0.44 - 4.,
+        format,
+        Action::LibraryFormat,
+        t,
+    );
     let items = state.library.items.clone();
     if items.is_empty() {
-        d.text(x, 160., "Import MIDI, MusicXML or MXL", 14., t.muted);
-    }
-    if items.is_empty() {
-        d.text(x, 182., "to save your first piece.", 14., t.muted);
+        let text = if state.library.query.is_empty() && state.library.format == 0 {
+            "Import MIDI, MusicXML or MXL files to begin."
+        } else {
+            "No matches. Clear search or change format."
+        };
+        d.text(x, 232., clip(text, width, 14.), 14., t.muted);
     }
     for (index, entry) in items.iter().enumerate() {
-        let y = 150. + index as f32 * row_height;
-        let title: String = entry
-            .title
-            .chars()
-            .take(((width - 165.) / 8.).max(6.) as usize)
-            .collect();
-        d.text(x, y, title, 16., t.ink);
+        let y = 222. + index as f32 * row_height;
+        let text_width = if narrow { width } else { width - 246. };
+        d.text(x, y, clip(&entry.title, text_width, 16.), 16., t.ink);
         let seconds = entry.duration_us / 1_000_000;
-        d.text(
-            x,
-            y + 23.,
-            format!(
-                "{} · {}:{:02} · {} notes",
-                entry.format,
-                seconds / 60,
-                seconds % 60,
-                entry.note_count
-            )
-            .chars()
-            .take(((width - 165.) / 6.).max(6.) as usize)
-            .collect::<String>(),
-            11.,
-            t.muted,
+        let detail = format!(
+            "{} · {} · {}:{:02} · {} notes",
+            if entry.composer.is_empty() {
+                "Unknown composer"
+            } else {
+                &entry.composer
+            },
+            entry.format,
+            seconds / 60,
+            seconds % 60,
+            entry.note_count
         );
+        d.text(x, y + 23., clip(&detail, text_width, 11.), 11., t.muted);
+        let bx = if narrow { x } else { l.width - 262. };
+        let by = if narrow { y + 45. } else { y };
+        d.button(state, bx, by, 66., "Open", Action::LibraryOpen(index), t);
         d.button(
             state,
-            l.width - 174.,
-            y,
+            bx + 74.,
+            by,
             65.,
-            "Open",
-            Action::LibraryOpen(index),
+            "Edit",
+            Action::LibraryEdit(index),
             t,
         );
         let label = if state.library.pending_delete.as_ref() == Some(&entry.id) {
@@ -122,9 +278,9 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         };
         d.button(
             state,
-            l.width - 101.,
-            y,
-            77.,
+            bx + 147.,
+            by,
+            91.,
             label,
             Action::LibraryRemove(index),
             t,
@@ -156,13 +312,96 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     d.text(
         x,
         l.height - 30.,
-        state
-            .library
-            .status
-            .chars()
-            .take((width / 6.).max(12.) as usize)
-            .collect::<String>(),
+        clip(&state.library.status, width, 11.),
         11.,
         t.muted,
     );
+}
+fn render_edit(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
+    let x = 24.;
+    let width = (l.width - 48.).max(120.);
+    let edit = state.library.edit.as_ref().unwrap();
+    let title = edit.title.clone();
+    let composer = edit.composer.clone();
+    d.text(x, 24., "Edit piece", 28., t.ink);
+    d.text(x, 77., "Title", 14., t.muted);
+    let label = format!(
+        "{}{}",
+        title,
+        if state.library.focus == Some(Field::Title) {
+            "|"
+        } else {
+            ""
+        }
+    );
+    d.button(
+        state,
+        x,
+        102.,
+        width,
+        &clip(&label, width - 16., 13.),
+        Action::LibraryTitle,
+        t,
+    );
+    d.text(x, 151., "Composer (optional)", 14., t.muted);
+    let label = format!(
+        "{}{}",
+        composer,
+        if state.library.focus == Some(Field::Composer) {
+            "|"
+        } else {
+            ""
+        }
+    );
+    d.button(
+        state,
+        x,
+        176.,
+        width,
+        &clip(&label, width - 16., 13.),
+        Action::LibraryComposer,
+        t,
+    );
+    d.button(state, x, 231., 110., "Save", Action::LibrarySaveMetadata, t);
+    d.button(
+        state,
+        x + 120.,
+        231.,
+        110.,
+        "Cancel",
+        Action::LibraryCancelEdit,
+        t,
+    );
+    d.text(
+        x,
+        280.,
+        "Type to edit · Ctrl+A selects all · Tab changes field",
+        11.,
+        t.muted,
+    );
+    d.text(
+        x,
+        305.,
+        clip(&state.library.status, width, 11.),
+        11.,
+        t.muted,
+    );
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn unicode_search_replaces_selection_and_preserves_text_controls() {
+        let mut library = Library::default();
+        library.focus(Field::Search);
+        library.type_key(KeyCode::KeyA, Some("Ærlig"), false);
+        assert_eq!(library.query, "Ærlig");
+        let ticket = library.ticket;
+        library.type_key(KeyCode::KeyA, Some("a"), true);
+        library.type_key(KeyCode::KeyB, Some("Bach"), false);
+        assert_eq!(library.query, "Bach");
+        assert!(library.ticket > ticket);
+        library.type_key(KeyCode::Backspace, None, false);
+        assert_eq!(library.query, "Bac");
+    }
 }

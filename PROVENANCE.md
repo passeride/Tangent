@@ -145,3 +145,11 @@ Original Bevy library UI, source-byte capability boundary and SQLite v3 migratio
 authored for Tangent. Existing SQLite and hashing libraries are reused. Source
 files are user imports; no external music collection or excluded fork assets
 were copied. ADR-0013 records storage limits and remaining performance work.
+
+## Library completion — 2026-10-25
+
+Original Unicode search, metadata editing, filter/sort, bounded batch import,
+fingerprint ownership and Windows/P-45 test/report workflow. The official Bevy
+v0.20.0 KeyboardInput source was consulted for text event semantics. Existing
+dependencies and original test music are reused; no excluded fork source/assets
+were consulted. ADR-0014 records the schema/capability changes.

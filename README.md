@@ -22,7 +22,7 @@ During play, only the corner gear and timeline remain; the pause screen contains
 transport, volume, file import, fullscreen and every setting. Opening it stops
 playback and releases live notes; returning leaves playback paused until Resume.
 
-The app opens at a logo-first main menu: **Play**, **Train**, **FreeForm**, and
+The app opens at a logo-first main menu: **Play**, **Library**, **Train**, **FreeForm**, and
 **Settings**. Train offers note reading and diatonic chord exercises; FreeForm
 keeps song playback silent. Return home from the corner-gear pause screen.
 
@@ -58,7 +58,9 @@ not a browser wrapper. Desktop MIDI (midir), audio (rodio) and SQLite
 (rusqlite with bundled SQLite) run natively. See
 [desktop builds and limitations](docs/distribution.md). Android/iOS use the web version.
 
-Choose **Library** from the main menu to import, reopen and remove locally saved pieces.
+Choose **Library** to import several files, search title/composer, edit metadata,
+sort/filter, reopen and remove saved pieces. Windows packages include a short
+[P-45 test](docs/test-p45.md) and PowerShell report starter.
 See [music library](docs/music-library.md) for limits and backup behavior.
 
 ## Project status

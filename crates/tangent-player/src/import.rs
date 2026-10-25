@@ -73,6 +73,7 @@ pub fn midi(bytes: &[u8], title: String) -> Result<Song, String> {
     // Stable sort preserves track/source order when timestamps tie.
     events.sort_by_key(|e| e.time_us);
     Ok(Song {
+        composer: None,
         title,
         duration_us: source.duration_us,
         parts,
@@ -93,6 +94,11 @@ pub fn study() -> Song {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn musicxml_preserves_composer_metadata() {
+        let song = study();
+        assert_eq!(song.composer.as_deref(), Some("Tangent contributors"));
+    }
     #[test]
     fn mixed_channel_track_keeps_drums_out_of_the_piano_lane() {
         // New independent type-0 sequence: C4 and a drum at t0, releases at 0.5s.

@@ -17,8 +17,7 @@ python3 -m http.server 8080 --directory web/piano
 ```
 
 Open http://localhost:8080. Press Play, tap a piano key or use A–K to activate
-sound. Import a MIDI file with the Import MIDI control. Files are processed in
-memory and are not uploaded or persisted. The distribution workflow now includes GitHub Pages deployment; see
+sound. Import a MIDI file with the Import MIDI control. Files are processed locally and saved in the SQLite music library. They are not uploaded. The distribution workflow now includes GitHub Pages deployment; see
 [distribution status/setup](distribution.md). GitHub Actions produces a `tangent-piano-web` artifact containing the
 static app and generated WASM; serve it over HTTP rather than opening file URLs.
 
@@ -61,7 +60,7 @@ The browser test starts its own HTTP server and Chromium, loads the real WASM
 and checks audio energy rather than only counting calls to mocked audio methods.
 Physical sound quality/latency and a hardware MIDI device require manual checks;
 an analyser signal alone does not prove a particular speaker produced sound.
-Native Cargo tests do not establish native UI/audio support.
+Native Cargo tests do not verify physical GPU/audio/MIDI behavior.
 
 ## Verification record — 2026-10-24
 

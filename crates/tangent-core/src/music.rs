@@ -35,6 +35,7 @@ pub struct Part {
 #[derive(Debug, Clone, Serialize)]
 pub struct Song {
     pub title: String,
+    pub composer: Option<String>,
     pub duration_us: u64,
     pub parts: Vec<Part>,
     pub notes: Vec<PerformanceNote>,

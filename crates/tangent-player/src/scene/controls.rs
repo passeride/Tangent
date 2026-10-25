@@ -4,6 +4,15 @@ pub enum Action {
     Main,
     Library,
     LibraryOpen(usize),
+    LibrarySearch,
+    LibraryClearSearch,
+    LibrarySort,
+    LibraryFormat,
+    LibraryEdit(usize),
+    LibraryTitle,
+    LibraryComposer,
+    LibrarySaveMetadata,
+    LibraryCancelEdit,
     LibraryRemove(usize),
     LibraryPrevious,
     LibraryNext,
@@ -39,6 +48,15 @@ impl Action {
             Self::Main => "main",
             Self::Library => "library",
             Self::LibraryOpen(_) => "library-open",
+            Self::LibrarySearch => "library-search",
+            Self::LibraryClearSearch => "library-clear-search",
+            Self::LibrarySort => "library-sort",
+            Self::LibraryFormat => "library-format",
+            Self::LibraryEdit(_) => "library-edit",
+            Self::LibraryTitle => "library-title",
+            Self::LibraryComposer => "library-composer",
+            Self::LibrarySaveMetadata => "library-save-metadata",
+            Self::LibraryCancelEdit => "library-cancel-edit",
             Self::LibraryRemove(_) => "library-remove",
             Self::LibraryPrevious => "library-previous",
             Self::LibraryNext => "library-next",
@@ -77,11 +95,56 @@ fn activate(state: &mut State, action: Action, shift: bool) {
     }
     let step = if shift { 15_000_000 } else { 5_000_000 };
     match action {
+        Action::LibrarySearch => state.library.focus(library::Field::Search),
+        Action::LibraryClearSearch => {
+            state.library.query.clear();
+            state.library.focus(library::Field::Search);
+            state.library.reset_page();
+        }
+        Action::LibrarySort => {
+            state.library.sort = (state.library.sort + 1) % library::SORTS.len();
+            state.library.reset_page();
+        }
+        Action::LibraryFormat => {
+            state.library.format = (state.library.format + 1) % library::FORMATS.len();
+            state.library.reset_page();
+        }
+        Action::LibraryEdit(index) => {
+            if let Some(entry) = state.library.items.get(index) {
+                state.library.edit = Some(library::Edit {
+                    id: entry.id.clone(),
+                    title: entry.title.clone(),
+                    composer: entry.composer.clone(),
+                });
+                state.library.focus(library::Field::Title);
+                state.library.pending_delete = None;
+                state.library.status = "Edit title or composer, then Save.".into();
+            }
+        }
+        Action::LibraryTitle => state.library.focus(library::Field::Title),
+        Action::LibraryComposer => state.library.focus(library::Field::Composer),
+        Action::LibrarySaveMetadata => {
+            if let Some(edit) = &state.library.edit {
+                if edit.validate() {
+                    platform::action("library-edit", &serde_json::to_string(edit).unwrap());
+                    state.library.status = "Saving metadata…".into();
+                } else {
+                    state.library.status =
+                        "Enter a title; fields may contain up to 160 characters.".into();
+                }
+            }
+        }
+        Action::LibraryCancelEdit => {
+            state.library.edit = None;
+            state.library.focus = None;
+        }
         Action::Library => {
             state.panic();
             state.help = false;
             state.screen = Screen::Library;
             state.library.pending_delete = None;
+            state.library.focus = None;
+            state.library.edit = None;
             state.library.refresh();
         }
         Action::LibraryPrevious | Action::LibraryNext => {
@@ -236,6 +299,7 @@ pub fn input(
     mouse: Res<ButtonInput<MouseButton>>,
     touches: Res<Touches>,
     time: Res<Time>,
+    mut text_events: MessageReader<bevy::input::keyboard::KeyboardInput>,
 ) {
     let Ok(window) = windows.single() else {
         return;
@@ -259,17 +323,56 @@ pub fn input(
         || keys.just_pressed(KeyCode::ControlRight)
         || keys.just_pressed(KeyCode::SuperLeft)
         || keys.just_pressed(KeyCode::SuperRight);
+    let typing = state.screen == Screen::Library && state.library.focus.is_some();
+    for event in text_events.read() {
+        if typing && event.state.is_pressed() {
+            state
+                .library
+                .type_key(event.key_code, event.text.as_deref(), ctrl);
+        }
+    }
+    if state.screen == Screen::Library {
+        state.library.tick(time.delta_secs());
+        if ctrl && keys.just_pressed(KeyCode::KeyF) {
+            state.library.focus(library::Field::Search);
+        }
+        if ctrl && keys.just_pressed(KeyCode::KeyO) {
+            activate(&mut state, Action::Import, false);
+        }
+        if keys.just_pressed(KeyCode::Tab) && state.library.edit.is_some() {
+            let field = if state.library.focus == Some(library::Field::Title) {
+                library::Field::Composer
+            } else {
+                library::Field::Title
+            };
+            state.library.focus(field);
+        }
+        if keys.just_pressed(KeyCode::Enter) || keys.just_pressed(KeyCode::NumpadEnter) {
+            if state.library.edit.is_some() {
+                activate(&mut state, Action::LibrarySaveMetadata, false);
+            } else {
+                state.library.focus = None;
+                state.library.reset_page();
+            }
+        }
+    }
     if state.screen != Screen::Session {
         if keys.just_pressed(KeyCode::F1) {
             activate(&mut state, Action::Help, false);
         }
         if keys.just_pressed(KeyCode::Escape) {
-            let action = if state.help {
-                Action::Help
+            if state.screen == Screen::Library && state.library.edit.is_some() {
+                activate(&mut state, Action::LibraryCancelEdit, false);
+            } else if state.screen == Screen::Library && state.library.focus.is_some() {
+                state.library.focus = None;
             } else {
-                Action::Main
-            };
-            activate(&mut state, action, false);
+                let action = if state.help {
+                    Action::Help
+                } else {
+                    Action::Main
+                };
+                activate(&mut state, action, false);
+            }
         }
         if keys.just_pressed(KeyCode::F11) {
             activate(&mut state, Action::Fullscreen, false);

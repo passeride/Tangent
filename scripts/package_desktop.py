@@ -31,6 +31,9 @@ else:
 shutil.copy2(args.binary, executable)
 executable.chmod(0o755)
 shutil.copy2(root / 'docs/distribution.md', output / 'README.md')
+shutil.copy2(root / 'docs/test-p45.md', output / 'TEST-P45.md')
+if 'windows' in args.target:
+    shutil.copy2(root / 'scripts/Test-Tangent.ps1', output / 'Test-Tangent.ps1')
 shutil.copytree(root / 'web/piano/samples', output / 'samples')
 for filename in ['THIRD_PARTY.md', 'THIRD_PARTY_NOTICES.txt']:
     shutil.copy2(root / filename, output / filename)

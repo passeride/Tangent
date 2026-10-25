@@ -20,7 +20,8 @@ this file tracks the remaining work, not an authorization gate.
 - [x] Save user settings in local SQLite; export a portable database (ADR-0009).
 - [x] Add a local SQLite symbolic fingerprint index and FreeForm MIDI identification (ADR-0011); original score files still are not persisted.
 - [x] Persist original music sources and add a paged Bevy Library view (ADR-0013).
-- Add library search/metadata/folders, backup restore and meaningful score/session recording.
+- [x] Library title/composer search, metadata editing, sorting/filtering, batch import and source/fingerprint cleanup (ADR-0014).
+- Add library folders/tags, backup restore and meaningful score/session recording.
 - Move source parsing and slow storage work off rendering/audio scheduling paths after profiling.
 - [x] Add a true native renderer, audio mixer, MIDI inputs and SQLite adapter
   without browser or localhost server (ADR-0012). Validate release binaries on

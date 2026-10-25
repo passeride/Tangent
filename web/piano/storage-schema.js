@@ -1,6 +1,6 @@
 // Portable SQLite schema. Musical matching stays in tangent-core (Rust).
-import { libraryMigration } from "./library-schema.js";
-export const schemaVersion = 3;
+import { libraryMigration, migrateLibraryV4 } from "./library-schema.js";
+export const schemaVersion = 4;
 
 export function migrate(db) {
   let version = db.exec("PRAGMA user_version")[0].values[0][0];
@@ -58,7 +58,12 @@ export function migrate(db) {
       COMMIT;`);
     version = 2;
   }
-  if (version === 2) db.run(`BEGIN; ${libraryMigration} COMMIT;`);
+  if (version === 2) { db.run(`BEGIN; ${libraryMigration} COMMIT;`); version = 3; }
+  if (version === 3) {
+    db.run("BEGIN");
+    try { migrateLibraryV4(db); db.run("COMMIT"); }
+    catch (error) { db.run("ROLLBACK"); throw error; }
+  }
 }
 
 export function readSettings(db) {

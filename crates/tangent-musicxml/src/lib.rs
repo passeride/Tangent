@@ -141,14 +141,27 @@ pub fn import(bytes: &[u8], fallback_title: String) -> Result<Song> {
         .or_else(|| text(root, "movement-title"))
         .unwrap_or(&fallback_title)
         .to_string();
-    timeline::song(
+    let mut song = timeline::song(
         title,
         grid,
         parts,
         staves,
         measures,
         warnings.into_iter().collect(),
-    )
+    )?;
+    song.composer = child(root, "identification")
+        .and_then(|identification| {
+            identification
+                .children()
+                .find(|node| {
+                    node.has_tag_name("creator") && node.attribute("type") == Some("composer")
+                })
+                .and_then(|node| node.text())
+        })
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .map(str::to_owned);
+    Ok(song)
 }
 
 // A normal external MusicXML declaration is metadata, never a resource request.

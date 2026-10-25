@@ -1,4 +1,4 @@
-import { saveLibrarySong, listLibrary, readLibrarySource, removeLibrarySong } from "./library-schema.js";
+import { saveLibrarySong, listLibrary, readLibrarySource, removeLibrarySong, editLibraryMetadata } from "./library-schema.js";
 // Genuine SQLite bytes persisted atomically in IndexedDB. No UI or scoring rules.
 import { migrate, readSettings, writeSettings, writeFingerprintedSong, findFingerprintCandidates, schemaVersion } from "./storage-schema.js";
 const filename = "tangent.sqlite";
@@ -53,11 +53,21 @@ export async function openStorage() {
     settings, diagnostics, saveSettings,
     saveLibrarySong(id, source, metadata) {
       diagnostics.pending++;
-      const result = tail.then(() => transaction(db => saveLibrarySong(db, id, source, metadata)));
+      const result = tail.then(() => transaction(db => {
+        saveLibrarySong(db, id, source, metadata);
+        if (metadata.fingerprint && metadata.fingerprint_id) {
+          writeFingerprintedSong(db, { ...metadata.fingerprint, id: metadata.fingerprint_id });
+          db.run("UPDATE fingerprint_songs SET title=(SELECT title FROM library_songs WHERE id=?) WHERE id=?", [id, metadata.fingerprint_id]);
+        }
+      }));
       tail = result.catch(() => {});
       return result.finally(() => { diagnostics.pending--; });
     },
-    async listLibrary(offset, limit) { await tail; return transaction(db => listLibrary(db, offset, limit), false); },
+    async listLibrary(offset, limit, query, sort, format) { await tail; return transaction(db => listLibrary(db, offset, limit, query, sort, format), false); },
+    editLibraryMetadata(id, title, composer) {
+      const result = tail.then(() => transaction(db => editLibraryMetadata(db, id, title, composer)));
+      tail = result.catch(() => {}); return result;
+    },
     readLibrarySource(id) {
       const result = tail.then(() => transaction(db => readLibrarySource(db, id)));
       tail = result.catch(() => {});

@@ -4,6 +4,7 @@
 - Decision date: 2026-10-25
 - Delivery: First local library slice; CI and device validation tracked separately
 - Related: ADR-0009, ADR-0011, ADR-0012
+- Search/edit and source ownership superseded by [ADR-0014](0014-library-search-and-metadata.md)
 
 ## Context
 

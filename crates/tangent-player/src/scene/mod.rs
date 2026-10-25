@@ -315,10 +315,15 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
                             .collect()
                     })
                     .unwrap_or_default();
-                load_song(
+                let ok = load_song(
                     &mut state,
                     &bytes,
                     m["title"].as_str().unwrap_or("MIDI").into(),
+                    m["from_library"].as_bool().unwrap_or(false),
+                );
+                platform::action(
+                    "import-result",
+                    &serde_json::json!({"ticket":m["import_ticket"],"ok":ok}).to_string(),
                 );
             }
             "library-list" => {
@@ -338,6 +343,10 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
                 state.status = state.library.status.clone();
             }
             "library-updated" => {
+                if m["metadata"].as_bool() == Some(true) {
+                    state.library.edit = None;
+                    state.library.focus = None;
+                }
                 state.library.status = m["text"].as_str().unwrap_or("").into();
                 state.library.refresh();
             }
@@ -396,8 +405,8 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
-    while let Some((bytes, title)) = platform::take_file() {
-        load_song(&mut state, &bytes, title);
+    if let Some(file) = platform::take_file() {
+        load_song(&mut state, &file.bytes, file.title, file.from_library);
     }
     if state.storage_ready {
         let p = state.preferences();
@@ -416,11 +425,14 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
     }
 }
 
-fn load_song(state: &mut State, bytes: &[u8], title: String) {
-    match import::song(bytes, title) {
-        Ok(song) => {
+fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool) -> bool {
+    match import::song(bytes, title.clone()) {
+        Ok(mut song) => {
             let metadata = crate::library::ImportMetadata::from_song(&song, bytes);
             platform::store_import(bytes, &serde_json::to_string(&metadata).unwrap());
+            if from_library {
+                song.title = title;
+            }
             state.panic();
             state.transport = Transport {
                 duration_us: song.duration_us,
@@ -433,14 +445,15 @@ fn load_song(state: &mut State, bytes: &[u8], title: String) {
             );
             state.song = song;
             platform::action("song", &serde_json::to_string(&state.song).unwrap());
-            platform::action(
-                "fingerprint-index",
-                &serde_json::to_string(&fingerprint::index_song(&state.song)).unwrap(),
-            );
             state.previous.clear();
             state.particles.clear();
             state.sync();
+            true
         }
-        Err(e) => state.status = e,
+        Err(e) => {
+            state.library.status = e.clone();
+            state.status = e;
+            false
+        }
     }
 }
