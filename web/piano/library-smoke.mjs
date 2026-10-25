@@ -23,7 +23,7 @@ try {
   await ready(page, server.url);
   await click(page, "library");
   await click(page, "library-open");
-  await page.waitForFunction(() => tangentDiagnostics().screen === "Session" && tangentDiagnostics().title === "First light");
+  await page.waitForFunction(() => tangentDiagnostics().screen === "Session" && tangentDiagnostics().title === "First light" && tangentDiagnostics().status.includes("notes loaded"));
   await click(page, "help"); await click(page, "main"); await click(page, "library");
   await click(page, "library-remove");
   // First click only asks for confirmation; the piece still exists.

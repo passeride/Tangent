@@ -76,13 +76,10 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     let row_height = ((l.height - 260.) / state.library.page_size as f32).clamp(40., 72.);
     let items = state.library.items.clone();
     if items.is_empty() {
-        d.text(
-            x,
-            160.,
-            "Import MIDI, MusicXML or MXL to save your first piece.",
-            14.,
-            t.muted,
-        );
+        d.text(x, 160., "Import MIDI, MusicXML or MXL", 14., t.muted);
+    }
+    if items.is_empty() {
+        d.text(x, 182., "to save your first piece.", 14., t.muted);
     }
     for (index, entry) in items.iter().enumerate() {
         let y = 150. + index as f32 * row_height;
@@ -102,7 +99,10 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 seconds / 60,
                 seconds % 60,
                 entry.note_count
-            ),
+            )
+            .chars()
+            .take(((width - 165.) / 6.).max(6.) as usize)
+            .collect::<String>(),
             11.,
             t.muted,
         );
@@ -156,7 +156,12 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     d.text(
         x,
         l.height - 30.,
-        state.library.status.chars().take(110).collect::<String>(),
+        state
+            .library
+            .status
+            .chars()
+            .take((width / 6.).max(12.) as usize)
+            .collect::<String>(),
         11.,
         t.muted,
     );

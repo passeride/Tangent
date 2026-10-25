@@ -101,6 +101,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
                 state.help = false;
                 state.screen = Screen::Session;
                 state.mode = Mode::Play;
+                state.status = "Opening piece…".into();
                 platform::action("library-open", &id);
             }
         }
