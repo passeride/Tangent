@@ -6,6 +6,7 @@ mod layout;
 mod library;
 mod menu;
 mod platform;
+mod practice_view;
 mod score;
 mod settings;
 mod theme;
@@ -86,6 +87,8 @@ pub struct State {
     library: library::Library,
     mode: Mode,
     practice: tangent_core::practice::Practice,
+    reference_remaining: f32,
+    reference_keys: Vec<u8>,
     song: Song,
     transport: Transport,
     piano: PianoLayout,
@@ -151,6 +154,8 @@ impl State {
             library: library::Library::default(),
             mode: Mode::Play,
             practice: tangent_core::practice::Practice::default(),
+            reference_remaining: 0.,
+            reference_keys: vec![],
             song,
             transport: Transport {
                 duration_us,
@@ -270,6 +275,7 @@ impl State {
             if self.screen != Screen::Session || self.help {
                 return;
             }
+            self.stop_reference();
             self.held.insert(id.clone(), key);
             self.capture_for_recognition(key);
             // Never judge backing-track playback as a player hit. A partial
@@ -339,7 +345,29 @@ impl State {
         });
         platform::action("fingerprint-query", &request.to_string());
     }
+    fn stop_reference(&mut self) {
+        for key in self.reference_keys.drain(..) {
+            platform::action("off", &format!("reference:{key}"));
+        }
+        self.reference_remaining = 0.;
+    }
+    fn hear_target(&mut self) {
+        self.stop_reference();
+        if !matches!(self.mode, Mode::Notes | Mode::Chords) || self.help {
+            return;
+        }
+        self.reference_keys = self.practice.target();
+        self.reference_remaining = 0.7;
+        for &key in &self.reference_keys {
+            platform::action(
+                "on",
+                &serde_json::json!({"id":format!("reference:{key}"),"key":key,"velocity":85})
+                    .to_string(),
+            );
+        }
+    }
     fn panic(&mut self) {
+        self.stop_reference();
         self.held.clear();
         self.practice.answer(&[]);
         self.live_bursts.clear();
@@ -551,6 +579,12 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
         }
     }
     let dt = time.delta_secs().min(0.05);
+    if state.reference_remaining > 0. {
+        state.reference_remaining -= time.delta_secs();
+        if state.reference_remaining <= 0. {
+            state.stop_reference();
+        }
+    }
     state.particles.retain(|p| p.life > 0.);
     state.ripples.retain(|r| r.age < r.preset.lifetime() * 0.8);
     for ripple in &mut state.ripples {

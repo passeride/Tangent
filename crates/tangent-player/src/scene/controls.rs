@@ -43,6 +43,7 @@ pub enum Action {
     PracticeClef,
     PracticeLevel,
     PracticeHint,
+    PracticeListen,
     Help,
     Settings,
     SettingsBack,
@@ -98,6 +99,7 @@ impl Action {
             Self::PracticeClef => "practice-clef",
             Self::PracticeLevel => "practice-level",
             Self::PracticeHint => "practice-hint",
+            Self::PracticeListen => "practice-listen",
             Self::Help => "help",
             Self::Settings => "settings",
             Self::SettingsBack => "settings-back",
@@ -358,6 +360,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.panic();
             state.practice.configure(clef, level);
         }
+        Action::PracticeListen => state.hear_target(),
         Action::PracticeHint => state.practice.hint = !state.practice.hint,
         Action::MidiOutput => {
             state.midi_dropdown_open = !state.midi_dropdown_open;

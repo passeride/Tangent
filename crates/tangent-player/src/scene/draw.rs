@@ -352,7 +352,7 @@ pub fn render(
             }
         }
         keyboard(&mut d, &state, &l, t);
-        if state.feedback.streak() >= 2 {
+        if state.mode == Mode::Play && state.feedback.streak() >= 2 {
             let streak = state.feedback.streak();
             d.text(
                 l.margin,
@@ -363,7 +363,7 @@ pub fn render(
             );
         }
         if matches!(state.mode, Mode::Notes | Mode::Chords) {
-            super::menu::exercise(&mut d, &mut state, &l, t);
+            super::practice_view::render(&mut d, &mut state, &l, t);
         }
         if state.mode == Mode::Play {
             d.rect(
