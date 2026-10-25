@@ -180,6 +180,7 @@ pub fn render(
         for (x, id, preset) in bursts.into_iter().take(32) {
             let [r, g, b] = preset.rgb();
             let color = Color::srgb(r, g, b);
+            #[cfg(not(target_arch = "wasm32"))]
             state.gpu_bursts.push(effects::ScreenBurst {
                 x,
                 y: l.strike - 12.,
@@ -218,7 +219,7 @@ pub fn render(
         keyboard(&mut d, &state, &l, t);
         if state.feedback.streak() >= 2 {
             let streak = state.feedback.streak();
-            d.text(l.margin, 14., format!("{streak} note streak"), 14., t.colors[0]);
+            d.text(l.margin, 14., format!("{streak} note streak · best {}", state.feedback.best()), 14., t.colors[0]);
         }
         if matches!(state.mode, Mode::Notes | Mode::Chords) {
             super::menu::exercise(&mut d, &mut state, &l, t);
