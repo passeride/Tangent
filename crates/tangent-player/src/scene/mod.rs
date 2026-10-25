@@ -219,7 +219,11 @@ impl State {
             self.midi_restore_pending = false;
             return;
         };
-        let matches: Vec<_> = self.midi_outputs.iter().filter(|p| &p.name == name).collect();
+        let matches: Vec<_> = self
+            .midi_outputs
+            .iter()
+            .filter(|p| &p.name == name)
+            .collect();
         if matches.len() > 1 {
             self.midi_restore_pending = false;
             self.status = format!("Multiple MIDI outputs named {name}; select one manually.");
