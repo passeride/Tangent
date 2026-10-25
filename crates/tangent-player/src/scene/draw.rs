@@ -88,6 +88,68 @@ impl Drawing {
         self.text(x + 9., y + 7., label, size, t.ink);
         state.buttons.push((Rect { x, y, w, h: 30. }, action));
     }
+    /// A large, single-action navigation target for menu screens.
+    pub(super) fn menu_card(
+        &mut self,
+        state: &mut State,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        title: &str,
+        subtitle: &str,
+        action: Action,
+        primary: bool,
+        t: theme::Theme,
+    ) {
+        self.rect(
+            x,
+            y,
+            w,
+            h,
+            if primary {
+                t.colors[0].with_alpha(0.18)
+            } else {
+                t.panel
+            },
+            10.,
+        );
+        if primary {
+            self.rect(x, y + 4., 3., h - 8., t.colors[0], 2.);
+        }
+        self.text(
+            x + 16.,
+            y + if h < 52. { 12. } else { 10. },
+            title,
+            16.,
+            t.ink,
+        );
+        if h >= 52. && !subtitle.is_empty() {
+            self.text(x + 16., y + 34., subtitle, 11., t.muted);
+        }
+        state.buttons.push((Rect { x, y, w, h }, action));
+    }
+    /// A larger two-column mode tile for the desktop home screen.
+    pub(super) fn menu_tile(
+        &mut self,
+        state: &mut State,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        title: &str,
+        subtitle: &str,
+        action: Action,
+        t: theme::Theme,
+    ) {
+        self.rect(x, y, w, h, t.panel, 12.);
+        // Simple original note marker: avoids icons/assets outside Bevy.
+        self.rect(x + 20., y + 22., 13., 9., t.colors[0], 8.);
+        self.rect(x + 30., y + 10., 3., 20., t.colors[0], 1.);
+        self.text(x + 20., y + h - 60., title, 19., t.ink);
+        self.text(x + 20., y + h - 33., subtitle, 11., t.muted);
+        state.buttons.push((Rect { x, y, w, h }, action));
+    }
     pub(super) fn note(
         &mut self,
         x: f32,
@@ -114,7 +176,7 @@ impl Drawing {
         }
     }
 }
-fn time(us: u64) -> String {
+pub(super) fn time(us: u64) -> String {
     let s = us / 1_000_000;
     format!("{}:{:02}", s / 60, s % 60)
 }
@@ -124,6 +186,7 @@ pub fn render(
     mut pool: ResMut<Pool>,
     windows: Query<&Window>,
     music_font: Res<MusicFont>,
+    mut clear_color: ResMut<ClearColor>,
 ) {
     let Ok(window) = windows.single() else {
         return;
@@ -135,7 +198,9 @@ pub fn render(
         ..Drawing::default()
     };
     state.buttons.clear();
-    d.rect(0., 0., l.width, l.height, t.bg, 0.);
+    // Let the Camera2d background show through UI, so native Hanabi particles
+    // can be composited underneath note widgets instead of a solid fullscreen node.
+    clear_color.0 = t.bg;
     if state.screen != Screen::Session && !state.help {
         if state.screen == Screen::Library {
             super::library::render(&mut d, &mut state, &l, t);
@@ -148,6 +213,8 @@ pub fn render(
         } else if state.mode == Mode::Play {
             falling(&mut d, &state, &l, t);
         }
+        let scale = effects::viewport_scale(l.width, l.height) * state.effect_scale();
+        let burst_y = l.strike - 16. * scale;
         let mut ids = BTreeSet::new();
         let mut bursts = vec![];
         for n in state.song.notes.iter().filter(|_| state.mode == Mode::Play) {
@@ -156,55 +223,160 @@ pub fn render(
                 && !state.song.parts[n.part].percussion
             {
                 ids.insert(n.id);
-                if state.effects
+                if state.animated_effects()
                     && state.transport.playing
                     && !state.previous.contains(&n.id)
                     && let Some(x) = l.center(&state.piano, n.key)
                 {
-                    bursts.push((x, n.id, t.colors[n.part % 4]));
+                    // The backing track can sparkle, but cannot increase streak.
+                    bursts.push((x, n.id, effects::Preset::FreePlay));
                 }
             }
         }
-        for key in std::mem::take(&mut state.live_bursts) {
-            if state.effects
-                && let Some(x) = l.center(&state.piano, key)
+        for event in std::mem::take(&mut state.live_bursts) {
+            if state.animated_effects()
+                && let Some(x) = l.center(&state.piano, event.key)
             {
-                bursts.push((x, key as usize, t.colors[0]));
+                bursts.push((x, event.key as usize, event.preset));
             }
         }
-        for (x, id, color) in bursts {
-            for i in 0..8 {
-                let seed = ((id * 17 + i * 31) % 101) as f32;
+        state.previous = ids;
+        for (x, id, preset) in bursts.into_iter().take(32) {
+            let [r, g, b] = preset.rgb();
+            let color = Color::srgb(r, g, b);
+            #[cfg(not(target_arch = "wasm32"))]
+            state.gpu_bursts.push(effects::ScreenBurst {
+                x,
+                y: burst_y,
+                preset,
+            });
+            // A soft, expanding shockwave remains visible across backends.
+            state.ripples.push(Ripple {
+                x,
+                y: burst_y,
+                age: 0.,
+                scale,
+                preset,
+            });
+            let count = preset.count().min(80);
+            let lifetime = preset.lifetime();
+            let speed = preset.burst_radius() * scale / lifetime;
+            for i in 0..count {
+                let jitter = ((id.wrapping_mul(17) + i * 31) % 101) as f32 / 101.;
+                let angle = -std::f32::consts::PI
+                    * (0.08 + 0.84 * (i as f32 + jitter * 0.45) / count as f32);
+                let radial = 0.62 + ((i * 13) % 11) as f32 / 25.;
+                let (sin, cos) = angle.sin_cos();
+                let mut vx = cos * speed * radial;
+                let mut vy = sin * speed * radial - speed * 0.30;
+                if preset == effects::Preset::Wrong {
+                    vx *= 0.78;
+                    vy += speed * 0.5;
+                }
+                let size = scale * (5.5 + ((i * 7) % 5) as f32);
                 state.particles.push(Particle {
                     x,
-                    y: l.strike,
-                    vx: seed - 50.,
-                    vy: -40. - seed,
-                    life: 0.4 + seed / 200.,
+                    y: burst_y,
+                    vx,
+                    vy,
+                    life: lifetime,
+                    duration: lifetime,
+                    size,
                     color,
                 });
             }
         }
-        state.previous = ids;
-        if state.particles.len() > 400 {
-            let extra = state.particles.len() - 400;
+        // Keep the UI fallback cheap even during dense passages on WebGL2.
+        if state.particles.len() > 520 {
+            let extra = state.particles.len() - 520;
             state.particles.drain(..extra);
         }
-        if state.effects {
+        if state.ripples.len() > 24 {
+            let extra = state.ripples.len() - 24;
+            state.ripples.drain(..extra);
+        }
+        if state.animated_effects() {
+            // Velocity-aligned trails give attacks a crisp direction without
+            // moving the camera or the notation. Newest particles retain detail.
             for p in &state.particles {
+                let opacity = (p.life / p.duration).clamp(0., 1.);
+                let size = p.size * (0.40 + opacity * 0.60);
+                let glow = size * 3.2;
+                for j in 1..=3 {
+                    let lag = j as f32 * 0.014;
+                    let trail = size * (1. - j as f32 * 0.18);
+                    d.rect(
+                        p.x - p.vx * lag - trail * 0.5,
+                        p.y - p.vy * lag - trail * 0.5,
+                        trail,
+                        trail,
+                        p.color.with_alpha(opacity * (0.28 - j as f32 * 0.06)),
+                        trail,
+                    );
+                }
                 d.rect(
-                    p.x,
-                    p.y,
-                    3.,
-                    3.,
-                    p.color.with_alpha(p.life.clamp(0., 1.)),
-                    3.,
+                    p.x - glow * 0.5,
+                    p.y - glow * 0.5,
+                    glow,
+                    glow,
+                    p.color.with_alpha(0.18 * opacity * opacity),
+                    glow,
+                );
+                d.rect(
+                    p.x - size * 0.5,
+                    p.y - size * 0.5,
+                    size,
+                    size,
+                    p.color.with_alpha(0.88 * opacity),
+                    size,
+                );
+                d.rect(
+                    p.x - size * 0.16,
+                    p.y - size * 0.16,
+                    size * 0.32,
+                    size * 0.32,
+                    Color::WHITE.with_alpha(0.85 * opacity * opacity),
+                    size,
+                );
+            }
+            // The ring communicates the hit immediately, even if Hanabi
+            // takes a frame to spawn its GPU emitter.
+            for ripple in &state.ripples {
+                let fraction = (ripple.age / (ripple.preset.lifetime() * 0.8)).clamp(0., 1.);
+                let expansion = 1. - (1. - fraction).powi(3);
+                let fade = (1. - fraction) * (1. - fraction);
+                let radius = (12. + ripple.preset.burst_radius() * expansion * 0.75) * ripple.scale;
+                let count = if ripple.preset.count() >= 60 { 24 } else { 16 };
+                let [r, g, b] = ripple.preset.rgb();
+                let tint = Color::srgb(r, g, b);
+                let dot = (7. * ripple.scale * (1. - fraction * 0.55)).max(1.);
+                for i in 0..count {
+                    let theta = -std::f32::consts::PI * i as f32 / (count - 1) as f32;
+                    let x = ripple.x + theta.cos() * radius;
+                    let y = ripple.y + theta.sin() * radius;
+                    d.rect(
+                        x - dot * 0.5,
+                        y - dot * 0.5,
+                        dot,
+                        dot,
+                        tint.with_alpha(fade * 0.75),
+                        dot,
+                    );
+                }
+                let flash = (16. + 40. * (1. - fraction)) * ripple.scale;
+                d.rect(
+                    ripple.x - flash * 0.5,
+                    ripple.y - flash * 0.5,
+                    flash,
+                    flash,
+                    tint.with_alpha(0.25 * fade),
+                    flash,
                 );
             }
         }
         keyboard(&mut d, &state, &l, t);
         if matches!(state.mode, Mode::Notes | Mode::Chords) {
-            super::menu::exercise(&mut d, &mut state, &l, t);
+            super::practice_view::render(&mut d, &mut state, &l, t);
         }
         if state.mode == Mode::Play {
             d.rect(
@@ -234,10 +406,57 @@ pub fn render(
             let label: String = state.recognition_status.chars().take(max_chars).collect();
             d.text(l.margin + 10., 56., label, 12., t.ink);
         }
+        super::session_hud::render(&mut d, &mut state, &l, t);
         // HUD goes above every musical layer, including moving ending brackets.
         gear(&mut d, &mut state, &l, t);
     } else {
-        settings(&mut d, &mut state, &l, t);
+        if state.screen == Screen::Session {
+            // Freeze a faint copy of the music beneath the modal. Only shape
+            // geometry is retained so old notation labels cannot float above
+            // the pause/settings panel (all Bevy text has a high text Z-index).
+            if state.mode == Mode::Play {
+                if state.view == View::Score {
+                    super::score::render(&mut d, &state, &l, t);
+                } else {
+                    falling(&mut d, &state, &l, t);
+                }
+            }
+            keyboard(&mut d, &state, &l, t);
+            d.labels.clear();
+            d.rect(0., 0., l.width, l.height, t.bg.with_alpha(0.82), 0.);
+        }
+        if state.settings_open {
+            super::settings::render(&mut d, &mut state, &l, t);
+        } else {
+            super::settings::pause(&mut d, &mut state, &l, t);
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    if state.screen == Screen::Main && !state.help {
+        let pad = if l.width < 1000. { 20. } else { 48. };
+        d.button(
+            &mut state,
+            pad,
+            l.height - 44.,
+            90.,
+            "Exit",
+            Action::Exit,
+            t,
+        );
+    }
+    if let Some((r, _)) = state
+        .focused_button
+        .and_then(|i| state.buttons.get(i))
+        .copied()
+    {
+        for (x, y, w, h) in [
+            (r.x, r.y, r.w, 2.),
+            (r.x, r.y + r.h - 2., r.w, 2.),
+            (r.x, r.y, 2., r.h),
+            (r.x + r.w - 2., r.y, 2., r.h),
+        ] {
+            d.rect(x, y, w, h, t.colors[0], 1.);
+        }
     }
     #[cfg(target_arch = "wasm32")]
     {
@@ -255,8 +474,8 @@ pub fn render(
                     .map(|r| serde_json::json!({"key":k.key,"x":r.x,"y":r.y,"w":r.w,"h":r.h}))
             })
             .collect();
-        let mut report = serde_json::json!({"status":state.status,"title":state.song.title,"library_total":state.library.total,"library_items":state.library.items,"library_editing":state.library.edit.is_some(),"library_focus":state.library.focus.map(|f|match f {library::Field::Search=>"search",library::Field::Title=>"title",library::Field::Composer=>"composer"}),"library_query":state.library.query,"library_sort":library::SORTS[state.library.sort],"library_format":library::FORMATS[state.library.format],"library_status":state.library.status,"screen":format!("{:?}",state.screen),"mode":format!("{:?}",state.mode),"completed":state.practice.completed,"preferences":state.preferences(),"storage_status":state.storage_status,"target":state.practice.target(),"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())});
-        report.as_object_mut().unwrap().extend(serde_json::json!({"practice_waiting_release":state.practice.waiting_release,"practice_wrong":state.practice.wrong,"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output}).as_object().unwrap().clone());
+        let mut report = serde_json::json!({"status":state.status,"title":state.song.title,"library_total":state.library.total,"library_items":state.library.items,"library_editing":state.library.edit.is_some(),"library_focus":state.library.focus.map(|f|match f {library::Field::Search=>"search",library::Field::Title=>"title",library::Field::Composer=>"composer"}),"library_query":state.library.query,"library_sort":library::SORTS[state.library.sort],"library_format":library::FORMATS[state.library.format],"library_status":state.library.status,"screen":format!("{:?}",state.screen),"mode":format!("{:?}",state.mode),"completed":state.practice.completed,"preferences":state.preferences(),"storage_status":state.storage_status,"target":state.practice.target(),"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"settings_open":state.settings_open,"settings_tab":state.settings_tab.title(),"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())});
+        report.as_object_mut().unwrap().extend(serde_json::json!({"focused_control":state.focused_button.and_then(|i|state.buttons.get(i)).map(|(_,a)|a.id()),"practice_played_label":d.labels.iter().find(|s|s.text.starts_with("Played ")).map(|s|s.text.as_str()),"reference_keys":state.reference_keys,"vfx_scale":effects::viewport_scale(l.width,l.height),"vfx_particles":state.particles.len(),"vfx_ripples":state.ripples.len(),"practice_waiting_release":state.practice.waiting_release,"streak":state.feedback.streak(),"best_streak":state.feedback.best(),"effects_backend":if cfg!(target_arch="wasm32") {"webgl2-fallback"} else {"hanabi+ui"},"practice_wrong":state.practice.wrong,"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output,"midi_output_preferred":state.preferred_midi_output,"midi_outputs":state.midi_outputs.iter().map(|p|serde_json::json!({"id":p.id,"name":p.name})).collect::<Vec<_>>(),"midi_dropdown_open":state.midi_dropdown_open,"midi_dropdown_page":state.midi_dropdown_page}).as_object().unwrap().clone());
         platform::report(&report.to_string());
     }
     apply(&mut commands, &mut pool, d, &music_font.0);
@@ -347,153 +566,6 @@ fn gear(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
         },
         Action::Help,
     ));
-}
-fn settings(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
-    d.text(
-        l.margin,
-        18.,
-        if state.screen == Screen::Session {
-            "Paused / Tangent"
-        } else {
-            "Settings / Tangent"
-        },
-        22.,
-        t.ink,
-    );
-    let items = [
-        ("Resume [Space]".into(), Action::Play),
-        ("Restart".into(), Action::Restart),
-        ("Seek -5s".into(), Action::Back),
-        ("Seek +5s".into(), Action::Forward),
-        (
-            format!("Volume - ({}%)", (state.volume * 100.).round()),
-            Action::Quieter,
-        ),
-        ("Volume +".into(), Action::Louder),
-        (format!("View: {} [V]", state.view.name()), Action::View),
-        (
-            format!("Theme: {} [B]", ["Aurora", "Ember", "Paper"][state.theme]),
-            Action::Theme,
-        ),
-        (format!("Hear song: {} [M]", state.hear), Action::Hear),
-        (format!("Sparkles: {} [P]", state.effects), Action::Effects),
-        (
-            format!(
-                "Piano: {} [X]",
-                ["Soft felt", "Bright keys"][state.instrument]
-            ),
-            Action::Instrument,
-        ),
-        (
-            format!("Keys: {} [R]", state.piano.keys.len()),
-            Action::Range,
-        ),
-        ("Import score [Ctrl+O]".into(), Action::Import),
-        ("XML demo [Ctrl+B]".into(), Action::Sample),
-        ("Rescan MIDI [Ctrl+M]".into(), Action::Midi),
-        (
-            format!(
-                "Output: {}",
-                state
-                    .midi_outputs
-                    .iter()
-                    .find(|p| p.id == state.midi_output)
-                    .map_or("Computer audio", |p| p.name.as_str())
-            ),
-            Action::MidiOutput,
-        ),
-        ("Music credits".into(), Action::Credits),
-        ("Full screen [F11]".into(), Action::Fullscreen),
-        ("Return [Esc / F1]".into(), Action::Help),
-        ("Main menu".into(), Action::Main),
-        ("Export database".into(), Action::ExportDatabase),
-    ];
-    let cols = if l.width > 700. { 3 } else { 2 };
-    let row = if l.height < 600. { 35. } else { 43. };
-    let start = if l.height < 600. { 50. } else { 65. };
-    let w = (l.width - 2. * l.margin - 12. * (cols - 1) as f32) / cols as f32;
-    let session = state.screen == Screen::Session;
-    let song_mode = state.mode == Mode::Play;
-    for (i, (label, action)) in items
-        .into_iter()
-        .filter(|(_, action)| {
-            (song_mode || !matches!(action, Action::Restart | Action::Back | Action::Forward))
-                && (session
-                    || !matches!(
-                        action,
-                        Action::Play
-                            | Action::Restart
-                            | Action::Back
-                            | Action::Forward
-                            | Action::Main
-                    ))
-        })
-        .enumerate()
-    {
-        let label = if w < 160. {
-            label
-                .replace("Falling blocks", "Blocks")
-                .replace("Staff blocks", "Staff")
-                .replace("Staff notes", "Notes")
-                .replace("Sheet & playhead", "Sheet")
-                .replace("Soft felt", "Felt")
-                .replace("Bright keys", "Bright")
-                .split(" [")
-                .next()
-                .unwrap_or("")
-                .to_string()
-        } else {
-            label
-        };
-        d.button(
-            state,
-            l.margin + (i % cols) as f32 * (w + 12.),
-            start + (i / cols) as f32 * row,
-            w,
-            label,
-            action,
-            t,
-        );
-    }
-    d.text(
-        l.margin,
-        l.height - 50.,
-        format!(
-            "{}  {} / {}",
-            state.song.title,
-            time(state.transport.position_us),
-            time(state.transport.duration_us)
-        ),
-        11.,
-        t.ink,
-    );
-    d.text(l.margin, l.height - 30., &state.status, 11., t.muted);
-    d.text(
-        l.margin,
-        l.height - 14.,
-        &state.storage_status,
-        10.,
-        t.muted,
-    );
-    let y = start + (21_usize.div_ceil(cols)) as f32 * row + 15.;
-    let line = ((l.height - y - 16.) / 8.).clamp(10., 23.);
-    for (i, text) in [
-        "Space: play / pause",
-        "Left / Right: seek 5 seconds (Shift: 15)",
-        "Up / Down: volume (5% per step)",
-        "Home: beginning    End: end",
-        "A W S E D F T G Y H U J K: C4 to C5",
-        "MIDI reading views use approximate notation.",
-        "First light: original MusicXML piano study",
-        "CC0 1.0. Music credits opens the provenance.",
-    ]
-    .iter()
-    .enumerate()
-    {
-        if y + i as f32 * line < l.height - 70. {
-            d.text(l.margin, y + i as f32 * line, *text, 12., t.muted);
-        }
-    }
 }
 fn expected_keys(state: &State) -> BTreeSet<u8> {
     if matches!(state.mode, Mode::Notes | Mode::Chords) {

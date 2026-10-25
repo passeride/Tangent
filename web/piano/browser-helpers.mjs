@@ -58,4 +58,8 @@ export async function click(page, id) {
   );
   if (!b) throw Error("Missing Bevy button: " + id);
   await page.mouse.click(b.x + b.w / 2, b.y + b.h / 2);
+  // Bevy consumes queued pointer events on a frame boundary. Let that action
+  // settle before issuing another action (especially a keyboard shortcut).
+  const frame = await page.evaluate(() => tangentDiagnostics().frame);
+  await page.waitForFunction(frame => tangentDiagnostics().frame >= frame + 2, frame);
 }

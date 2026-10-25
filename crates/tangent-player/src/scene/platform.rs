@@ -25,7 +25,14 @@ mod web {
 pub use web::*;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn native_window(mut windows: bevy::prelude::Query<&mut bevy::window::Window>) {
+pub fn native_window(
+    mut windows: bevy::prelude::Query<&mut bevy::window::Window>,
+    mut exit: bevy::prelude::MessageWriter<bevy::app::AppExit>,
+) {
+    if take_quit_request() {
+        exit.write(bevy::app::AppExit::Success);
+        return;
+    }
     use bevy::window::{MonitorSelection, WindowMode};
     if !take_fullscreen_request() {
         return;

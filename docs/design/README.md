@@ -13,6 +13,7 @@ wireframes in [sketches](sketches/README.md), asset records in
 | Brief | Status | Sketches | Outcome |
 | --- | --- | --- | --- |
 | [Piano player](piano-player.md) | Initial implementation | Owner-supplied sketch; not bundled | Four views, piano, sound and themes |
+| [Tangent UI/UX v2](tangent-ui-v2.md) | Design direction approved; not implemented | Interactive concept reviewed 2026-10-25; not bundled | Menus, navigation flow, player HUD, settings categories and design principles |
 
 ## Initial design questions
 

@@ -72,15 +72,28 @@ try {
   page.on("pageerror", (e) => errors.push(e.message));
   await ready(page, server.url);
   assert.equal((await page.evaluate(() => tangentDiagnostics())).screen, "Main");
+  await page.keyboard.press("Tab");
+  await page.waitForFunction(()=>tangentDiagnostics().focused_control==='start-play');
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(()=>tangentDiagnostics().screen==='Session');
+  await page.keyboard.press("Escape"); await click(page, "main");
   await page.keyboard.press("KeyA");
   assert.equal((await page.evaluate(() => tangentDiagnostics())).live.length, 0);
-  await click(page, "help");
+  await click(page, "settings");
+  assert.equal((await page.evaluate(() => tangentDiagnostics())).settings_tab, "Audio & MIDI");
   await page.keyboard.press("Escape");
   await click(page, "train");
   await click(page, "train-notes");
   await page.waitForFunction(() => tangentDiagnostics().screen === "Session");
+  assert.equal((await page.evaluate(() => tangentDiagnostics())).vfx_scale, 1.125);
+  await click(page, "practice-listen");
+  await page.waitForFunction(()=>tangentDiagnostics().energy > 0.0001);
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).completed, 0);
+  await page.waitForFunction(()=>tangentDiagnostics().reference_keys.length===0);
   await page.keyboard.down("KeyA");
   await page.waitForFunction(() => tangentDiagnostics().practice_waiting_release === true);
+  await page.waitForFunction(() => tangentDiagnostics().vfx_particles >= 20
+    && tangentDiagnostics().vfx_ripples > 0);
   await page.keyboard.up("KeyA");
   await page.keyboard.press("Escape");
   await click(page, "main");
@@ -164,8 +177,8 @@ try {
     (await page.evaluate(() => tangentDiagnostics())).position,
     position,
   );
-  // The playing surface exposes only a corner gear; all settings live in pause.
-  assert.deepEqual((await page.evaluate(() => tangentDiagnostics())).buttons.map(b => b.id), ["help"]);
+  // Common transport remains reachable; Settings is a separate page.
+  assert.deepEqual((await page.evaluate(() => tangentDiagnostics())).buttons.map(b => b.id), ["play", "help"]);
   await page.keyboard.press("Space");
   await page.waitForFunction(() => tangentDiagnostics().playing);
   await click(page, "help");
@@ -173,17 +186,24 @@ try {
   const pausedAt = (await page.evaluate(() => tangentDiagnostics())).position;
   await page.waitForTimeout(180);
   assert.equal((await page.evaluate(() => tangentDiagnostics())).position, pausedAt);
+  await click(page, "settings");
+  await page.waitForFunction(() => tangentDiagnostics().settings_open);
+  await click(page, "settings-visuals");
   await click(page, "fullscreen");
   await page.waitForFunction(
     () => document.fullscreenElement?.id === "tangent",
   );
   await page.keyboard.press("F11");
   await page.waitForFunction(() => !document.fullscreenElement);
-  await page.waitForFunction(() => tangentDiagnostics().help);
+  await page.waitForFunction(() => tangentDiagnostics().settings_open);
   await click(page, "theme");
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => tangentDiagnostics().help && !tangentDiagnostics().settings_open);
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => !tangentDiagnostics().help);
   await click(page, "help");
+  await click(page, "settings");
+  await click(page, "settings-data");
   const pickerPromise = page.waitForEvent("filechooser");
   await click(page, "import");
   const picker = await pickerPromise;
@@ -211,13 +231,17 @@ try {
     buffer: mxl,
   });
   await page.waitForFunction(() => tangentDiagnostics().notes === 5);
+  await click(page, "settings-back");
   await page.keyboard.press("Space");
   await page.waitForFunction(() => tangentDiagnostics().playing && !tangentDiagnostics().help);
   await page.waitForFunction(() => tangentDiagnostics().energy > 0.0001);
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => tangentDiagnostics().help && !tangentDiagnostics().playing);
+  await click(page, "settings");
+  await click(page, "settings-data");
   await click(page, "sample");
   await page.waitForFunction(() => tangentDiagnostics().notes === 130);
+  await click(page, "settings-back");
   await page.keyboard.press("Space");
   await page.waitForFunction(() => tangentDiagnostics().playing && tangentDiagnostics().energy > 0.0001);
   await page.keyboard.press("Escape");
@@ -226,6 +250,7 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForFunction(() => tangentDiagnostics().width === 390);
   const ui = await page.evaluate(() => tangentDiagnostics());
+  assert.ok(Math.abs(ui.vfx_scale - 0.65) < 1e-6, "Mobile viewport has a bounded effect scale");
   assert(
     ui.buttons.every(
       (b) =>
@@ -236,8 +261,13 @@ try {
   await page.waitForFunction(() => tangentDiagnostics().help);
   const menu = await page.evaluate(() => tangentDiagnostics());
   assert.equal(menu.playing, false);
-  assert(menu.buttons.length > 10);
+  assert(menu.buttons.length >= 8);
   assert(menu.buttons.every(b => b.x >= 0 && b.y >= 0 && b.x + b.w <= menu.width && b.y + b.h <= menu.height));
+  await click(page, "settings");
+  const settings = await page.evaluate(() => tangentDiagnostics());
+  assert.equal(settings.settings_open, true);
+  assert(settings.buttons.every(b => b.x >= 0 && b.y >= 0 && b.x + b.w <= settings.width && b.y + b.h <= settings.height));
+  await click(page, "settings-back");
   await page.keyboard.press("Escape");
   assert.equal(
     await page.evaluate(

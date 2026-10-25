@@ -18,7 +18,7 @@ this file tracks the remaining work, not an authorization gate.
 - Index long sustained notes and visible windows; frame JSON and prefix scanning
   are prototype boundaries and need dense/long-song profiling.
 - [x] Save user settings in local SQLite; export a portable database (ADR-0009).
-- [x] Add a local SQLite symbolic fingerprint index and FreeForm MIDI identification (ADR-0011); original score files still are not persisted.
+- [x] Add a local SQLite symbolic fingerprint index and FreeForm MIDI identification (ADR-0011).
 - [x] Persist original music sources and add a paged Bevy Library view (ADR-0013).
 - [x] Library title/composer search, metadata editing, sorting/filtering, batch import and source/fingerprint cleanup (ADR-0014).
 - Add library folders/tags, backup restore and meaningful score/session recording.
@@ -29,7 +29,8 @@ this file tracks the remaining work, not an authorization gate.
 - Add OS-integrated drag/drop and robust cross-platform native file picker
   (currently PowerShell, AppleScript and optional Zenity).
 - Extend fingerprint search with polyphonic voices, multiple arrangements per work, calibrated match confidence and large-library performance.
-- Add managed desktop lifecycle/quit UI, signing and macOS notarization.
+- [x] Native Exit UI through managed Bevy shutdown (ADR-0012).
+- Add signing and macOS notarization.
 
 - [x] Explicit MIDI output selection, no hardware echo, cancellation and seek-state reconstruction (ADR-0015). Verify output with physical P-45.
 - [x] Independent played solid fill and expected edge glow, including when particles are off.
@@ -40,8 +41,8 @@ this file tracks the remaining work, not an authorization gate.
   without invented spelling.
 - Add a notation renderer/layout boundary for rests, key/time signatures, beams,
   tuplets, ties across pages, stem direction, collisions and accidental context.
-- Improve narrow-screen score density and auto-follow paging. The current sheet
-  view uses time spacing and eight-second pages, not engraved measures.
+- Improve narrow-screen score density and auto-follow paging. MusicXML uses authored measures; refine its layout and the approximate MIDI
+  fallback independently.
 - Evaluate the rotated-staff learning projection with users; keyboard spacing
   differs from conventional equal staff steps, and dense chords need layout work.
 - Add key-range auto-fit/zoom and a clear indicator for off-screen pitches.
@@ -52,7 +53,9 @@ this file tracks the remaining work, not an authorization gate.
   ADR-0008. [x] Extend the fixed C-major exercises with bass-clef targets, curriculum
   options and feedback (delivered in ADR-0015). Timed scoring, progress persistence and adaptive exercise
   selection remain future work in the domain layer.
-- Add full reduced-motion preferences, contrast checks and accessible Bevy UI semantics for
+- [x] Persistent reduced-motion preference and effect intensity (ADR-0017).
+- [x] Optional practice reference audio and exact live pitch pointers (ADR-0017).
+- Add contrast checks and accessible Bevy UI semantics for
   note/event information. Effects can already be disabled manually.
 
 ## MusicXML follow-up (ADR-0006)

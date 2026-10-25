@@ -169,7 +169,9 @@ impl Practice {
             self.wrong = false;
             true
         } else {
-            self.wrong = true;
+            // A chord can be assembled one finger at a time. A subset of
+            // the expected pitch classes is incomplete, not an error.
+            self.wrong = actual.iter().any(|key| !expected.contains(key));
             false
         }
     }
@@ -177,6 +179,15 @@ impl Practice {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn releasing_wrong_finger_can_complete_held_target() {
+        let mut p = Practice::default();
+        assert!(!p.answer(&[60, 62]));
+        assert!(p.answer(&[60]));
+        assert_eq!(p.completed, 0);
+        p.answer(&[]);
+        assert_eq!(p.completed, 1);
+    }
     #[test]
     fn notes_require_correct_octave_and_release() {
         let mut p = Practice::default();
@@ -193,6 +204,7 @@ mod tests {
             ..Default::default()
         };
         assert!(!p.answer(&[60, 64]));
+        assert!(!p.wrong);
         assert!(!p.answer(&[60, 64, 67, 70]));
         assert!(p.answer(&[64, 67, 72]));
         p.answer(&[]);
@@ -248,5 +260,85 @@ mod reading_tests {
         assert!(!p.answer(&[60]));
         p.answer(&[]);
         assert_eq!(p.completed, 1);
+    }
+}
+
+/// Cosmetic performance feedback; this is not calibrated scoring or a saved score.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Grade {
+    Correct,
+    Wrong,
+    Neutral,
+}
+#[derive(Default)]
+pub struct SongHits(std::collections::BTreeSet<usize>);
+impl SongHits {
+    pub fn reset(&mut self) {
+        self.0.clear();
+    }
+    /// Award each target once per transport run. Reattacking a held target
+    /// remains neutral instead of farming streak milestones.
+    pub fn judge(&mut self, song: &crate::music::Song, position_us: u64, key: u8) -> Grade {
+        let candidates: Vec<_> = song
+            .notes
+            .iter()
+            .filter(|n| {
+                n.key == key
+                    && song.parts.get(n.part).is_some_and(|p| !p.percussion)
+                    && n.start_us <= position_us.saturating_add(180_000)
+                    && n.end_us.saturating_add(180_000) >= position_us
+            })
+            .collect();
+        if let Some(note) = candidates
+            .iter()
+            .filter(|n| !self.0.contains(&n.id))
+            .min_by_key(|n| n.start_us.abs_diff(position_us))
+        {
+            self.0.insert(note.id);
+            Grade::Correct
+        } else if candidates.is_empty() {
+            Grade::Wrong
+        } else {
+            Grade::Neutral
+        }
+    }
+}
+#[cfg(test)]
+mod hit_tests {
+    use super::*;
+    use crate::music::{Part, PerformanceNote, Song};
+    #[test]
+    fn repeated_input_cannot_award_same_target_twice_and_seek_can_reset() {
+        let mut song = Song {
+            title: String::new(),
+            composer: None,
+            duration_us: 3_000_000,
+            parts: vec![Part {
+                name: String::new(),
+                percussion: false,
+            }],
+            notes: vec![PerformanceNote {
+                id: 0,
+                part: 0,
+                key: 60,
+                velocity: 90,
+                start_us: 1_000_000,
+                end_us: 1_500_000,
+                written: None,
+            }],
+            notation: None,
+            warnings: vec![],
+            events: vec![],
+        };
+        let mut hits = SongHits::default();
+        assert_eq!(hits.judge(&song, 700_000, 60), Grade::Wrong);
+        assert_eq!(hits.judge(&song, 900_000, 60), Grade::Correct);
+        assert_eq!(hits.judge(&song, 1_200_000, 60), Grade::Neutral);
+        assert_eq!(hits.judge(&song, 1_200_000, 61), Grade::Wrong);
+        assert_eq!(hits.judge(&song, 1_700_001, 60), Grade::Wrong);
+        hits.reset();
+        assert_eq!(hits.judge(&song, 1_200_000, 60), Grade::Correct);
+        song.parts[0].percussion = true;
+        assert_eq!(hits.judge(&song, 1_200_000, 60), Grade::Wrong);
     }
 }
