@@ -45,7 +45,7 @@ enum Mode {
     Chords,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum SettingsTab {
+pub enum SettingsTab {
     AudioMidi,
     Visuals,
     Practice,
