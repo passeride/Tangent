@@ -439,7 +439,11 @@ pub fn input(
     }
     if state.screen != Screen::Session {
         if keys.just_pressed(KeyCode::F1) {
-            let action = if state.help { Action::SettingsBack } else { Action::Settings };
+            let action = if state.help {
+                Action::SettingsBack
+            } else {
+                Action::Settings
+            };
             activate(&mut state, action, false);
         }
         if keys.just_pressed(KeyCode::Escape) {
@@ -500,7 +504,8 @@ pub fn input(
             (KeyCode::F1, Action::Help),
         ] {
             if keys.just_pressed(key)
-                && (!state.help || matches!(action, Action::Help)
+                && (!state.help
+                    || matches!(action, Action::Help)
                     || (matches!(action, Action::Play) && !state.settings_open))
             {
                 activate(&mut state, action, shift);
@@ -517,7 +522,9 @@ pub fn input(
         (KeyCode::ArrowDown, Action::Quieter),
         (KeyCode::ArrowUp, Action::Louder),
     ] {
-        if !state.help && (keys.just_pressed(key) || (keys.pressed(key) && state.arrow_repeat <= 0.)) {
+        if !state.help
+            && (keys.just_pressed(key) || (keys.pressed(key) && state.arrow_repeat <= 0.))
+        {
             activate(&mut state, action, shift);
             state.arrow_repeat = 0.15;
         }
