@@ -5,6 +5,7 @@
 - Delivery: Implemented; physical output verification remains separate
 - Related: [ADR-0005](0005-one-bevy-gpu-surface.md), [ADR-0012](0012-native-desktop-runtime.md)
 - Supersedes: Exercise sequencing/presentation in [ADR-0008](0008-navigation-and-practice.md)
+- Output selection persistence and UI **superseded** by [ADR-0016](0016-persistent-midi-output-selection.md); no-echo and cancellation decisions still apply.
 
 ## Context and options
 
