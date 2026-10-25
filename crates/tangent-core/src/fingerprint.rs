@@ -131,8 +131,14 @@ fn align_intervals(query: &[u8], candidate: &[u8]) -> Option<(usize, f32)> {
     if query.len() < MIN_QUERY_NOTES || candidate.len() < MIN_QUERY_NOTES {
         return None;
     }
-    let a: Vec<i16> = query.windows(2).map(|w| w[1] as i16 - w[0] as i16).collect();
-    let b: Vec<i16> = candidate.windows(2).map(|w| w[1] as i16 - w[0] as i16).collect();
+    let a: Vec<i16> = query
+        .windows(2)
+        .map(|w| w[1] as i16 - w[0] as i16)
+        .collect();
+    let b: Vec<i16> = candidate
+        .windows(2)
+        .map(|w| w[1] as i16 - w[0] as i16)
+        .collect();
     let mut prev_cost = vec![0.0f32; b.len() + 1];
     let mut prev_start: Vec<usize> = (0..=b.len()).collect();
     for (i, &interval) in a.iter().enumerate() {
@@ -141,7 +147,13 @@ fn align_intervals(query: &[u8], candidate: &[u8]) -> Option<(usize, f32)> {
         cost[0] = (i + 1) as f32 * GAP;
         for (j, &other) in b.iter().enumerate() {
             let delta = (interval - other).abs();
-            let substitution = if delta == 0 { 0.0 } else if delta <= 2 { 0.55 } else { 1.0 };
+            let substitution = if delta == 0 {
+                0.0
+            } else if delta <= 2 {
+                0.55
+            } else {
+                1.0
+            };
             let diagonal = (prev_cost[j] + substitution, prev_start[j]);
             let deletion = (prev_cost[j + 1] + GAP, prev_start[j + 1]);
             let insertion = (cost[j] + GAP, start[j]);
@@ -208,23 +220,40 @@ mod tests {
         let mut notes = vec![];
         let mut parts = vec![];
         for (part, (keys, percussion)) in lanes.iter().enumerate() {
-            parts.push(Part { name: format!("Part {part}"), percussion: *percussion });
+            parts.push(Part {
+                name: format!("Part {part}"),
+                percussion: *percussion,
+            });
             for (index, key) in keys.iter().enumerate() {
                 notes.push(PerformanceNote {
-                    id: notes.len(), part, key: *key, velocity: 90,
+                    id: notes.len(),
+                    part,
+                    key: *key,
+                    velocity: 90,
                     start_us: index as u64 * 250_000,
                     end_us: (index as u64 + 1) * 250_000,
                     written: None,
                 });
             }
         }
-        Song { title: "Fixture".into(), duration_us: 3_000_000, parts, notes, notation: None, warnings: vec![], events: vec![] }
+        Song {
+            title: "Fixture".into(),
+            duration_us: 3_000_000,
+            parts,
+            notes,
+            notation: None,
+            warnings: vec![],
+            events: vec![],
+        }
     }
 
     fn candidate(keys: &[u8]) -> Candidate {
         Candidate {
-            song_id: "fixture".into(), title: "Fixture".into(), part: 0,
-            keys: keys.to_vec(), onsets_us: (0..keys.len()).map(|i| i as u64 * 250_000).collect(),
+            song_id: "fixture".into(),
+            title: "Fixture".into(),
+            part: 0,
+            keys: keys.to_vec(),
+            onsets_us: (0..keys.len()).map(|i| i as u64 * 250_000).collect(),
             hits: 1,
         }
     }
@@ -236,7 +265,10 @@ mod tests {
         let shifted = [78, 77, 78, 77, 78, 73, 76, 74, 71];
         assert_eq!(fingerprints(&original), fingerprints(&lower));
         assert_eq!(fingerprints(&original), fingerprints(&shifted));
-        assert_eq!(rank_matches(&lower, &[candidate(&original)], 1)[0].similarity, 1.);
+        assert_eq!(
+            rank_matches(&lower, &[candidate(&original)], 1)[0].similarity,
+            1.
+        );
     }
 
     #[test]
@@ -253,10 +285,18 @@ mod tests {
 
     #[test]
     fn percussion_excluded_and_chords_choose_top_voice() {
-        let mut s = song(&[(&[60, 62, 64, 65, 67, 69], false), (&[35, 38, 42, 36, 42, 38], true)]);
+        let mut s = song(&[
+            (&[60, 62, 64, 65, 67, 69], false),
+            (&[35, 38, 42, 36, 42, 38], true),
+        ]);
         s.notes.push(PerformanceNote {
-            id: 12, part: 0, key: 48, velocity: 80, start_us: 0,
-            end_us: 200_000, written: None,
+            id: 12,
+            part: 0,
+            key: 48,
+            velocity: 80,
+            start_us: 0,
+            end_us: 200_000,
+            written: None,
         });
         let idx = index_song(&s);
         assert_eq!(idx.melodies.len(), 1);
@@ -268,7 +308,14 @@ mod tests {
     fn short_queries_and_unrelated_patterns_are_rejected() {
         assert!(signatures(&[60, 62, 64]).is_empty());
         assert!(rank_matches(&[60, 62, 64], &[candidate(&[60, 62, 64, 65, 67])], 1).is_empty());
-        assert!(rank_matches(&[60, 60, 60, 60, 60, 60], &[candidate(&[60, 72, 48, 72, 48, 72])], 1).is_empty());
+        assert!(
+            rank_matches(
+                &[60, 60, 60, 60, 60, 60],
+                &[candidate(&[60, 72, 48, 72, 48, 72])],
+                1
+            )
+            .is_empty()
+        );
     }
 
     #[test]
