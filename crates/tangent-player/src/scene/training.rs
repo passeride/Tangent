@@ -293,7 +293,12 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         d.text(
             x,
             242.,
-            if state.mode == Mode::Play {
+            if state
+                .training
+                .result
+                .as_ref()
+                .is_some_and(|r| r.mode == "play")
+            {
                 "100 per target / percentage is pitch coverage"
             } else {
                 "100 first try / 40 corrected / 0 assisted or skipped"
@@ -327,12 +332,35 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             x,
             265.,
             (w / 2. - 6.).min(220.),
-            if state.mode == Mode::Play {
-                "Play again"
+            if state
+                .training
+                .result
+                .as_ref()
+                .is_some_and(|r| r.mode == "play")
+            {
+                if state
+                    .training
+                    .result
+                    .as_ref()
+                    .is_some_and(|r| r.piece_id.as_ref() == Some(&state.piece_id))
+                {
+                    "Play again"
+                } else {
+                    "Choose music"
+                }
             } else {
                 "Practice again"
             },
-            Action::PracticeAgain,
+            if state
+                .training
+                .result
+                .as_ref()
+                .is_some_and(|r| r.mode == "play" && r.piece_id.as_ref() != Some(&state.piece_id))
+            {
+                Action::Library
+            } else {
+                Action::PracticeAgain
+            },
             t,
         );
         d.button(
@@ -344,6 +372,29 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             Action::Progress,
             t,
         );
+        if let Some(r) = &state.training.result {
+            let rows = ((l.height - 405.) / 22.).clamp(0., 12.) as usize;
+            for (i, trial) in r.trials.iter().take(rows).enumerate() {
+                let label = tangent_core::progress::skill_label(&trial.skill)
+                    .unwrap_or_else(|| "Task".into());
+                let outcome = if trial.skipped {
+                    "skipped"
+                } else if trial.assisted {
+                    "assisted"
+                } else if trial.clean {
+                    "first try"
+                } else {
+                    "corrected"
+                };
+                d.text(
+                    x,
+                    350. + i as f32 * 22.,
+                    format!("{}. {label} / {outcome}", i + 1),
+                    11.,
+                    t.muted,
+                );
+            }
+        }
     } else {
         merge_pending(state);
         let history = &state.training.model.history;
@@ -393,26 +444,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             .model
             .review_focus()
             .iter()
-            .filter_map(|s| {
-                let key = s
-                    .rsplit(':')
-                    .next()?
-                    .split('-')
-                    .next()?
-                    .parse::<u8>()
-                    .ok()?;
-                if key > 127 {
-                    return None;
-                }
-                Some(format!(
-                    "{}{}{}",
-                    [
-                        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
-                    ][key as usize % 12],
-                    i16::from(key) / 12 - 1,
-                    if s.starts_with("chord") { " chord" } else { "" }
-                ))
-            })
+            .filter_map(|s| tangent_core::progress::skill_label(s))
             .collect::<Vec<_>>()
             .join(", ");
         if !focus.is_empty() {
@@ -425,6 +457,10 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         for (i, r) in history.iter().skip(page * rows).take(rows).enumerate() {
             let y = 175. + i as f32 * 60.;
             d.rect(x, y, w, 50., t.panel, 7.);
+            state.buttons.push((
+                layout::Rect { x, y, w, h: 50. },
+                Action::ProgressOpen(page * rows + i),
+            ));
             let seconds =
                 (platform::wall_time_ms() as u64).saturating_sub(r.started_unix_ms) / 1000;
             let ago = if r.started_unix_ms == 0 {
@@ -499,12 +535,20 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             t.muted,
         );
     }
-    let status =
-        if !state.training.pending.is_empty() && !state.training.status.starts_with("Not saved") {
-            "Saving locally..."
-        } else {
-            &state.training.status
-        };
+    let status = if result
+        && state
+            .training
+            .result
+            .as_ref()
+            .is_some_and(|r| !r.meaningful())
+    {
+        "No attempts recorded"
+    } else if !state.training.pending.is_empty() && !state.training.status.starts_with("Not saved")
+    {
+        "Saving locally..."
+    } else {
+        &state.training.status
+    };
     d.text(
         x,
         l.height - 35.,

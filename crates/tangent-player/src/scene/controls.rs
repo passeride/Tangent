@@ -7,6 +7,7 @@ pub enum Action {
     Progress,
     ProgressPrevious,
     ProgressNext,
+    ProgressOpen(usize),
     PracticeFinish,
     PracticeAgain,
     PracticeSkip,
@@ -70,6 +71,7 @@ impl Action {
             Self::Progress => "progress",
             Self::ProgressPrevious => "progress-previous",
             Self::ProgressNext => "progress-next",
+            Self::ProgressOpen(_) => "progress-open",
             Self::PracticeFinish => "practice-finish",
             Self::PracticeAgain => "practice-again",
             Self::PracticeSkip => "practice-skip",
@@ -151,6 +153,18 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.panic();
             platform::action("quit", "");
         }
+        Action::ProgressOpen(index) => {
+            if let Some(run) = state.training.model.history.get(index).cloned() {
+                state.training.status = if state.training.pending.contains_key(&run.id) {
+                    "Saving locally..."
+                } else {
+                    "Saved locally"
+                }
+                .into();
+                state.training.result = Some(run);
+                state.screen = Screen::Results;
+            }
+        }
         Action::ProgressPrevious => state.training.page = state.training.page.saturating_sub(1),
         Action::ProgressNext => state.training.page += 1,
         Action::Progress => {
@@ -163,18 +177,27 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             platform::action("progress-list", "");
         }
         Action::PracticeFinish => training::end(state, true),
-        Action::PracticeAgain if state.mode == Mode::Play => {
-            activate(state, Action::StartPlay, false);
-            activate(state, Action::Restart, false);
-            activate(state, Action::Play, false);
-        }
         Action::PracticeAgain => {
-            let action = if state.mode == Mode::Chords {
-                Action::TrainChords
-            } else {
-                Action::TrainNotes
-            };
-            activate(state, action, false);
+            if let Some(run) = state.training.result.as_ref() {
+                if run.mode == "play" {
+                    activate(state, Action::StartPlay, false);
+                    activate(state, Action::Restart, false);
+                    activate(state, Action::Play, false);
+                } else {
+                    use tangent_core::practice::{Level, ReadingClef};
+                    let action = if run.mode == "chords" {
+                        Action::TrainChords
+                    } else {
+                        Action::TrainNotes
+                    };
+                    state.practice.configure(
+                        [ReadingClef::Treble, ReadingClef::Bass, ReadingClef::Mixed]
+                            [run.clef as usize],
+                        [Level::Stepwise, Level::Mixed, Level::Chromatic][run.level as usize],
+                    );
+                    activate(state, action, false);
+                }
+            }
         }
         Action::PracticeSkip => {
             if !state.practice.waiting_release && state.training.model.run.is_some() {
@@ -452,10 +475,13 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             } else {
                 state.practice.level
             };
-            training::end(state, false);
+            let active_practice = matches!(state.mode, Mode::Notes | Mode::Chords);
+            if active_practice {
+                training::end(state, false);
+            }
             state.panic();
             state.practice.configure(clef, level);
-            if state.screen == Screen::Session {
+            if state.screen == Screen::Session && active_practice {
                 training::start(state);
             }
         }

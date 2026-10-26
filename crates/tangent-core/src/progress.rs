@@ -21,6 +21,10 @@ pub struct Run {
     pub revision: u32,
     pub mode: String,
     pub label: String,
+    #[serde(default)]
+    pub clef: u8,
+    #[serde(default)]
+    pub level: u8,
     pub points: u32,
     pub errors: u32,
     pub elapsed_ms: u64,
@@ -49,6 +53,8 @@ impl Run {
             } else {
                 format!("{} / {}", p.clef.name(), p.curriculum_name())
             },
+            clef: p.clef as u8,
+            level: p.level as u8,
             points: 0,
             errors: 0,
             elapsed_ms: 0,
@@ -129,6 +135,8 @@ impl Run {
                 .piece_id
                 .as_ref()
                 .is_none_or(|id| id.len() == 64 && id.bytes().all(|b| b.is_ascii_hexdigit()))
+            && self.clef <= 2
+            && self.level <= 2
             && self.label.len() <= 100
             && self.trials.len() <= SESSION_LENGTH
             && ((self.mode == "play" && self.trials.is_empty())
@@ -373,4 +381,30 @@ mod tests {
         r.points = 100;
         assert!(!r.validate());
     }
+}
+
+/// Human-readable skill identity without exposing a target in the exercise HUD.
+pub fn skill_label(tag: &str) -> Option<String> {
+    let fields: Vec<_> = tag.split(':').collect();
+    if fields.len() != 4 {
+        return None;
+    }
+    let keys: Vec<u8> = fields[3]
+        .split('-')
+        .map(str::parse)
+        .collect::<Result<_, _>>()
+        .ok()?;
+    if keys.iter().any(|&k| k > 127) || !keys.windows(2).all(|p| p[0] < p[1]) {
+        return None;
+    }
+    let chords = fields[0] == "chord";
+    if (!chords && keys.len() != 1) || (chords && !(3..=4).contains(&keys.len())) {
+        return None;
+    }
+    let p = Practice {
+        chords,
+        review_target: Some(keys),
+        ..Default::default()
+    };
+    Some(p.label())
 }

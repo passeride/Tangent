@@ -41,11 +41,14 @@ export async function serve(root, prefix = "/") {
 export async function ready(page, url) {
   page.setDefaultTimeout(90_000);
   await page.goto(url);
-  await page.waitForFunction(
-    () => window.tangentDiagnostics?.()?.renderer === "bevy-wgpu",
-    null,
-    { timeout: 90_000 },
-  );
+  const bootErrors=[];
+  const record=e=>bootErrors.push(e.message);page.on('pageerror',record);
+  try {
+    await page.waitForFunction(()=>window.tangentDiagnostics?.()?.renderer==='bevy-wgpu',null,{timeout:90000});
+  } catch(error) {
+    console.error('Bevy startup failed:', await page.locator('#startup').textContent().catch(()=>''), bootErrors);
+    throw error;
+  } finally {page.off('pageerror',record);}
   await page.waitForTimeout(500);
 }
 export async function click(page, id) {

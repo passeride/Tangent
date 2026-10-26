@@ -10,6 +10,7 @@ function valid(r) {
  const int=(n,max)=>Number.isSafeInteger(n)&&n>=0&&n<=max;
  return r && (r.version??1)===1 && /^[a-zA-Z0-9-]{8,100}$/.test(r.id) && ['notes','chords','play'].includes(r.mode)
  && (r.piece_id==null||typeof r.piece_id==='string'&&/^[a-fA-F0-9]{64}$/.test(r.piece_id))
+ && int(r.clef??0,2)&&int(r.level??0,2)
  && typeof r.label==='string'&&r.label.length<=100&&typeof r.finished==='boolean'
  && int(r.revision,4294967295)&&int(r.errors,100000)&&int(r.elapsed_ms,604800000)
  && Array.isArray(r.trials)&&r.trials.length<=12 && r.trials.every(t=>typeof t.skill==='string'&&t.skill.length<=100

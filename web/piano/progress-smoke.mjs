@@ -36,6 +36,9 @@ try {
  await page.reload();await page.waitForFunction(()=>window.tangentDiagnostics?.()?.storage.ready);
  await click(page,'progress');await page.waitForFunction(()=>tangentDiagnostics().progress_history.some(r=>r.points===940));
  assert.equal((await page.evaluate(()=>tangentDiagnostics().progress_history)).filter(r=>r.id===result.id).length,1,'No duplicate history after checkpoints/reload');
+ await click(page,'progress-open');
+ await page.waitForFunction(()=>tangentDiagnostics().screen==='Results');
+ assert.equal((await page.evaluate(()=>tangentDiagnostics().practice_result)).points,940);
  await click(page,'main');await click(page,'train');await click(page,'train-notes');await click(page,'practice-adaptive');
  const first=await page.evaluate(()=>tangentDiagnostics().target[0]);await answer();
  const next=await page.evaluate(()=>tangentDiagnostics().target[0]);assert.notEqual(next,first);

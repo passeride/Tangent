@@ -222,9 +222,11 @@ try {
   await page.waitForFunction(() => tangentDiagnostics().notes === 130);
   const mxlPickerPromise = page.waitForEvent("filechooser");
   await click(page, "import");
-  const mxl = compressedMxl(readFileSync(
-    new URL("../../crates/tangent-musicxml/tests/fixtures/piano.musicxml", import.meta.url),
-  ));
+  // Keep this fixture playing long enough to exercise pause on slower GPUs.
+  // Natural completion/results have their own coverage in progress-smoke.mjs.
+  const mxl = compressedMxl(Buffer.from(readFileSync(
+    new URL("../../crates/tangent-musicxml/tests/fixtures/piano.musicxml", import.meta.url), 'utf8',
+  ).replace(/tempo="[\d.]+"/g,'tempo="15"')));
   await (await mxlPickerPromise).setFiles({
     name: "piano.mxl",
     mimeType: "application/vnd.recordare.musicxml",
