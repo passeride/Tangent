@@ -13,6 +13,34 @@ pub(super) struct Sessions {
     millis: f64,
     // Run + trial identity also distinguishes consecutive equal pitches.
     pub heard_target: Option<(String, usize, Vec<u8>)>,
+    weak_cache: Option<WeakCache>,
+}
+struct WeakCache {
+    run: String,
+    revision: u32,
+    source: String,
+    passage: Option<tangent_core::passage::Passage>,
+}
+fn weak_passage(state: &mut State) -> Option<tangent_core::passage::Passage> {
+    let run = state.training.result.as_ref()?;
+    if run.mode != "play" || run.piece_id.as_ref() != Some(&state.piece_id) {
+        return None;
+    }
+    if let Some(c) = &state.training.weak_cache
+        && c.run == run.id
+        && c.revision == run.revision
+        && c.source == state.piece_id
+    {
+        return c.passage;
+    }
+    let passage = run.weak_passage(&state.song);
+    state.training.weak_cache = Some(WeakCache {
+        run: run.id.clone(),
+        revision: run.revision,
+        source: state.piece_id.clone(),
+        passage,
+    });
+    passage
 }
 fn merge_pending(state: &mut State) {
     for run in state.training.pending.values() {
@@ -23,7 +51,9 @@ fn merge_pending(state: &mut State) {
             .iter_mut()
             .find(|r| r.id == run.id)
         {
-            *old = run.clone();
+            if old.revision < run.revision {
+                *old = run.clone();
+            }
         } else {
             state.training.model.history.insert(0, run.clone());
         }
@@ -94,6 +124,7 @@ pub(super) fn end(state: &mut State, show: bool) {
             run.trials.len() >= SESSION_LENGTH
         };
         run.close(complete);
+        passage::record_goal(state, &run);
         if run.meaningful() {
             state.training.pending.insert(run.id.clone(), run.clone());
             platform::action("progress-save", &serde_json::to_string(&run).unwrap());
@@ -114,8 +145,7 @@ pub(super) fn grade(state: &mut State, grade: effects::Grade) {
         if let Some(r) = &mut state.training.model.run
             && r.mode == "play"
         {
-            r.song_input(grade);
-            r.matched_targets = Some(state.song_hits.targets());
+            r.song_input_with_target(grade, state.song_hits.latest_target());
         }
         return;
     }
@@ -148,6 +178,7 @@ pub(super) fn released(state: &mut State) {
     }
 }
 pub(super) fn tick(state: &mut State, dt: f32, focused: bool) {
+    passage::goal_tick(state);
     if state.screen == Screen::Session
         && !state.help
         && matches!(state.mode, Mode::Notes | Mode::Chords)
@@ -346,19 +377,17 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 .iter()
                 .filter(|h| h.comparable_to(r))
                 .map(|h| h.points)
-                .chain(
-                    r.finished
-                        .then_some(r.points)
-                        .filter(|_| r.context.is_some()),
-                )
-                .max()
-                .unwrap_or(0);
+                .chain(r.comparable_to(r).then_some(r.points))
+                .max();
             d.text(
                 x,
                 310.,
                 if let Some(c) = &r.context {
+                    let score = best.map_or("no comparable score yet".into(), |v| {
+                        format!("recent best: {v} pts")
+                    });
                     format!(
-                        "{}% / {}-{} / compatible recent: {best} pts",
+                        "{}% / {}-{} / {score}",
                         c.speed_percent,
                         draw::time(c.passage.start_us),
                         draw::time(c.passage.end_us)
@@ -369,6 +398,41 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 12.,
                 t.colors[0],
             );
+            if let Some(c) = &r.context {
+                let part = c
+                    .part
+                    .and_then(|i| state.song.parts.get(i))
+                    .filter(|_| r.piece_id.as_ref() == Some(&state.piece_id))
+                    .map_or_else(
+                        || {
+                            c.part
+                                .map_or("All parts".into(), |i| format!("Part {}", i + 1))
+                        },
+                        |p| p.name.clone(),
+                    );
+                let previous = state
+                    .training
+                    .model
+                    .history
+                    .iter()
+                    .find(|h| h.id != r.id && h.comparable_to(r));
+                let change = previous
+                    .and_then(|h| r.matched_change(h))
+                    .map_or("No comparable previous attempt".into(), |delta| {
+                        format!("{delta:+} matched notes vs previous")
+                    });
+                let detail = format!(
+                    "{part} / backing {} / {change}",
+                    if c.song_audio { "on" } else { "off" }
+                );
+                d.text(
+                    x,
+                    330.,
+                    detail.chars().take((w / 6.) as usize).collect::<String>(),
+                    10.,
+                    t.muted,
+                );
+            }
         }
         d.button(
             state,
@@ -415,11 +479,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             Action::Progress,
             t,
         );
-        if let Some(r) = &state.training.result
-            && r.mode == "play"
-            && r.piece_id.as_ref() == Some(&state.piece_id)
-            && let Some(p) = r.weak_passage(&state.song)
-        {
+        if let Some(p) = weak_passage(state) {
             d.button(
                 state,
                 x,
@@ -432,6 +492,20 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 ),
                 Action::PracticeSection,
                 t,
+            );
+        }
+        if state
+            .training
+            .result
+            .as_ref()
+            .is_some_and(|r| r.mode == "play" && r.matched_targets.is_none())
+        {
+            d.text(
+                x,
+                350.,
+                "No passage detail available; use Replay or select a loop.",
+                11.,
+                t.muted,
             );
         }
         if let Some(r) = &state.training.result {

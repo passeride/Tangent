@@ -83,3 +83,16 @@ Choose Train (clef and difficulty) → optionally hear each target (marked assis
 - Never silently create performance claims; ensure text and displayed values use the same evaluator.
 
 Read the staged [roadmap](ux-roadmap.md) for sequence and dependencies.
+
+## Initial software coverage — 2026-10-26
+
+| Stories | Delivered initial slice | Remaining qualification |
+| --- | --- | --- |
+| UX-02/04 | A–B loops, drag/non-drag controls, source-time speed, authored visit snap and saved attempt rate | Physical MIDI boundary verification |
+| UX-03 | Explicit imported-part targets and honest All parts fallback | Per-staff/voice identity and user-defined MIDI hand mapping |
+| UX-05/07/11 | Actual missed-target retry, honest contexts and compatible previous-attempt deltas | Cross-source reopening and richer trends |
+| UX-12/14 | Independent persisted HUD density, fixed keyboard fitting and offscreen counts | Broader accessibility semantics and physical 4K profiling |
+| UX-13 | Optional session-local 3×80% pitch-coverage goal; no autoplay/partial credit | Persistent/time-based goals |
+
+These are software delivery statements, not participant-study findings or claims
+that every acceptance gate is closed. Read ADR-0021–0023 and the execution log.

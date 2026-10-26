@@ -55,3 +55,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0021: Passage practice and comparable context](0021-passage-practice-and-comparable-context.md) — source-time A–B ranges, explicit parts, per-repeat attempts and truthful comparison context.
 
 - [ADR-0022: Readable HUD and keyboard fit](0022-readable-hud-and-keyboard-fit.md) — independent Focus/Standard/Arcade density, explicit keyboard fitting and short-window pause.
+
+- [ADR-0023: Measure snapping and repetition goals](0023-measure-snapping-and-repetition-goals.md) — exact MusicXML playback visits and voluntary 3×80% coverage goals.

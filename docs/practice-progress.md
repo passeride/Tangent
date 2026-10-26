@@ -122,3 +122,29 @@ lower/higher notes and **Fit keys**. Fit chooses the smallest supported 49/61/88
 range covering the selected pitches and current held keys. Pitches outside the
 physical 88-key range stay flagged; no music is dropped. Short windows move
 passage setup into Settings → Practice while retaining normal pause controls.
+
+## Measures and repetition goals
+
+For MusicXML, **Snap bars** expands a loop to its actual playback measure visits.
+With no loop it selects the measure at the playhead. Repeated written bars remain
+separate visits, shown in the range label. MIDI keeps time ranges and offers no
+invented bar numbers. These controls also live in Settings → Practice.
+
+After selecting a loop, **Goal** optionally asks for three complete attempts at
+**80% pitch coverage**. Autoplay, partial attempts, empty selections and duplicate
+checkpoints cannot advance it. Backing audio is allowed; wrong/extra attacks are
+still reported separately. This is a coverage goal, not a clean-rhythm or mastery
+award. Goal reached suggests a small speed increase without changing tempo.
+
+Changing range, part, tempo or backing audio resets the goal's count. Clear loop,
+source replacement or app restart removes it. Goals are session-local; individual
+attempts remain in saved history. There is no daily streak penalty or XP bonus.
+Results with an identical known context can now show the actual change in matched
+notes versus the previous compatible attempt. Missing context produces no invented
+comparison. Ctrl+O import works from paused sessions as well as live playback.
+
+New attempts retain detailed onset/pitch hits up to 20,000 matches. Longer runs
+keep accurate aggregate points/coverage but omit detailed weak-section analysis;
+Results explicitly says when detail is unavailable. Older valid detailed records
+remain readable. Repetition goals use actual evaluator totals and input even when
+this detail cap has been exceeded. No historical data is deleted or rewritten.

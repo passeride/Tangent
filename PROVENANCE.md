@@ -207,3 +207,10 @@ Original UI/core changes implement UX-12/14 and ADR-0022: HUD density, explicit
 keyboard fitting and short-window passage controls. New screenshots use the
 original bundled study or synthetic generated MIDI, never competitor assets.
 No dependency or asset source was added.
+
+## Authored passages and voluntary goals — 2026-10-26
+
+New original core/UI behavior implements authored measure-visit snapping,
+session-local repetition goals and compatible-result deltas, using the existing
+MusicXML model and synthetic/original-study tests. Requirements: UX-02/11/13 and
+ADR-0023. No dependency, external asset, competitor code or telemetry was added.

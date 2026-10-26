@@ -100,6 +100,13 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             ));
         }
     }
+    if let Some(g) = &state.goal {
+        detail.push_str(&if g.model.reached() {
+            " / Goal reached - try +5% when ready".into()
+        } else {
+            format!(" / {}", passage::goal_label(state))
+        });
+    }
     if state.transport.passage().is_some() {
         detail.push_str(&format!(" / {}", passage::label(state)));
     }
@@ -117,18 +124,20 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         let label = if l.width < 600. {
             format!("Outside view: {below} low / {above} high")
         } else {
-            format!("Selected music outside keyboard: {below} lower / {above} higher")
+            format!("Notes outside keyboard: {below} lower / {above} higher")
         };
         d.text(l.margin, 49., label, 10., t.colors[1]);
-        d.button(
-            state,
-            l.width - l.margin - 132.,
-            12.,
-            85.,
-            "Fit keys",
-            Action::FitRange,
-            t,
-        );
+        if state.piano.keys.len() < 88 {
+            d.button(
+                state,
+                l.width - l.margin - 132.,
+                12.,
+                85.,
+                "Fit keys",
+                Action::FitRange,
+                t,
+            );
+        }
     }
 }
 pub(super) fn offscreen(state: &State) -> (usize, usize) {

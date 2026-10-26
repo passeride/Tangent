@@ -100,6 +100,7 @@ pub struct State {
     transport: Transport,
     loop_a: Option<u64>,
     loop_drag: Option<(String, bool)>,
+    goal: Option<passage::Goal>,
     selected_part: Option<usize>,
     piano: PianoLayout,
     view: View,
@@ -116,6 +117,7 @@ pub struct State {
     help: bool,
     settings_open: bool,
     settings_tab: SettingsTab,
+    practice_defaults: bool,
     status: String,
     midi_outputs: Vec<MidiPort>,
     midi_output: String,
@@ -184,6 +186,7 @@ impl State {
             transport: Transport::new(duration_us),
             loop_a: None,
             loop_drag: None,
+            goal: None,
             selected_part: None,
             piano: PianoLayout::new(21, 108).unwrap(),
             view: View::Blocks,
@@ -200,6 +203,7 @@ impl State {
             help: false,
             settings_open: false,
             settings_tab: SettingsTab::AudioMidi,
+            practice_defaults: false,
             status: "Tap a key or press Space to enable sound. F1: shortcuts".into(),
             midi_outputs: vec![],
             midi_output: String::new(),
@@ -739,6 +743,7 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
             state.transport = Transport::new(song.duration_us);
             state.loop_a = None;
             state.loop_drag = None;
+            state.goal = None;
             state.selected_part = None;
             state.transport.set_rate(rate);
             state.status = format!(

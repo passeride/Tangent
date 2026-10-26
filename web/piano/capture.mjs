@@ -1,5 +1,17 @@
 import { chromium } from "playwright";
 import { serve, ready, click, gpuArgs } from "./browser-helpers.mjs";
+// Product-strategy captures are made by real input scenarios in the same app.
+if (process.env.TANGENT_CAPTURE_PRODUCT === '1') {
+  const {spawn}=await import('node:child_process');
+  for (const file of ['passage-smoke.mjs','hud-smoke.mjs','goal-smoke.mjs']) {
+    await new Promise((resolve,reject)=>{
+      const child=spawn(process.execPath,[new URL(file,import.meta.url).pathname],{cwd:new URL('./',import.meta.url),stdio:'inherit'});
+      child.on('error',reject);
+      child.on('exit',code=>code===0?resolve():reject(new Error(`${file} failed: ${code}`)));
+    });
+  }
+  process.exit(0);
+}
 const server = await serve(new URL("./", import.meta.url).pathname);
 let browser;
 try {

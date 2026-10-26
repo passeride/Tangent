@@ -41,6 +41,10 @@ Settings → Visuals now offers saved **Focus / Standard / Arcade** HUD density,
 independent of effects. **Fit keys** and out-of-range warnings help keep selected
 music visible on the keyboard.
 
+MusicXML loops can **Snap bars** to explicit measure visits. An optional
+**Goal** tracks three complete attempts at 80% pitch coverage; autoplay never
+advances it. Results show matched-note change against a compatible previous run.
+
 ## Screenshots
 
 Actual running app, captured with Chromium at 1440 px width using Tangent's
@@ -70,6 +74,7 @@ The screenshots above are baseline captures from the previous UI; they have not
 been regenerated for UI v2. See [UI/UX v2 design](docs/design/tangent-ui-v2.md).
 
 Reproduce with `node web/piano/capture.mjs` after building the WASM package.
+New passage/HUD/goal captures: `TANGENT_CAPTURE_PRODUCT=1 node web/piano/capture.mjs`.
 
 ## Platform builds
 

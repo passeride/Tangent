@@ -315,13 +315,14 @@ pub enum Grade {
     Neutral,
 }
 #[derive(Default)]
-pub struct SongHits(std::collections::BTreeSet<(u64, u8)>);
+pub struct SongHits(std::collections::BTreeSet<(u64, u8)>, Option<(u64, u8)>);
 impl SongHits {
     pub fn reset(&mut self) {
         self.0.clear();
+        self.1 = None;
     }
-    pub fn targets(&self) -> Vec<(u64, u8)> {
-        self.0.iter().copied().collect()
+    pub fn latest_target(&self) -> Option<(u64, u8)> {
+        self.1
     }
     /// Award each target once per transport run. Reattacking a held target
     /// remains neutral instead of farming streak milestones.
@@ -335,6 +336,7 @@ impl SongHits {
         key: u8,
         context: Option<&crate::passage::SongContext>,
     ) -> Grade {
+        self.1 = None;
         let candidates: Vec<_> = song
             .notes
             .iter()
@@ -352,6 +354,7 @@ impl SongHits {
             .min_by_key(|n| n.start_us.abs_diff(position_us))
         {
             self.0.insert((note.start_us, note.key));
+            self.1 = Some((note.start_us, note.key));
             Grade::Correct
         } else if candidates.is_empty() {
             Grade::Wrong

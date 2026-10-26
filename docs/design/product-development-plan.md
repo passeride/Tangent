@@ -223,8 +223,8 @@ explicit imported parts, separate repetition attempts, context/evidence storage,
 compatible recent pitch-score summaries and direct weak-range retry. Loop markers
 are draggable; Set A/B and ordinary seek controls offer a non-drag path.
 
-This is an initial passage-practice slice, not all of G1/R1. Remaining gaps:
-authored measure/repeat-visit snapping, per-staff/voice targets, exact-source
+This is an initial passage-practice slice, not all of G1/R1. Remaining gaps at that first iteration (measure snapping was added below):
+per-staff/voice targets, exact-source
 reopening from history, full R0 first-run/Continue audit, and physical P-45/native
 GPU validation. S5–S10 remain planned. Automated evidence is recorded in
 practice-progress and the committed passage-smoke test; no participant study or
@@ -247,3 +247,25 @@ real Bevy HUD persistence/range/4K/short-window test; existing player and passag
 browser regression; packaged site smoke; native release and executable self-test.
 Screenshots were inspected at 1280×800, 3840×2160 and 640×360. Software rendering
 checks establish layout, not physical 4K frame-time or display-latency guarantees.
+
+Third iteration: authored MusicXML snapping now uses explicit expanded measure
+visits and labels repeated occurrences; MIDI remains time-based. Optional
+session-local 3×80% pitch-coverage goals advance only from completed evidenced
+user-input attempts, reset on context changes and never reward autoplay. Results
+show matched-note change versus the previous compatible attempt. ADR-0023 records
+the semantics. Per-staff/voice selection, saved resume, persistent goals and
+guided wait-for-note remain separate follow-up slices.
+
+Integration/performance follow-up: restored access to exercise defaults from
+paused-song Practice settings (CI caught this regression); preserved the paused
+run-ID assertion. Fixed press+release within one PC-input frame. Registered match
+detail incrementally, bounded new detailed evidence at 20,000 hits while preserving
+aggregate totals, and cached weak-range analysis by result revision/source.
+
+Third-iteration local validation: 95 workspace tests, native/WASM warnings-denied
+Clippy, full Bevy browser suite followed by focused progress/passage/HUD/goal
+regression after the performance refinements, packaged /Tangent/ smoke, native
+release/self-test and archive checks. The 20,001-target fixture confirms bounded
+new detail, retained totals and legacy larger-record readability. Product captures
+reproduce through TANGENT_CAPTURE_PRODUCT=1 node web/piano/capture.mjs. Physical
+P-45/GPU testing and participant research remain separate gates.

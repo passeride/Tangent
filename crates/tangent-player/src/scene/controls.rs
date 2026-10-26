@@ -40,6 +40,8 @@ pub enum Action {
     LoopA,
     LoopB,
     LoopClear,
+    LoopSnap,
+    RepetitionGoal,
     Part,
     Back,
     Forward,
@@ -64,6 +66,7 @@ pub enum Action {
     MidiOutputSelect(Option<usize>),
     MidiOutputPage(bool),
     PracticeClef,
+    PracticeDefaults,
     PracticeLevel,
     PracticeHint,
     PracticeListen,
@@ -114,6 +117,8 @@ impl Action {
             Self::LoopA => "loop-a",
             Self::LoopB => "loop-b",
             Self::LoopClear => "loop-clear",
+            Self::LoopSnap => "loop-snap",
+            Self::RepetitionGoal => "repetition-goal",
             Self::Part => "practice-part",
             Self::Restart => "restart",
             Self::Back => "back",
@@ -141,6 +146,7 @@ impl Action {
             Self::MidiOutputPage(true) => "midi-output-next",
             Self::MidiOutputPage(false) => "midi-output-prev",
             Self::PracticeClef => "practice-clef",
+            Self::PracticeDefaults => "practice-defaults",
             Self::PracticeLevel => "practice-level",
             Self::PracticeHint => "practice-hint",
             Self::PracticeListen => "practice-listen",
@@ -402,9 +408,12 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.clock = platform::clock_us();
             state.sync();
         }
-        Action::LoopA | Action::LoopB | Action::LoopClear | Action::Part => {
-            passage::change(state, action)
-        }
+        Action::LoopA
+        | Action::LoopB
+        | Action::LoopClear
+        | Action::LoopSnap
+        | Action::RepetitionGoal
+        | Action::Part => passage::change(state, action),
         Action::Slower | Action::Faster | Action::NormalSpeed => {
             training::end(state, false);
             use tangent_core::transport::PlaybackRate;
@@ -485,6 +494,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.sync();
         }
         Action::PassageSetup => {
+            state.practice_defaults = false;
             state.panic();
             state.help = true;
             state.settings_open = true;
@@ -532,6 +542,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             }
         }
         Action::Settings => {
+            state.practice_defaults = false;
             if !state.help {
                 state.panic();
             }
@@ -560,6 +571,9 @@ fn activate(state: &mut State, action: Action, shift: bool) {
                 },
                 "",
             );
+        }
+        Action::PracticeDefaults => {
+            state.practice_defaults = !state.practice_defaults;
         }
         Action::PracticeClef | Action::PracticeLevel => {
             let clef = if matches!(action, Action::PracticeClef) {
@@ -775,7 +789,7 @@ pub fn input(
         }
         return;
     }
-    if ctrl && !state.help {
+    if ctrl {
         for (key, action) in [
             (KeyCode::KeyO, Action::Import),
             (KeyCode::KeyB, Action::Sample),
@@ -852,7 +866,12 @@ pub fn input(
             state.source(id.clone(), None, 0);
         }
         if keys.just_pressed(key) && !ctrl && !state.help {
-            state.source(id, Some(60 + i as u8), 95);
+            state.source(id.clone(), Some(60 + i as u8), 95);
+        }
+        // A rapid tap may press and release between two rendered frames.
+        // Judge its attack, then preserve the final released state.
+        if keys.just_released(key) && !keys.pressed(key) {
+            state.source(id, None, 0);
         }
     }
     let mut pointer = |id: String, pos: Option<Vec2>, down: bool, pressed: bool| {

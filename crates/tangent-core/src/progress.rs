@@ -2,6 +2,8 @@
 use crate::practice::{Level, Practice};
 use serde::{Deserialize, Serialize};
 pub const SESSION_LENGTH: usize = 12;
+/// New detailed attempts are bounded; legacy larger payloads remain readable.
+pub const TARGET_EVIDENCE_LIMIT: usize = 20_000;
 /// Layered unisons require one physical key attack, regardless of source part.
 pub fn song_target_count(song: &crate::music::Song) -> u32 {
     song.notes
@@ -93,6 +95,44 @@ impl Run {
         r.song_total = total;
         r
     }
+    pub fn song_input_with_target(
+        &mut self,
+        grade: crate::practice::Grade,
+        target: Option<(u64, u8)>,
+    ) {
+        if grade == crate::practice::Grade::Correct
+            && target.is_some_and(|t| {
+                self.matched_targets
+                    .as_ref()
+                    .is_some_and(|v| v.binary_search(&t).is_ok())
+            })
+        {
+            return;
+        }
+        let previous = self.song_correct;
+        self.song_input(grade);
+        if self.song_correct == previous {
+            return;
+        }
+        if let Some(hits) = &mut self.matched_targets {
+            if let Some(t) = target.filter(|(at, key)| {
+                *key < 128
+                    && self
+                        .context
+                        .as_ref()
+                        .is_some_and(|c| c.passage.contains(*at))
+            }) {
+                if hits.len() >= TARGET_EVIDENCE_LIMIT {
+                    self.matched_targets = None;
+                } else {
+                    let index = hits.binary_search(&t).unwrap_err();
+                    hits.insert(index, t);
+                }
+            } else {
+                self.matched_targets = None;
+            }
+        }
+    }
     pub fn song_input(&mut self, grade: crate::practice::Grade) {
         if self.mode != "play" {
             return;
@@ -146,11 +186,7 @@ impl Run {
         let c = self.context.as_ref()?;
         let hits: std::collections::BTreeSet<_> =
             self.matched_targets.as_ref()?.iter().copied().collect();
-        if !self.finished
-            || self.mode != "play"
-            || c.duration_us != song.duration_us
-            || c.target_count(song) != self.song_total
-        {
+        if !self.finished || self.mode != "play" || c.duration_us != song.duration_us {
             return None;
         }
         let targets: std::collections::BTreeSet<_> = song
@@ -159,6 +195,9 @@ impl Run {
             .filter(|n| c.includes(n) && song.parts.get(n.part).is_some_and(|p| !p.percussion))
             .map(|n| (n.start_us, n.key))
             .collect();
+        if targets.len() != self.song_total as usize || !hits.is_subset(&targets) {
+            return None;
+        }
         let mut buckets = std::collections::BTreeMap::<u64, usize>::new();
         for (at, _) in targets.difference(&hits) {
             *buckets
@@ -175,6 +214,10 @@ impl Run {
             start.saturating_add(10_000_000).min(c.passage.end_us),
             c.duration_us,
         )
+    }
+    pub fn matched_change(&self, other: &Self) -> Option<i32> {
+        self.comparable_to(other)
+            .then_some(self.song_correct as i32 - other.song_correct as i32)
     }
     pub fn comparable_to(&self, other: &Self) -> bool {
         self.mode == "play"

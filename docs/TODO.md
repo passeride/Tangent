@@ -3,7 +3,7 @@
 Keep implemented behavior separate from planned work. Decisions belong in ADRs;
 this file tracks the remaining work, not an authorization gate.
 
-For user-facing sequencing, see the **proposed** [UX roadmap](design/ux-roadmap.md), [user stories](design/user-stories-and-journeys.md) and [product north star](design/product-north-star.md). The prioritized practice-loop bet is passage looping, honest hand/part isolation and action-oriented results. This is **not** a claim of implementation. Keep this engineering backlog and new UX roadmap aligned as work lands.
+For user-facing sequencing, see the **proposed** [UX roadmap](design/ux-roadmap.md), [user stories](design/user-stories-and-journeys.md) and [product north star](design/product-north-star.md). The prioritized practice-loop bet is passage looping, honest hand/part isolation and action-oriented results. Initial implementation now includes source-time loops, explicit parts, authored measure snapping, contextual retry, HUD presets, keyboard fitting and session-local goals (ADR-0021–0023). The remaining milestones are proposals; see the execution-plan delivery log.
 
 ## Piano/playback foundation
 
@@ -48,7 +48,7 @@ For user-facing sequencing, see the **proposed** [UX roadmap](design/ux-roadmap.
   fallback independently.
 - Evaluate the rotated-staff learning projection with users; keyboard spacing
   differs from conventional equal staff steps, and dense chords need layout work.
-- Add key-range auto-fit/zoom and a clear indicator for off-screen pitches.
+- [x] Explicit Fit keys for 49/61/88-key ranges and off-screen pitch counts (ADR-0022). Arbitrary zoom and physical display profiling remain open.
 
 ## Product layers
 
@@ -73,3 +73,13 @@ For user-facing sequencing, see the **proposed** [UX roadmap](design/ux-roadmap.
 - [x] Bounded sequential repeats and numbered endings.
 - [ ] Nested repeats/D.C./D.S./coda and dynamics/pedal/articulation playback.
 - [ ] Broader exporter fixtures/interoperability.
+
+## Next practice slices after ADR-0021–0023
+
+- Retain per-performance staff/voice identifiers from MusicXML across repeated
+  visits, then expose explicit staff/voice target selection; never infer MIDI hands.
+- Add guided wait-for-note with shared clock/output gating and chord release rules.
+- Resolve exact saved sources and restore practice context safely paused after restart.
+- Add persistent goals and richer compatible passage trends without inventing legacy tempo.
+- Validate P-45 loop boundaries, output switching, sustained notes and native GPU layouts.
+- Implement validated backup restore before promising portable recovery.

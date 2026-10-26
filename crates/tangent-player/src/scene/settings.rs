@@ -146,8 +146,39 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
             .selected_part
             .and_then(|i| state.song.parts.get(i))
             .map_or("All parts", |p| p.name.as_str());
-        let label = format!("Targets: {}", part.chars().take(34).collect::<String>());
-        d.button(state, inner, y + 284., usable, label, Action::Part, t);
+        let cols = if state.song.notation.is_some() {
+            3.
+        } else {
+            2.
+        };
+        let width = (usable - (cols - 1.) * gap) / cols;
+        let label = format!(
+            "Targets: {}",
+            part.chars()
+                .take((((width - 18.) / (9. * 0.62)) as usize).saturating_sub(9))
+                .collect::<String>()
+        );
+        d.button(state, inner, y + 284., width, label, Action::Part, t);
+        d.button(
+            state,
+            inner + width + gap,
+            y + 284.,
+            width,
+            passage::goal_label(state),
+            Action::RepetitionGoal,
+            t,
+        );
+        if cols == 3. {
+            d.button(
+                state,
+                inner + 2. * (width + gap),
+                y + 284.,
+                width,
+                "Snap bars",
+                Action::LoopSnap,
+                t,
+            );
+        }
     }
     if state.mode == Mode::Play && !expanded && l.height >= 420. {
         d.button(
@@ -371,7 +402,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             ]);
             "Changes are saved locally. Sheet notation is most accurate with MusicXML."
         }
-        SettingsTab::Practice if state.screen == Screen::Session && state.mode == Mode::Play => {
+        SettingsTab::Practice
+            if state.screen == Screen::Session
+                && state.mode == Mode::Play
+                && !state.practice_defaults =>
+        {
             entries.extend([
                 ("Set A here".into(), Action::LoopA),
                 ("Set B here".into(), Action::LoopB),
@@ -389,7 +424,15 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                     Action::Part,
                 ),
             ]);
-            "Set A, seek forward, set B. Targets filter scoring; song audio is backing."
+            entries.push((passage::goal_label(state), Action::RepetitionGoal));
+            if state.song.notation.is_some() {
+                entries.push(("Snap to measure visits".into(), Action::LoopSnap));
+            }
+            entries.push((
+                "Note/chord exercise defaults".into(),
+                Action::PracticeDefaults,
+            ));
+            "Goal: 3 complete repeats at 80% pitch coverage. Backing audio is allowed."
         }
         SettingsTab::Practice => {
             entries.extend([
@@ -411,6 +454,12 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                     Action::PracticeHint,
                 ),
             ]);
+            if state.screen == Screen::Session && state.mode == Mode::Play {
+                entries.push((
+                    "Back to song passage setup".into(),
+                    Action::PracticeDefaults,
+                ));
+            }
             "Hints reveal answers; note and chord exercises stay untimed."
         }
         SettingsTab::Effects => {
@@ -452,7 +501,9 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     let text: String = explanation.chars().take(max_text).collect();
     d.text(content_x, desc_y, text, 11., t.muted);
 
-    let cols = if content_w >= 500. || l.height < 500. {
+    let cols = if l.height < 420. && entries.len() > 6 {
+        3
+    } else if content_w >= 500. || l.height < 500. {
         2
     } else {
         1

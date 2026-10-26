@@ -81,7 +81,7 @@ try {
  await page.waitForFunction(()=>tangentDiagnostics().solid_keys.length===0);
  await click(page,'help');
  const pausedRun=await page.evaluate(()=>tangentDiagnostics().practice_run.id);
- await click(page,'settings');await click(page,'settings-practice');await click(page,'practice-clef');
+ await click(page,'settings');await click(page,'settings-practice');await click(page,'practice-defaults');await click(page,'practice-clef');
  assert.equal((await page.evaluate(()=>tangentDiagnostics().practice_run)).id,pausedRun,'Practice defaults preserve the paused song score');
  await click(page,'settings-back');await click(page,'play');
  await down(60);await page.mouse.up();

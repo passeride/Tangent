@@ -170,6 +170,11 @@ mod integration_tests {
         a.close(true);
         let mut b = a.clone();
         assert!(a.comparable_to(&b));
+        assert_eq!(a.matched_change(&b), Some(0));
+        b.song_correct = 1;
+        b.song_missed = 2;
+        b.points = 100;
+        assert_eq!(a.matched_change(&b), Some(-1));
         b.context.as_mut().unwrap().speed_percent = 80;
         assert!(!a.comparable_to(&b));
         b = a.clone();
@@ -205,5 +210,203 @@ mod integration_tests {
         assert!(run.weak_passage(&song).is_none());
         run.matched_targets = Some(vec![(1_000_000, 60), (1_000_000, 60)]);
         assert!(!run.validate());
+    }
+}
+
+impl Passage {
+    /// Snap to the particular expanded measure visits, never all written repeats.
+    pub fn snap_to_measures(
+        self,
+        score: &crate::notation::NotatedScore,
+        duration_us: u64,
+    ) -> Option<Self> {
+        Self::new(self.start_us, self.end_us, duration_us)?;
+        let start = score
+            .playback
+            .iter()
+            .find(|v| v.start_us <= self.start_us && self.start_us < v.end_us)?;
+        let end = score
+            .playback
+            .iter()
+            .find(|v| v.start_us < self.end_us && self.end_us <= v.end_us)?;
+        Self::new(start.start_us, end.end_us.min(duration_us), duration_us)
+    }
+}
+/// Optional session-local repetition target. This measures coverage, not mastery.
+#[derive(Clone, Debug)]
+pub struct RepetitionGoal {
+    required: u8,
+    minimum_coverage: u8,
+    accepted: Vec<String>,
+}
+impl RepetitionGoal {
+    pub fn new(required: u8, minimum_coverage: u8) -> Option<Self> {
+        ((1..=20).contains(&required) && (1..=100).contains(&minimum_coverage)).then_some(Self {
+            required,
+            minimum_coverage,
+            accepted: vec![],
+        })
+    }
+    pub fn completed(&self) -> u8 {
+        self.accepted.len() as u8
+    }
+    pub fn required(&self) -> u8 {
+        self.required
+    }
+    pub fn reached(&self) -> bool {
+        self.completed() >= self.required
+    }
+    /// Returns true only when this complete, evidenced attempt advances the goal.
+    pub fn record(&mut self, run: &crate::progress::Run) -> bool {
+        if self.reached()
+            || !run.validate()
+            || !run.finished
+            || run.mode != "play"
+            || run.context.is_none()
+            || run.piece_id.is_none()
+            || run.song_total == 0
+            || run.input_sources.as_ref().is_none_or(Vec::is_empty)
+            || run.accuracy().unwrap_or(0) < u32::from(self.minimum_coverage)
+            || self.accepted.contains(&run.id)
+        {
+            return false;
+        }
+        self.accepted.push(run.id.clone());
+        true
+    }
+}
+
+#[cfg(test)]
+mod goal_tests {
+    use super::*;
+    use crate::notation::{MeasureVisit, NotatedScore};
+    #[test]
+    fn snapping_selects_specific_repeat_visits_and_respects_exact_end() {
+        let score = NotatedScore {
+            staves: vec![],
+            measures: vec![],
+            playback: (0..4)
+                .map(|i| MeasureVisit {
+                    measure: i % 2,
+                    pass: (i / 2 + 1) as u8,
+                    start_us: i as u64 * 10,
+                    end_us: (i + 1) as u64 * 10,
+                    timing: vec![],
+                })
+                .collect(),
+        };
+        assert_eq!(
+            Passage {
+                start_us: 21,
+                end_us: 29
+            }
+            .snap_to_measures(&score, 40),
+            Passage::new(20, 30, 40)
+        );
+        assert_eq!(
+            Passage {
+                start_us: 11,
+                end_us: 30
+            }
+            .snap_to_measures(&score, 40),
+            Passage::new(10, 30, 40)
+        );
+        assert!(
+            Passage {
+                start_us: 40,
+                end_us: 41
+            }
+            .snap_to_measures(&score, 40)
+            .is_none()
+        );
+    }
+    #[test]
+    fn goal_needs_real_complete_input_and_deduplicates_attempts() {
+        use crate::{practice::Grade, progress::Run};
+        let mut r = Run::song("goal-attempt-one".into(), "Goal".into(), 1);
+        r.context = Some(SongContext {
+            passage: Passage {
+                start_us: 0,
+                end_us: 100,
+            },
+            duration_us: 100,
+            speed_percent: 70,
+            part: None,
+            evaluator: 1,
+            song_audio: true,
+        });
+        r.piece_id = Some("a".repeat(64));
+        r.matched_targets = Some(vec![]);
+        r.input_sources = Some(vec![]);
+        r.close(true);
+        let mut goal = RepetitionGoal::new(3, 80).unwrap();
+        assert!(!goal.record(&r));
+        r.song_input(Grade::Correct);
+        r.matched_targets = Some(vec![(0, 60)]);
+        r.input_sources = Some(vec!["midi".into()]);
+        r.close(true);
+        assert!(goal.record(&r));
+        assert!(!goal.record(&r));
+        r.id = "goal-attempt-two".into();
+        r.finished = false;
+        assert!(!goal.record(&r));
+        r.close(true);
+        assert!(goal.record(&r));
+        r.id = "goal-attempt-three".into();
+        assert!(goal.record(&r));
+        assert!(goal.reached());
+        assert_eq!(goal.completed(), 3);
+        assert!(RepetitionGoal::new(0, 80).is_none());
+        assert!(RepetitionGoal::new(3, 101).is_none());
+    }
+}
+
+#[cfg(test)]
+mod bounded_evidence_tests {
+    use super::*;
+    use crate::{
+        practice::Grade,
+        progress::{Run, TARGET_EVIDENCE_LIMIT},
+    };
+    #[test]
+    fn long_attempt_keeps_totals_without_unbounded_detail_and_goals_use_real_counts() {
+        let mut run = Run::song(
+            "long-attempt-test".into(),
+            "Synthetic".into(),
+            TARGET_EVIDENCE_LIMIT as u32 + 1,
+        );
+        run.context = Some(SongContext {
+            passage: Passage {
+                start_us: 0,
+                end_us: 30_000,
+            },
+            duration_us: 30_000,
+            speed_percent: 70,
+            part: None,
+            evaluator: 1,
+            song_audio: false,
+        });
+        run.matched_targets = Some(vec![]);
+        run.piece_id = Some("a".repeat(64));
+        run.input_sources = Some(vec!["computer".into()]);
+        run.song_input_with_target(Grade::Correct, Some((0, 60)));
+        run.song_input_with_target(Grade::Correct, Some((0, 60)));
+        assert_eq!(run.song_correct, 1);
+        for at in 1..=TARGET_EVIDENCE_LIMIT as u64 {
+            run.song_input_with_target(Grade::Correct, Some((at, 60)));
+        }
+        run.close(true);
+        assert!(run.matched_targets.is_none());
+        assert_eq!(run.song_correct, TARGET_EVIDENCE_LIMIT as u32 + 1);
+        assert!(run.validate());
+        let mut goal = RepetitionGoal::new(3, 80).unwrap();
+        assert!(goal.record(&run));
+        // The new writer cap must not invalidate older, larger detailed records.
+        run.matched_targets = Some(
+            (0..=TARGET_EVIDENCE_LIMIT as u64)
+                .map(|at| (at, 60))
+                .collect(),
+        );
+        assert!(run.validate());
     }
 }
