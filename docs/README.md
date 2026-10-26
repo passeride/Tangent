@@ -6,7 +6,7 @@ behavior. Delivered components include [MIDI import](midi-import.md) and the
 [Bevy-core browser piano](piano-player.md).
 
 - [Architecture decision records](adr/README.md)
-- [Product and visual design](design/README.md)
+- [Product and visual design](design/README.md) — includes UX strategy, gamification benchmark, provisional personas, stories and roadmap (2026-10-26)
 - [Sketch index](design/sketches/README.md)
 - [Design asset records](design/assets/README.md)
 - [Project provenance](../PROVENANCE.md)
