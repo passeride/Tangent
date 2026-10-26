@@ -11,6 +11,7 @@ mod practice_view;
 mod score;
 mod session_hud;
 mod settings;
+mod shortcuts;
 mod theme;
 mod training;
 use super::{import, preferences::Preferences};
@@ -117,6 +118,7 @@ pub struct State {
     help: bool,
     settings_open: bool,
     settings_tab: SettingsTab,
+    shortcuts: shortcuts::Shortcuts,
     practice_defaults: bool,
     status: String,
     midi_outputs: Vec<MidiPort>,
@@ -142,7 +144,6 @@ pub struct State {
     ripples: Vec<Ripple>,
     buttons: Vec<(layout::Rect, controls::Action)>,
     focused_button: Option<usize>,
-    arrow_repeat: f32,
     viewport_set: bool,
     storage_ready: bool,
     saved_preferences: Option<Preferences>,
@@ -203,8 +204,10 @@ impl State {
             help: false,
             settings_open: false,
             settings_tab: SettingsTab::AudioMidi,
+            shortcuts: Default::default(),
             practice_defaults: false,
-            status: "Tap a key or press Space to enable sound. F1: shortcuts".into(),
+            status: "Tap a key or use Play to enable sound. Bindings: Settings / Accessibility"
+                .into(),
             midi_outputs: vec![],
             midi_output: String::new(),
             preferred_midi_output: None,
@@ -228,7 +231,6 @@ impl State {
             ripples: vec![],
             buttons: vec![],
             focused_button: None,
-            arrow_repeat: 0.,
             viewport_set: false,
             storage_ready: false,
             saved_preferences: None,
@@ -238,6 +240,7 @@ impl State {
     fn preferences(&self) -> Preferences {
         Preferences {
             version: 1,
+            bindings: self.shortcuts.config.clone(),
             view: match self.view {
                 View::Blocks => 0,
                 View::Staff => 1,
@@ -263,6 +266,9 @@ impl State {
         }
     }
     fn restore_preferences(&mut self, p: Preferences) {
+        self.shortcuts.config = p.bindings;
+        self.shortcuts.config.fill_missing();
+        self.shortcuts.piano.reset();
         self.view = [View::Blocks, View::Staff, View::Notes, View::Score][p.view as usize];
         self.hud = p.hud;
         self.theme = p.theme;
@@ -355,7 +361,7 @@ impl State {
             {
                 let category = if id.starts_with("midi:") {
                     "midi"
-                } else if id.starts_with("key:") {
+                } else if id.starts_with("key:") || id.starts_with("binding:") {
                     "computer"
                 } else if id.starts_with("touch:") {
                     "touch"
@@ -469,6 +475,8 @@ impl State {
         }
     }
     fn panic(&mut self) {
+        self.shortcuts.piano.reset();
+        self.shortcuts.capture = None;
         self.stop_reference();
         self.held.clear();
         self.practice.answer(&[]);
@@ -493,7 +501,7 @@ pub fn run() {
     #[cfg(not(target_arch = "wasm32"))]
     let state = {
         let mut state = State::new();
-        state.status = "Native MIDI/audio ready; press F1 for settings".into();
+        state.status = "Native MIDI/audio ready; open Settings to configure input".into();
         state
     };
     platform::action("song", &serde_json::to_string(&state.song).unwrap());
@@ -567,8 +575,23 @@ fn update(mut state: ResMut<State>, time: Res<Time>, windows: Query<&Window>) {
         }
         state.sync();
     }
-    for m in messages {
-        if training::message(&mut state, &m) {
+    let edges: Vec<_> = messages
+        .iter()
+        .map(|m| {
+            (
+                m["key"].as_u64().filter(|k| *k < 128).unwrap_or(128) as u8,
+                m["type"] == "note" && m["down"] == true,
+            )
+        })
+        .collect();
+    let order = if state.shortcuts.config.piano_enabled && state.shortcuts.capture.is_none() {
+        tangent_core::input_bindings::batch_order(&edges, state.shortcuts.config.control)
+    } else {
+        (0..messages.len()).collect()
+    };
+    for index in order {
+        let m = &messages[index];
+        if training::message(&mut state, m) {
             continue;
         }
         match m["type"].as_str().unwrap_or("") {
@@ -676,15 +699,18 @@ fn update(mut state: ResMut<State>, time: Res<Time>, windows: Query<&Window>) {
             }
             "note" => {
                 let id = m["id"].as_str().unwrap_or("midi").to_string();
-                let key = if state.screen == Screen::Session
-                    && !state.help
-                    && m["down"].as_bool() == Some(true)
-                {
-                    m["key"].as_u64().filter(|k| *k < 128).map(|k| k as u8)
-                } else {
-                    None
-                };
-                state.source(id, key, m["velocity"].as_u64().unwrap_or(90) as u8);
+                if let Some(key) = m["key"].as_u64().filter(|k| *k < 128) {
+                    let down = m["down"].as_bool() == Some(true);
+                    if windows.single().is_ok_and(|w| w.focused)
+                        && !shortcuts::midi(&mut state, &id, key as u8, down, now as u64)
+                    {
+                        state.source(
+                            id,
+                            down.then_some(key as u8),
+                            m["velocity"].as_u64().unwrap_or(90) as u8,
+                        );
+                    }
+                }
             }
             "pause" => state.panic(),
             "status" => state.status = m["text"].as_str().unwrap_or("").into(),

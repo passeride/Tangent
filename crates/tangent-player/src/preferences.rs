@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Preferences {
     pub version: u32,
+    #[serde(default)]
+    pub bindings: tangent_core::input_bindings::Bindings,
     pub view: u8,
     #[serde(default = "default_hud")]
     pub hud: u8,
@@ -42,6 +44,9 @@ fn default_effect_strength() -> u8 {
 }
 impl Preferences {
     pub fn validate(&self) -> Result<(), &'static str> {
+        if !self.bindings.validate() {
+            return Err("Invalid input bindings");
+        }
         if self.version != 1 {
             return Err("Unsupported settings version");
         }
@@ -81,6 +86,7 @@ mod tests {
     fn settings() -> Preferences {
         Preferences {
             version: 1,
+            bindings: Default::default(),
             view: 3,
             hud: 2,
             theme: 2,
@@ -101,6 +107,29 @@ mod tests {
         }
     }
     #[test]
+    fn bindings_round_trip_and_conflicts_are_rejected() {
+        let mut p = settings();
+        p.bindings.piano_enabled = true;
+        p.bindings.control = 108;
+        p.bindings
+            .rows
+            .iter_mut()
+            .find(|r| r.action == "play")
+            .unwrap()
+            .piano = Some(60);
+        let restored: Preferences =
+            serde_json::from_str(&serde_json::to_string(&p).unwrap()).unwrap();
+        assert_eq!(p, restored);
+        assert!(restored.validate().is_ok());
+        p.bindings
+            .rows
+            .iter_mut()
+            .find(|r| r.action == "faster")
+            .unwrap()
+            .piano = Some(60);
+        assert!(p.validate().is_err());
+    }
+    #[test]
     fn settings_round_trip_and_invalid_values() {
         let p = settings();
         let restored: Preferences =
@@ -118,12 +147,14 @@ mod tests {
         legacy.as_object_mut().unwrap().remove("practice_hear");
         legacy.as_object_mut().unwrap().remove("speed_percent");
         legacy.as_object_mut().unwrap().remove("hud");
+        legacy.as_object_mut().unwrap().remove("bindings");
         let old: Preferences = serde_json::from_value(legacy).unwrap();
         assert_eq!(old.midi_output_name, None);
         assert!(!old.reduced_motion);
         assert!(!old.practice_hear);
         assert_eq!(old.speed_percent, 100);
         assert_eq!(old.hud, 1);
+        assert_eq!(old.bindings, Default::default());
         assert_eq!(old.effect_strength, 1);
         assert_eq!(old.practice_clef, 0);
         assert_eq!(old.practice_level, 0);

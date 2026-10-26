@@ -214,3 +214,12 @@ New original core/UI behavior implements authored measure-visit snapping,
 session-local repetition goals and compatible-result deltas, using the existing
 MusicXML model and synthetic/original-study tests. Requirements: UX-02/11/13 and
 ADR-0023. No dependency, external asset, competitor code or telemetry was added.
+
+## Configurable input — 2026-10-26
+
+Original shared action-binding preferences, MIDI modifier/prefix state machine,
+Bevy capture/matrix UI and synthetic input regression tests implement the owner's
+control-key request. Existing domain actions remain authoritative. Public upstream
+Leafwing/Enhanced Input compatibility/API documentation was evaluated; neither is
+added as a dependency. No excluded source, runtime asset or new package is imported.
+ADR-0024 records the architecture, event-ordering and persistence contract.

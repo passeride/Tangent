@@ -74,6 +74,12 @@ pub enum Action {
     Settings,
     SettingsBack,
     SettingsTab(SettingsTab),
+    Keybindings,
+    BindingCapture(usize, bool),
+    BindingControl(u8),
+    BindingToggle,
+    BindingPage(bool),
+    BindingReset,
     Credits,
     ExportDatabase,
 }
@@ -161,13 +167,30 @@ impl Action {
                 SettingsTab::Accessibility => "settings-accessibility",
                 SettingsTab::Data => "settings-data",
             },
+            Self::Keybindings => "keybindings",
+            Self::BindingCapture(_, false) => "binding-keyboard",
+            Self::BindingCapture(_, true) => "binding-piano",
+            Self::BindingControl(_) => "binding-control",
+            Self::BindingToggle => "binding-toggle",
+            Self::BindingPage(true) => "binding-next",
+            Self::BindingPage(false) => "binding-prev",
+            Self::BindingReset => "binding-reset",
             Self::Credits => "credits",
             Self::ExportDatabase => "export-database",
         }
     }
 }
-fn activate(state: &mut State, action: Action, shift: bool) {
+pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
     state.focused_button = None;
+    if matches!(action, Action::SettingsBack | Action::SettingsTab(_)) {
+        state.shortcuts.capture = None;
+        if state.shortcuts.open {
+            state.shortcuts.open = false;
+            if matches!(action, Action::SettingsBack) {
+                return;
+            }
+        }
+    }
     if state.mode != Mode::Play
         && matches!(
             action,
@@ -188,6 +211,50 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             training::end(state, false);
             state.panic();
             platform::action("quit", "");
+        }
+        Action::Keybindings => {
+            state.shortcuts.open = !state.shortcuts.open;
+            state.shortcuts.capture = None;
+        }
+        Action::BindingCapture(index, piano) => {
+            state.shortcuts.capture = Some(if piano {
+                shortcuts::Capture::Piano(index)
+            } else {
+                shortcuts::Capture::Keyboard(index)
+            });
+            state.shortcuts.status = "Press a key. Esc cancels; Delete clears the binding.".into();
+        }
+        Action::BindingControl(choice) => {
+            let note = match choice {
+                0 => Some(state.piano.keys.first().unwrap().key),
+                1 => Some(state.piano.keys.last().unwrap().key),
+                _ => None,
+            };
+            if let Some(note) = note {
+                shortcuts::set_control(state, note);
+            } else {
+                state.shortcuts.capture = Some(shortcuts::Capture::Control);
+                state.shortcuts.status = "Play the piano control-key. Esc cancels.".into();
+            }
+        }
+        Action::BindingToggle => {
+            state.shortcuts.config.piano_enabled = !state.shortcuts.config.piano_enabled;
+            state.shortcuts.piano.reset();
+        }
+        Action::BindingPage(next) => {
+            state.shortcuts.page = if next {
+                state.shortcuts.page + 1
+            } else {
+                state.shortcuts.page.saturating_sub(1)
+            };
+            state.shortcuts.capture = None;
+        }
+        Action::BindingReset => {
+            state.shortcuts.config = Default::default();
+            state.shortcuts.piano.reset();
+            state.shortcuts.capture = None;
+            state.shortcuts.status =
+                "Default keyboard bindings restored; piano shortcuts Off.".into();
         }
         Action::ProgressOpen(index) => {
             if let Some(run) = state.training.model.history.get(index).cloned() {
@@ -683,20 +750,10 @@ pub fn input(
         state.viewport_set = true;
     }
     let layout = Layout::new(window.width(), window.height(), &state.piano);
-    let shift = keys.pressed(KeyCode::ShiftLeft)
-        || keys.pressed(KeyCode::ShiftRight)
-        || keys.just_pressed(KeyCode::ShiftLeft)
-        || keys.just_pressed(KeyCode::ShiftRight);
-    let ctrl = keys.pressed(KeyCode::ControlLeft)
-        || keys.pressed(KeyCode::ControlRight)
-        || keys.pressed(KeyCode::SuperLeft)
-        || keys.pressed(KeyCode::SuperRight)
-        || keys.just_pressed(KeyCode::ControlLeft)
-        || keys.just_pressed(KeyCode::ControlRight)
-        || keys.just_pressed(KeyCode::SuperLeft)
-        || keys.just_pressed(KeyCode::SuperRight);
-    let typing = state.screen == Screen::Library && state.library.focus.is_some();
-    for event in text_events.read() {
+    let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
+    let typing = state.screen == Screen::Library && state.library.focus.is_some() && !state.help;
+    let input_events: Vec<_> = text_events.read().cloned().collect();
+    for event in &input_events {
         state.library.input_event(
             event.key_code,
             event.text.as_deref(),
@@ -710,34 +767,17 @@ pub fn input(
         }
         state.library.clear_modifiers();
     }
-    if !typing && keys.just_pressed(KeyCode::Tab) && !state.buttons.is_empty() {
-        let count = state.buttons.len();
-        state.focused_button = Some(match (state.focused_button, shift) {
-            (None, false) => 0,
-            (None, true) => count - 1,
-            (Some(i), false) => (i + 1) % count,
-            (Some(i), true) => (i + count - 1) % count,
-        });
+    if !window.focused {
+        state.shortcuts.piano.reset();
+        state.shortcuts.capture = None;
         return;
     }
-    if !typing
-        && (keys.just_pressed(KeyCode::Enter) || keys.just_pressed(KeyCode::NumpadEnter))
-        && let Some((_, action)) = state
-            .focused_button
-            .and_then(|i| state.buttons.get(i))
-            .copied()
-    {
-        activate(&mut state, action, shift);
+    let capturing = shortcuts::capture_keyboard(&mut state, &input_events, &keys);
+    if !capturing && shortcuts::keyboard(&mut state, &keys, typing) {
         return;
     }
-    if state.screen == Screen::Library {
+    if state.screen == Screen::Library && !state.help && !capturing {
         state.library.tick(time.delta_secs());
-        if ctrl && keys.just_pressed(KeyCode::KeyF) {
-            state.library.focus(library::Field::Search);
-        }
-        if ctrl && keys.just_pressed(KeyCode::KeyO) {
-            activate(&mut state, Action::Import, false);
-        }
         if keys.just_pressed(KeyCode::Tab) && state.library.edit.is_some() {
             let field = if state.library.focus == Some(library::Field::Title) {
                 library::Field::Composer
@@ -756,31 +796,6 @@ pub fn input(
         }
     }
     if state.screen != Screen::Session {
-        if keys.just_pressed(KeyCode::F1) {
-            let action = if state.help {
-                Action::SettingsBack
-            } else {
-                Action::Settings
-            };
-            activate(&mut state, action, false);
-        }
-        if keys.just_pressed(KeyCode::Escape) {
-            if state.screen == Screen::Library && state.library.edit.is_some() {
-                activate(&mut state, Action::LibraryCancelEdit, false);
-            } else if state.screen == Screen::Library && state.library.focus.is_some() {
-                state.library.focus = None;
-            } else {
-                let action = if state.help {
-                    Action::SettingsBack
-                } else {
-                    Action::Main
-                };
-                activate(&mut state, action, false);
-            }
-        }
-        if keys.just_pressed(KeyCode::F11) {
-            activate(&mut state, Action::Fullscreen, false);
-        }
         let pos = window.cursor_position();
         let touch = touches.iter_just_pressed().next();
         let pressed = mouse.just_pressed(MouseButton::Left) || touch.is_some();
@@ -796,91 +811,6 @@ pub fn input(
             activate(&mut state, action, false);
         }
         return;
-    }
-    if ctrl {
-        for (key, action) in [
-            (KeyCode::KeyO, Action::Import),
-            (KeyCode::KeyB, Action::Sample),
-            (KeyCode::KeyM, Action::Midi),
-        ] {
-            if keys.just_pressed(key) {
-                activate(&mut state, action, shift);
-            }
-        }
-    }
-    if !ctrl {
-        for (key, action) in [
-            (KeyCode::Space, Action::Play),
-            (KeyCode::Home, Action::Restart),
-            (KeyCode::F11, Action::Fullscreen),
-            (KeyCode::KeyV, Action::View),
-            (KeyCode::KeyB, Action::Theme),
-            (KeyCode::KeyM, Action::Hear),
-            (KeyCode::KeyP, Action::Effects),
-            (KeyCode::KeyX, Action::Instrument),
-            (KeyCode::KeyR, Action::Range),
-            (KeyCode::F1, Action::Help),
-        ] {
-            if keys.just_pressed(key)
-                && (!state.help
-                    || matches!(action, Action::Help | Action::Fullscreen)
-                    || (matches!(action, Action::Play) && !state.settings_open))
-            {
-                activate(&mut state, action, shift);
-            }
-        }
-    }
-    if keys.just_pressed(KeyCode::Escape) {
-        activate(&mut state, Action::Help, false);
-    }
-    state.arrow_repeat -= time.delta_secs();
-    for (key, action) in [
-        (KeyCode::ArrowLeft, Action::Back),
-        (KeyCode::ArrowRight, Action::Forward),
-        (KeyCode::ArrowDown, Action::Slower),
-        (KeyCode::ArrowUp, Action::Faster),
-    ] {
-        if !state.help
-            && (keys.just_pressed(key) || (keys.pressed(key) && state.arrow_repeat <= 0.))
-        {
-            activate(&mut state, action, shift);
-            state.arrow_repeat = 0.15;
-        }
-    }
-    if state.mode == Mode::Play && !state.help && keys.just_pressed(KeyCode::End) {
-        training::end(&mut state, false);
-        let end = state.transport.duration_us;
-        state.transport.seek(end);
-        state.sync();
-    }
-    let note_keys = [
-        KeyCode::KeyA,
-        KeyCode::KeyW,
-        KeyCode::KeyS,
-        KeyCode::KeyE,
-        KeyCode::KeyD,
-        KeyCode::KeyF,
-        KeyCode::KeyT,
-        KeyCode::KeyG,
-        KeyCode::KeyY,
-        KeyCode::KeyH,
-        KeyCode::KeyU,
-        KeyCode::KeyJ,
-        KeyCode::KeyK,
-    ];
-    for (i, key) in note_keys.into_iter().enumerate() {
-        let id = format!("key:{i}");
-        if keys.just_released(key) {
-            state.source(id.clone(), None, 0);
-        }
-        if keys.just_pressed(key) && !ctrl && !state.help {
-            state.source(id.clone(), Some(60 + i as u8), 95);
-        }
-        // A rapid tap may press and release between two rendered frames.
-        // Judge its attack, then preserve the final released state.
-        if keys.just_released(key) && !keys.pressed(key) {
-            state.source(id, None, 0);
-        }
     }
     let mut pointer = |id: String, pos: Option<Vec2>, down: bool, pressed: bool| {
         if !down {

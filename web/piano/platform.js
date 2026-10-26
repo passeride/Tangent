@@ -53,7 +53,7 @@ export async function installPlatform() {
     // Browser MIDI authorization may still require a user gesture. Reconnect
     // automatically only if the origin already has permission; otherwise the
     // saved device remains visible until the user selects Rescan / connect.
-    if (storage.settings?.midi_output_name && navigator.permissions?.query) {
+    if ((storage.settings?.midi_output_name || storage.settings?.bindings?.piano_enabled) && navigator.permissions?.query) {
       navigator.permissions.query({name:"midi",sysex:false})
         .then(permission => {
           if (permission.state === "granted") return midi();
@@ -186,8 +186,10 @@ export async function installPlatform() {
         "ArrowRight",
         "F1",
         "F11",
-      ].includes(e.code) ||
-      (e.ctrlKey && ["KeyO", "KeyB", "KeyM"].includes(e.code))
+      ].includes(e.code) || state?.bindings_capture ||
+      state?.preferences?.bindings?.rows?.some(row => row.keyboard &&
+        row.keyboard.key === e.code && row.keyboard.ctrl === (e.ctrlKey || e.metaKey) &&
+        row.keyboard.shift === e.shiftKey && row.keyboard.alt === e.altKey)
     )
       e.preventDefault();
   });

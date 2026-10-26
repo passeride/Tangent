@@ -45,6 +45,12 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
         d.text(inner, y + 50., "Your session is paused.", 12., t.muted);
     }
 
+    let resume_hint = super::shortcuts::hint(state, "play");
+    let resume_label = if resume_hint.is_empty() {
+        "Resume".into()
+    } else {
+        format!("Resume  [{resume_hint}]")
+    };
     // Resume is the only action that can restart the transport.
     d.menu_card(
         state,
@@ -52,7 +58,7 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
         y + 76.,
         usable,
         45.,
-        "Resume  [Space]",
+        &resume_label,
         "",
         Action::Play,
         true,
@@ -272,7 +278,7 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
                     .take((usable / 6.) as usize)
                     .collect::<String>()
             } else {
-                "Space resumes / Esc closes while staying paused".into()
+                "Use Resume / Esc closes while staying paused".into()
             },
             11.,
             t.muted,
@@ -354,6 +360,10 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         content_w = (l.width - content_x - pad).max(0.);
     }
 
+    if state.settings_tab == SettingsTab::Accessibility && state.shortcuts.open {
+        super::shortcuts::render(d, state, l, t, content_x, content_y, content_w);
+        return;
+    }
     d.text(content_x, content_y, state.settings_tab.title(), 21., t.ink);
     let mut entries: Vec<(String, Action)> = vec![];
     let explanation = match state.settings_tab {
@@ -477,6 +487,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             "Cosmetic hit feedback; reduced motion disables bursts. Key glow stays visible."
         }
         SettingsTab::Accessibility => {
+            entries.push(("Keybindings: keyboard & piano".into(), Action::Keybindings));
             entries.push((
                 format!(
                     "Reduced motion: {}",
@@ -629,6 +640,12 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         let x = content_x + (i % cols) as f32 * (btn_w + gap);
         let y = start + (i / cols) as f32 * step;
         if y + 30. < l.height - 16. {
+            let hint = super::shortcuts::action_hint(state, action);
+            let label = if hint.is_empty() {
+                label
+            } else {
+                format!("{label} [{hint}]")
+            };
             d.button(state, x, y, btn_w, label, action, t);
         }
     }

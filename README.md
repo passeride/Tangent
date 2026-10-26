@@ -45,6 +45,12 @@ MusicXML loops can **Snap bars** to explicit measure visits. An optional
 **Goal** tracks three complete attempts at 80% pitch coverage; autoplay never
 advances it. Results show matched-note change against a compatible previous run.
 
+Settings → Accessibility → **Keybindings** has persistent Keyboard/Piano columns
+for application actions and computer piano keys. Choose a low/high/custom MIDI
+control-key, then hold it with a command note or tap it before the next note
+within two seconds. Piano commands default Off; binding capture rejects conflicts.
+See [input binding architecture](docs/adr/0024-configurable-keyboard-and-piano-bindings.md).
+
 ## Screenshots
 
 Actual running app, captured with Chromium at 1440 px width using Tangent's

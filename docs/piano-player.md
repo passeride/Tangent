@@ -233,3 +233,18 @@ release WASM and native executable self-test, source-time browser checks at
 mobile pause bounds and packaged `/Tangent/` playback. The clock mapping tests
 are in `web/piano/playback-clock.test.mjs`; real-app acceptance is in
 `web/piano/speed-smoke.mjs`. Physical MIDI latency remains a device check.
+
+## Configurable keyboard and piano input
+
+Settings → Accessibility → Keybindings offers action rows with Keyboard and Piano
+columns, including the PC live-note keys and menu navigation. Click a cell to
+record a new chord/note; Esc cancels and Delete clears it. Conflicts leave the
+previous binding intact. Reset restores keyboard defaults and disables piano
+commands. Changes persist through the same SQLite preferences as other settings.
+
+Piano shortcuts default Off. Choose the lowest/highest visible key or Learn a
+custom control note. Hold that note with a command note, or tap control before
+the next note within two seconds. A Piano cell C4 means control then MIDI 60;
+C4 alone remains ordinary musical input. Enabled control is silent and reserved.
+Resume and supported Settings labels derive their hints from the current map.
+Escape remains a recovery alias. See [ADR-0024](adr/0024-configurable-keyboard-and-piano-bindings.md).

@@ -1,7 +1,7 @@
 # MIDI input selection and piano shortcuts
 
 - Date: 2026-10-26
-- Status: Design proposal; dropdown and piano commands are not implemented.
+- Status: Piano bindings implemented under ADR-0024; MIDI input dropdown proposed.
 - Scope: web and native, one Bevy canvas, optional control without leaving the piano.
 - Related: [UI v2](tangent-ui-v2.md), [development plan](product-development-plan.md),
   [MIDI output](../adr/0015-midi-output-and-reading-practice.md).
@@ -39,113 +39,51 @@ be absent or duplicated; do not imply unique identity. Neither MIDI 1.0 nor thes
 adapters reliably reports physical key count: calibration must be user-driven.
 No new dependency is needed. Hardware hotplug behavior remains a device test.
 
-## First-time setup
+## Revised piano control design — 2026-10-26
 
-1. Choose the input device in Settings → Audio & MIDI.
-2. Enable Piano shortcuts and choose Configure. Explain that commands pause music.
-3. Press the lowest playable key, then the highest; show exact MIDI numbers and
-   note names. Offer manual correction and 49/61/73/76/88-key presets.
-4. Rehearse entry and one harmless command, then confirm. Save device/range/map
-   locally only after this explicit confirmation; cancellation keeps prior setup.
+The owner replaced the proposed two-extreme gesture with one assignable control
+note. The authoritative implemented contract is now
+[ADR-0024](../adr/0024-configurable-keyboard-and-piano-bindings.md).
+The input dropdown section above remains a proposal; it is independent of bindings.
 
-An 88-key P-45 normally maps A0 (21) through C8 (108); show MIDI numbers because
-manufacturers disagree on octave naming. Do not hard-code these extremes for
-other keyboards. With All inputs selected, nominate one command device; gestures
-must originate from that same device. Duplicate device names require re-selection.
+Open Settings → Accessibility → Keybindings. Each row names an action; the columns
+are Keyboard and Piano. Click a cell to record a new keyboard chord or input note.
+For example, Piano C4 (60) on Faster means hold the chosen control-key and press C4,
+or tap/release control then press C4 within two seconds. Capture the C4 binding by
+playing C4 alone in Settings. Conflicts are rejected with the existing assignment
+retained. Esc cancels capture, Delete clears the selected cell; Reset restores
+defaults and turns piano commands Off. All changes use the saved SQLite preferences.
 
-## Entering and leaving command mode
+Control-key choices: explicitly use the lowest/highest currently visible piano
+key, or Learn any custom input pitch. Show its resolved pitch and MIDI number.
+Changing view range later does not change that stored control note. Input shortcuts
+default Off because an enabled control note is reserved for commands and silent.
+The next note is consumed as a command even when it has no assignment; a held
+modifier may invoke multiple commands, one new attack per command. The modifier
+and command must originate from the same input device/channel.
 
-Chosen initial proposal: hold both calibrated outermost keys together for 800 ms,
-with no other keys held and pedal released. Both note-ons must occur within
-150 ms. A visible hold indicator appears as the gesture forms. Successful entry
-pauses transport, checkpoints the attempt, cancels scheduled audio/MIDI and
-releases held notes. Display “Piano controls — release both keys”. No command is
-accepted until every key and pedal is released. This is a latched overlay, so
-players do not need to span the piano while playing a third key.
-
-The shortcut detector runs before scoring/output. Only when explicitly enabled,
-buffer candidate extreme-key attacks for up to 150 ms; if entry fails, deliver
-them in order as ordinary input. If the pair forms, reserve it through hold/release.
-Document this small edge-key delay and offer button-only entry for repertoire
-that uses those notes. Consumed command notes never score, synthesize, echo to
-MIDI output, advance reference exercises or feed fingerprint recognition.
-Sustain must track incoming CC64 for this gate even though pedal-aware scoring
-is currently unsupported. Outgoing playback cannot enter command mode.
-
-Exit on the mapped Cancel key, Esc, overlay Close, 10 seconds idle, focus loss or
-device loss. Closing leaves playback paused; Play/resume is explicit. Mode exit
-requires release before ordinary notes can re-enter scoring. An on-screen button
-provides equivalent entry, including for players unable to reach both extremes.
-Never use the gesture as a global emergency-stop replacement.
-
-## Initial command map
-
-Use the first eight white keys strictly inside the calibrated low extreme.
-Call them W1–W8; the overlay and settings display their resolved pitches/numbers.
-Do not assume C-major key positions on a shortened/custom range. At least eight
-interior white keys are required. Commands trigger once per new press and require
-release; a held key never auto-repeats or repeatedly toggles playback.
-
-| Piano key | Command | Feedback / boundary |
+| Action | Keyboard default | Piano column example |
 | --- | --- | --- |
-| W1 | Slower | −5 percentage points, minimum 25%; show new percentage |
-| W2 | Faster | +5 percentage points, maximum 200%; show new percentage |
-| W3 | Back 5 seconds | Source-song time, clamped to song/active loop |
-| W4 | Forward 5 seconds | Same source-time/loop contract |
-| W5 | Set A | Current position; explicitly clears old B as existing control does |
-| W6 | Set B | Validate B > A; show error and retain previous valid selection |
-| W7 | Resume and close | Wait for full release, then explicitly resume |
-| W8 | Cancel and close | Remain paused; retain changes already applied |
+| Play / pause | Space | C5 (72) |
+| Faster / slower | ↑ / ↓ | C4 (60) / D4 (62) |
+| Jump forward / back | → / ←, five source seconds | E4 (64) / F4 (65) |
+| Longer jump | Shift+→ / Shift+←, fifteen seconds | User assignment |
+| Set A / Set B / clear loop / snap | Unbound | User assignment |
+| Volume, view, theme, sound, effects, instrument, range | Existing keys where present | User assignment |
+| Import, sample, rescan MIDI, fullscreen | Existing Ctrl/F keys | User assignment |
+| Hint, hear, skip, target part and Fit keys | Unbound | User assignment |
+| Menu focus, activate and back | Tab / Shift+Tab / Enter / Esc | User assignment |
+| PC live notes | A W S E D F T G Y H U J K | Direct piano input |
 
-Only offer tempo/seek/loop commands for Play. Train and FreeForm show unavailable
-commands with an explanation. First version excludes import, deletion, database
-export, device changes and automatic output switching from piano commands.
-Changing tempo/range uses existing domain actions and their attempt segmentation.
-Volume, view, part and effects can be later configurable mappings; do not crowd
-this initial eight-key map or silently repurpose commands by screen.
+Piano examples are suggestions; no command notes are preassigned. Column heading
+“Piano (Ctrl first)” and the control-note summary explain the meaning of C4.
+An armed in-session label appears when control is waiting for a command. Ordinary
+notes need no modifier and retain sound/scoring. All matrix editing stays in Bevy,
+with paging on low windows. Reset and Escape remain recoverable paths if the user
+unbinds their usual controls. Reduced motion remains in Accessibility beside the
+Keybindings entry.
 
-## How settings advertise their piano shortcut
-
-Each supported setting/action gets a quiet secondary label next to its normal
-computer-key shortcut. Example after calibration:
-
-| Setting / action | Computer shortcut | Piano shortcut label |
-| --- | --- | --- |
-| Speed − | ↓ | Piano controls → W1 · B0 · MIDI 23 (example) |
-| Speed + | ↑ | Piano controls → W2 · C1 · MIDI 24 (example) |
-| Back / forward | ← / → · 5s; Shift · 15s | Piano controls → W3 / W4 · resolved pitch |
-| Set A / Set B | Focusable buttons | Piano controls → W5 / W6 · resolved pitch |
-| MIDI input | Focusable dropdown | No piano shortcut |
-
-W1/B0 is an example for A0 as low extreme, not a universal mapping. Render the
-actual calibrated pitch. Clicking a label opens Configure and highlights that key
-on a miniature keyboard. With shortcuts Off, display “Piano shortcuts: Off — Set
-up” once per settings group. With a missing device, retain the label but mark
-“Unavailable: device disconnected”. Unmapped settings say “Not assigned” only in
-Configure, avoiding noise throughout Settings. Never suggest an ordinary note is
-always a global shortcut: every label starts with “Piano controls →”.
-
-The overlay shows entry gesture, device, eight key tiles, action names, current
-speed/position/loop and a short last-action confirmation. Use text and shapes as
-well as colour, respect reduced motion, and retain keyboard/pointer navigation.
-A low-height layout pages the key legend; all mapped actions remain discoverable.
-No extra HTML controls: presentation stays inside Bevy.
-
-## Implementation sequence and acceptance
-
-1. Add independent input enumeration/selection and validated additive preferences;
-   preserve legacy All inputs. Test duplicate names, denied permission, Off,
-   selected-device disconnect and release of held keys on both adapters.
-2. Add a platform-independent command state machine using device/key/CC events
-   and monotonic time; unit-test hold thresholds, release gate, failed gestures,
-   simultaneous multi-device input, zero-velocity note-off, sustain and timeout.
-3. Integrate state machine ahead of scoring/audio with Bevy overlay and shared
-   actions. Add actual-app tests that commands produce no target hits or outgoing
-   note attacks, cannot self-trigger from playback, and never resume on cancel.
-4. Test with the P-45, a short keyboard and two devices, then evaluate the entry
-   gesture with players. Confirm 4K and short-window readability and manual
-   alternatives. Record measured gesture usability before calling it the default.
-
-A follow-up implementation ADR must define event ordering, cancellation and
-preference validation before these interfaces ship. This document is a concrete
-proposal for review, not a delivered capability or hardware validation claim.
+Future improvements: per-device piano mappings, user-controlled prefix timeout,
+searchable/filterable action rows and broader shortcut badges beyond the existing settings/resume labels. These
+are not claimed as delivered. Physical keyboard
+range detection is still explicit/user-driven; MIDI does not reliably report it.

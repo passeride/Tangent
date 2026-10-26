@@ -8,3 +8,5 @@ pub mod practice;
 pub mod transport;
 
 pub mod progress;
+
+pub mod input_bindings;

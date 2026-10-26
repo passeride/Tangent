@@ -279,3 +279,15 @@ Regression coverage includes unordered history and changed playback speed.
 Local validation for this follow-up: all 34 tangent-core tests, warnings-denied
 core Clippy, workspace formatting, diff checks and web/native progress-schema
 parity tests pass. Full application builds/browser regression run in CI.
+
+Input-control iteration (ADR-0024): added persistent action × Keyboard/Piano
+bindings under Settings → Accessibility, low/high/custom piano control-note,
+held and single-use prefix commands, conflict rejection, capture/clear/reset and
+shortcut labels derived from the current bindings. Ordinary MIDI notes remain
+direct musical input. The MIDI input dropdown remains an independent proposal.
+Validation for ADR-0024: all 102 workspace Rust tests, native/WASM warnings-denied
+Clippy, formatting, complete real Bevy browser suite, then focused final binding
+regression (including wrong-mode command isolation and reconnect), packaged
+/Tangent/ smoke and native debug executable self-test pass. Matrix screenshot was
+inspected at 1280×800; bounds/overlap checks cover 640×360 and 390×844. Physical
+P-45 usability/latency remains a manual check. No new dependency was added.

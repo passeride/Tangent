@@ -57,3 +57,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0022: Readable HUD and keyboard fit](0022-readable-hud-and-keyboard-fit.md) — independent Focus/Standard/Arcade density, explicit keyboard fitting and short-window pause.
 
 - [ADR-0023: Measure snapping and repetition goals](0023-measure-snapping-and-repetition-goals.md) — exact MusicXML playback visits and voluntary 3×80% coverage goals.
+
+- [ADR-0024: Configurable keyboard and piano bindings](0024-configurable-keyboard-and-piano-bindings.md) — persistent two-column matrix, capture/conflicts, shared actions and MIDI control-key prefix/chords.
