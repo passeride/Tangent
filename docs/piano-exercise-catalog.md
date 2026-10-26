@@ -40,7 +40,7 @@ Hver oppføring angir **nivå (0–4)**, **læringsmål/teori**, **spillflyt**, 
 
 ## 1. Notelesing og orientering (N01–N08)
 
-Målet er rask og selvstendig kobling mellom нотasjon, klingende tone og tangent. Begynn med få noter, utvid register/fortegn og fjern støtte gradvis.
+Målet er rask og selvstendig kobling mellom notasjon, klingende tone og tangent. Begynn med få noter, utvid register/fortegn og fjern støtte gradvis.
 
 ### N01 — Note Hunter
 
