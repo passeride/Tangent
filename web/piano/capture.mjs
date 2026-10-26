@@ -1,3 +1,7 @@
+if (process.env.TANGENT_CAPTURE_EXPLORER === '1') {
+  await import('./explorer-smoke.mjs');
+  process.exit(0);
+}
 // Optional dedicated real-app 3D piano captures.
 if (process.env.TANGENT_CAPTURE_3D === '1') {
   await import('./piano3d-smoke.mjs');

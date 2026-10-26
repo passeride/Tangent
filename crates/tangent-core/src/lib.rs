@@ -10,3 +10,5 @@ pub mod transport;
 pub mod progress;
 
 pub mod input_bindings;
+
+pub mod explorer;

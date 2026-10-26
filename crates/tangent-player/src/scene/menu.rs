@@ -45,7 +45,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         d.text(x, title_y + 80., "Practice", 26., t.ink);
         d.text(x, title_y + 114., "Choose what to learn", 14., t.muted);
         let top = title_y + if short { 137. } else { 156. };
-        let height = if short { 48. } else { 62. };
+        let height = if short {
+            ((l.height - top - 48.) / 4. - 8.).clamp(30., 48.)
+        } else {
+            62.
+        };
         for (i, (label, caption, action)) in [
             (
                 "Read notes",
@@ -57,6 +61,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 "Recognize and play chord shapes",
                 Action::TrainChords,
             ),
+            (
+                "Keyboard Explorer",
+                "Find the same note in another octave",
+                Action::TrainExplorer,
+            ),
             ("Back to main menu", "", Action::Main),
         ]
         .into_iter()
@@ -65,7 +74,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             d.menu_card(
                 state,
                 x,
-                top + i as f32 * (height + 12.),
+                top + i as f32 * (height + if short { 8. } else { 12. }),
                 width,
                 height,
                 label,

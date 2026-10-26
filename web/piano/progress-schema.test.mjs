@@ -36,3 +36,11 @@ assert.throws(()=>writeProgress(db,{...song,matched_targets:[[11000000,60]]}));
 assert.throws(()=>writeProgress(db,{...song,song_correct:2,song_missed:1,points:200,matched_targets:[[1000000,60],[1000000,60]]}));
 assert.equal(readProgress(db).find(r=>r.id==='test-session').context,undefined,'Legacy context stays unknown');
 console.log('Passage context: legacy absence, exact context/evidence round trip and malformed checkpoints passed.');
+
+const explorer={...run,id:'keyboard-explorer-session',mode:'keyboard-explorer',label:'Keyboard Explorer / C / D / E',trials:[{...run.trials[0],skill:'explorer:1:48:60'}]};
+writeProgress(db,explorer);
+const explorerDb=new SQL.Database(db.export());migrate(explorerDb);
+assert.equal(readProgress(explorerDb).find(r=>r.id===explorer.id).trials[0].skill,'explorer:1:48:60');
+assert.throws(()=>writeProgress(db,{...explorer,trials:[{...explorer.trials[0],skill:'explorer:1:48:72'}]}));
+assert.throws(()=>writeProgress(db,{...explorer,trials:[{...explorer.trials[0],skill:'note:0:0:60'}]}));
+console.log('Keyboard Explorer checkpoint: exact octave evidence, export/reopen and invalid task rejection passed.');

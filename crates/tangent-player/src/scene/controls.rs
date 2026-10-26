@@ -31,6 +31,7 @@ pub enum Action {
     StartPlay,
     FreeForm,
     TrainNotes,
+    TrainExplorer,
     TrainChords,
     Play,
     Restart,
@@ -116,6 +117,7 @@ impl Action {
             Self::StartPlay => "start-play",
             Self::FreeForm => "freeform",
             Self::TrainNotes => "train-notes",
+            Self::TrainExplorer => "train-explorer",
             Self::TrainChords => "train-chords",
             Self::Play => "play",
             Self::Slower => "speed-slower",
@@ -359,7 +361,9 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
                     state.help = true;
                 } else {
                     use tangent_core::practice::{Level, ReadingClef};
-                    let action = if run.mode == "chords" {
+                    let action = if run.mode == "keyboard-explorer" {
+                        Action::TrainExplorer
+                    } else if run.mode == "chords" {
                         Action::TrainChords
                     } else {
                         Action::TrainNotes
@@ -484,7 +488,11 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
                 Screen::Train
             };
         }
-        Action::StartPlay | Action::FreeForm | Action::TrainNotes | Action::TrainChords => {
+        Action::StartPlay
+        | Action::FreeForm
+        | Action::TrainNotes
+        | Action::TrainChords
+        | Action::TrainExplorer => {
             training::end(state, false);
             state.panic();
             state.help = false;
@@ -493,13 +501,18 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             state.mode = match action {
                 Action::FreeForm => Mode::FreeForm,
                 Action::TrainNotes => Mode::Notes,
+                Action::TrainExplorer => Mode::Explorer,
                 Action::TrainChords => Mode::Chords,
                 _ => Mode::Play,
             };
             let (clef, level) = (state.practice.clef, state.practice.level);
-            state.practice = tangent_core::practice::Practice::new(state.mode == Mode::Chords);
+            state.practice = if state.mode == Mode::Explorer {
+                tangent_core::practice::Practice::explorer()
+            } else {
+                tangent_core::practice::Practice::new(state.mode == Mode::Chords)
+            };
             state.practice.configure(clef, level);
-            if matches!(state.mode, Mode::Notes | Mode::Chords) {
+            if matches!(state.mode, Mode::Notes | Mode::Chords | Mode::Explorer) {
                 training::start(state);
             }
             state.particles.clear();
@@ -637,7 +650,7 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
                         .filter(|n| c.includes(n) && !state.song.parts[n.part].percussion)
                         .map(|n| n.key),
                 );
-            } else if matches!(state.mode, Mode::Notes | Mode::Chords) {
+            } else if matches!(state.mode, Mode::Notes | Mode::Chords | Mode::Explorer) {
                 keys.extend(state.practice.target());
             }
             let (first, last) = tangent_core::piano::fit_range(keys);
@@ -708,7 +721,7 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             } else {
                 state.practice.level
             };
-            let active_practice = matches!(state.mode, Mode::Notes | Mode::Chords);
+            let active_practice = matches!(state.mode, Mode::Notes | Mode::Chords | Mode::Explorer);
             if active_practice {
                 training::end(state, false);
             }

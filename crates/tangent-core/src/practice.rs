@@ -45,9 +45,16 @@ impl Level {
         }
     }
 }
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum Exercise {
+    #[default]
+    Notes,
+    Chords,
+    KeyboardExplorer,
+}
 #[derive(Debug, Default)]
 pub struct Practice {
-    pub chords: bool,
+    pub exercise: Exercise,
     pub completed: usize,
     pub clef: ReadingClef,
     pub level: Level,
@@ -59,12 +66,36 @@ pub struct Practice {
 impl Practice {
     pub fn new(chords: bool) -> Self {
         Self {
-            chords,
+            exercise: if chords {
+                Exercise::Chords
+            } else {
+                Exercise::Notes
+            },
             ..Default::default()
         }
     }
+    pub fn explorer() -> Self {
+        Self {
+            exercise: Exercise::KeyboardExplorer,
+            ..Default::default()
+        }
+    }
+    pub fn is_chord(&self) -> bool {
+        self.exercise == Exercise::Chords
+    }
+    pub fn explorer_task(&self) -> Option<crate::explorer::ExplorerTask> {
+        (self.exercise == Exercise::KeyboardExplorer)
+            .then(|| crate::explorer::ExplorerTask::generate(self.level, self.completed))
+    }
     pub fn curriculum_name(&self) -> &'static str {
-        if self.chords {
+        if self.exercise == Exercise::KeyboardExplorer {
+            return match self.level {
+                Level::Stepwise => "C / D / E",
+                Level::Mixed => "White keys",
+                Level::Chromatic => "All keys / both directions",
+            };
+        }
+        if self.is_chord() {
             match self.level {
                 Level::Stepwise => "Diatonic triads",
                 Level::Mixed => "Major/minor triads",
@@ -75,10 +106,13 @@ impl Practice {
         }
     }
     pub fn target(&self) -> Vec<u8> {
+        if let Some(task) = self.explorer_task() {
+            return vec![task.target];
+        }
         if let Some(keys) = &self.review_target {
             return keys.clone();
         }
-        if self.chords && self.level != Level::Stepwise {
+        if self.is_chord() && self.level != Level::Stepwise {
             let root = 60 + (self.completed % 12) as u8;
             let minor = (self.completed / 12) % 2 == 1;
             return if self.level == Level::Chromatic {
@@ -87,12 +121,12 @@ impl Practice {
                 vec![root, root + if minor { 3 } else { 4 }, root + 7]
             };
         }
-        let root = if self.chords {
+        let root = if self.is_chord() {
             [60, 62, 64, 65, 67, 69, 71][self.completed % 7]
         } else {
             self.note_target()
         };
-        if self.chords {
+        if self.is_chord() {
             vec![
                 root,
                 root + if [62, 64, 69, 71].contains(&root) {
@@ -129,7 +163,7 @@ impl Practice {
         }
     }
     pub fn label(&self) -> String {
-        if self.chords && (self.level != Level::Stepwise || self.review_target.is_some()) {
+        if self.is_chord() && (self.level != Level::Stepwise || self.review_target.is_some()) {
             let keys = self.target();
             let name = [
                 "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
@@ -148,7 +182,7 @@ impl Practice {
                 "major"
             };
             format!("{name} {kind}")
-        } else if self.chords {
+        } else if self.is_chord() {
             format!(
                 "{} {}",
                 ["C", "D", "E", "F", "G", "A", "B"][self.completed % 7],
@@ -177,7 +211,7 @@ impl Practice {
         *self = Self {
             clef,
             level,
-            chords: self.chords,
+            exercise: self.exercise,
             ..Default::default()
         };
     }
@@ -197,12 +231,12 @@ impl Practice {
         }
         let mut actual: Vec<_> = held
             .iter()
-            .map(|k| if self.chords { k % 12 } else { *k })
+            .map(|k| if self.is_chord() { k % 12 } else { *k })
             .collect();
         let mut expected: Vec<_> = self
             .target()
             .iter()
-            .map(|k| if self.chords { k % 12 } else { *k })
+            .map(|k| if self.is_chord() { k % 12 } else { *k })
             .collect();
         actual.sort_unstable();
         actual.dedup();
@@ -244,7 +278,7 @@ mod tests {
     #[test]
     fn chords_require_all_and_only_target_pitch_classes() {
         let mut p = Practice {
-            chords: true,
+            exercise: Exercise::Chords,
             ..Default::default()
         };
         assert!(!p.answer(&[60, 64]));

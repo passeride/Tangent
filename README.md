@@ -232,3 +232,5 @@ follows repeat visits. Falling staff/notes show faint clef watermarks plus movin
 measure/beat guides and endings. MIDI remains an approximate reading view.
 
 The session piano is a procedural, lit 3D keyboard with chamfered keys, key depression and expected-note edge glow, composited into the same Bevy surface. See [3D piano stage](docs/design/3d-piano-stage.md).
+
+Train also includes **Keyboard Explorer**: learn octave/key patterns through exact register transfers, three levels, optional hints/reference audio and saved scored attempts. See [N02](docs/design/keyboard-explorer.md).

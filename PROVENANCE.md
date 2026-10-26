@@ -246,3 +246,7 @@ assets or implementation were copied.
 ## Procedural 3D piano — 2026-10-26
 
 The chamfered key mesh, case, lighting and light-spill geometry in `scene/piano3d.rs` and `scene/draw.rs` are original project code. Bevy 0.20.0 PBR/light features use the already pinned MIT/Apache-2.0 engine. Official Bevy render-to-texture and orthographic examples/API were consulted; no external piano model, texture or shader was imported. Prior source-exposure limitations documented above remain unchanged.
+
+## Keyboard Explorer — 2026-10-26
+
+N02 octave-transfer generation, evidence, UI and tests are original project code based on the owner-requested internal exercise catalogue. No external exercise files, music, graphical assets or implementation sources were imported.

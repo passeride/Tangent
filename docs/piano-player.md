@@ -272,3 +272,7 @@ not change the transport behavior of Open; Edit/Remove remain separate controls.
 ## 3D keyboard — 2026-10-26
 
 The session keyboard now uses procedural chamfered 3D keys, case/cheeks, broad PBR lighting and live-key depression. A separate layer renders into the same Bevy UI surface; no extra canvas or JS renderer is used. Expected notes have luminous mesh edges and rail spill, held keys fill and depress, and reduced motion snaps their state. The target is capped at 2x density/4096px width. See [ADR-0026](adr/0026-procedural-3d-piano.md) for geometry and platform limits.
+
+## Keyboard Explorer (N02)
+
+Train → Keyboard Explorer marks a reference key and asks for the same note exactly one octave higher/lower. Three levels progress from C/D/E to white keys and chromatic transfers in both directions. Twelve-task scores and exact source/target evidence save to existing progress; hints and target audio are assisted. See [ADR-0027](adr/0027-keyboard-explorer.md) and the [brief](design/keyboard-explorer.md).
