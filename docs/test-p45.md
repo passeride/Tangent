@@ -41,3 +41,12 @@ korte testresultater når du lukker det. Rapporten lagres ved siden av programme
 - Enable Adaptive review; verify it revisits weak tasks. Try all chord levels.
 - Play a piece: pause/resume and reattack a held target without extra points.
   Finish session shows pitch coverage; Restart creates a fresh scored run.
+
+## Passage loop check
+
+- Play → pause → Set A → +5 seconds → Set B → 70% → Resume. Let it repeat three
+  times through the P-45. Verify the boundary releases notes/pedal and produces
+  no late attacks; change to 80% and retry.
+- Finish, inspect saved range/tempo/coverage. Open a completed attempt in Progress
+  and choose Practice this section; verify it opens paused. Test output unplug
+  and reconnect while looping. Report stuck/double notes separately from latency.

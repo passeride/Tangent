@@ -10,6 +10,7 @@ pub enum Action {
     ProgressOpen(usize),
     PracticeFinish,
     PracticeAgain,
+    PracticeSection,
     PracticeSkip,
     PracticeAdaptive,
     Library,
@@ -36,6 +37,10 @@ pub enum Action {
     Slower,
     Faster,
     NormalSpeed,
+    LoopA,
+    LoopB,
+    LoopClear,
+    Part,
     Back,
     Forward,
     Quieter,
@@ -77,6 +82,7 @@ impl Action {
             Self::ProgressOpen(_) => "progress-open",
             Self::PracticeFinish => "practice-finish",
             Self::PracticeAgain => "practice-again",
+            Self::PracticeSection => "practice-section",
             Self::PracticeSkip => "practice-skip",
             Self::PracticeAdaptive => "practice-adaptive",
             Self::Library => "library",
@@ -102,6 +108,10 @@ impl Action {
             Self::Slower => "speed-slower",
             Self::Faster => "speed-faster",
             Self::NormalSpeed => "speed-reset",
+            Self::LoopA => "loop-a",
+            Self::LoopB => "loop-b",
+            Self::LoopClear => "loop-clear",
+            Self::Part => "practice-part",
             Self::Restart => "restart",
             Self::Back => "back",
             Self::Forward => "forward",
@@ -183,12 +193,36 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             platform::action("progress-list", "");
         }
         Action::PracticeFinish => training::end(state, true),
-        Action::PracticeAgain => {
-            if let Some(run) = state.training.result.as_ref() {
+        Action::PracticeSection | Action::PracticeAgain => {
+            if let Some(run) = state.training.result.clone() {
                 if run.mode == "play" {
+                    if run.piece_id.as_ref() != Some(&state.piece_id) {
+                        activate(state, Action::Library, false);
+                        return;
+                    }
                     activate(state, Action::StartPlay, false);
+                    state.transport.set_passage(None);
+                    if let Some(c) = run.context.as_ref() {
+                        state.selected_part = c.part;
+                        state.hear = c.song_audio;
+                        if let Some(rate) =
+                            tangent_core::transport::PlaybackRate::new(c.speed_percent)
+                        {
+                            state.transport.set_rate(rate);
+                        }
+                        let range = if matches!(action, Action::PracticeSection) {
+                            run.weak_passage(&state.song)
+                        } else {
+                            Some(c.passage)
+                        };
+                        if let Some(p) = range {
+                            state.transport.set_passage(Some(p));
+                            state.loop_a = Some(p.start_us);
+                        }
+                    }
                     activate(state, Action::Restart, false);
-                    activate(state, Action::Play, false);
+                    // Retry is deliberately paused so the user can inspect range/part/rate.
+                    state.help = true;
                 } else {
                     use tangent_core::practice::{Level, ReadingClef};
                     let action = if run.mode == "chords" {
@@ -349,7 +383,8 @@ fn activate(state: &mut State, action: Action, shift: bool) {
                 state.transport.seek(0);
             }
             if !state.transport.playing
-                && state.transport.position_us == 0
+                && state.transport.position_us
+                    == state.transport.passage().map_or(0, |p| p.start_us)
                 && state.training.model.run.is_none()
             {
                 training::start_song(state);
@@ -361,7 +396,11 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.clock = platform::clock_us();
             state.sync();
         }
+        Action::LoopA | Action::LoopB | Action::LoopClear | Action::Part => {
+            passage::change(state, action)
+        }
         Action::Slower | Action::Faster | Action::NormalSpeed => {
+            training::end(state, false);
             use tangent_core::transport::PlaybackRate;
             let now = platform::clock_us();
             state.transport.advance((now - state.clock).max(0.) as u64);
@@ -381,7 +420,8 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             training::end(state, false);
             state.song_hits.reset();
             state.feedback.reset();
-            state.transport.seek(0);
+            let start = state.transport.passage().map_or(0, |p| p.start_us);
+            state.transport.seek(start);
             state.clock = platform::clock_us();
             if state.transport.playing {
                 training::start_song(state);
@@ -423,6 +463,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         }
         Action::Theme => state.theme = (state.theme + 1) % 3,
         Action::Hear => {
+            training::end(state, false);
             state.hear = !state.hear;
             state.sync();
         }
@@ -782,6 +823,13 @@ pub fn input(
     }
     let mut pointer = |id: String, pos: Option<Vec2>, down: bool, pressed: bool| {
         if !down {
+            if state
+                .loop_drag
+                .as_ref()
+                .is_some_and(|(source, _)| source == &id)
+            {
+                state.loop_drag = None;
+            }
             state.source(id, None, 0);
             return;
         }
@@ -798,9 +846,56 @@ pub fn input(
             activate(&mut state, action, shift);
             return;
         }
+        if state.mode == Mode::Play
+            && !state.help
+            && let Some(range) = state.transport.passage()
+        {
+            if pressed && (pos.y - (layout.progress.y + 5.)).abs() < 18. {
+                let px = |at: u64| {
+                    layout.progress.x
+                        + layout.progress.w * at as f32 / state.song.duration_us.max(1) as f32
+                };
+                let is_a = (pos.x - px(range.start_us)).abs() < 14.;
+                let is_b = (pos.x - px(range.end_us)).abs() < 14.;
+                if is_a || is_b {
+                    training::end(&mut state, false);
+                    state.panic();
+                    state.loop_drag = Some((id.clone(), is_a));
+                }
+            }
+            if let Some((source, is_a)) = state.loop_drag.clone()
+                && source == id
+            {
+                let at = (((pos.x - layout.progress.x) / layout.progress.w).clamp(0., 1.)
+                    * state.song.duration_us as f32) as u64;
+                let next = if is_a {
+                    tangent_core::passage::Passage::new(
+                        at.min(range.end_us - 1),
+                        range.end_us,
+                        state.song.duration_us,
+                    )
+                } else {
+                    tangent_core::passage::Passage::new(
+                        range.start_us,
+                        at.max(range.start_us + 1),
+                        state.song.duration_us,
+                    )
+                };
+                if let Some(p) = next {
+                    state.transport.set_passage(Some(p));
+                    state.transport.seek(p.start_us);
+                    state.loop_a = Some(p.start_us);
+                    state.sync();
+                }
+                return;
+            }
+        }
         if state.mode == Mode::Play && !state.help && layout.progress.contains(pos.x, pos.y) {
             let at = ((pos.x - layout.progress.x) / layout.progress.w).clamp(0., 1.)
                 * state.transport.duration_us as f32;
+            training::end(&mut state, false);
+            state.song_hits.reset();
+            state.feedback.reset();
             state.transport.seek(at as u64);
             state.sync();
             state.source(id, None, 0);

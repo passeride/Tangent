@@ -41,6 +41,10 @@ identity. Different source files/arrangements remain distinct; this does not
 replace the separate melodic fingerprint matcher. The existing pinned BLAKE3
 dependency is now shared with WASM, with no new dependency version.
 
+The whole-song-only attempt and source-only comparison policy is superseded by
+[ADR-0021](0021-passage-practice-and-comparable-context.md). Practice point rules
+and existing checkpoint lifecycle remain unchanged.
+
 ## Persistence and lifecycle
 
 SQLite v5 adds practice_details, keyed by the existing practice_sessions FK,

@@ -49,6 +49,13 @@ pub struct Run {
     pub song_missed: u32,
     #[serde(default)]
     pub piece_id: Option<String>,
+    /// Missing on legacy records: never invent historical tempo/selection.
+    #[serde(default)]
+    pub context: Option<crate::passage::SongContext>,
+    #[serde(default)]
+    pub matched_targets: Option<Vec<(u64, u8)>>,
+    #[serde(default)]
+    pub input_sources: Option<Vec<String>>,
 }
 impl Run {
     pub fn new(id: String, p: &Practice) -> Self {
@@ -74,6 +81,9 @@ impl Run {
             song_total: 0,
             song_missed: 0,
             piece_id: None,
+            context: None,
+            matched_targets: None,
+            input_sources: None,
         }
     }
     pub fn song(id: String, title: String, total: u32) -> Self {
@@ -131,8 +141,78 @@ impl Run {
             || self.song_correct > 0
             || (self.mode == "play" && self.finished)
     }
+    /// Suggest only from a completed, evidenced attempt and its exact loaded source.
+    pub fn weak_passage(&self, song: &crate::music::Song) -> Option<crate::passage::Passage> {
+        let c = self.context.as_ref()?;
+        let hits: std::collections::BTreeSet<_> =
+            self.matched_targets.as_ref()?.iter().copied().collect();
+        if !self.finished
+            || self.mode != "play"
+            || c.duration_us != song.duration_us
+            || c.target_count(song) != self.song_total
+        {
+            return None;
+        }
+        let targets: std::collections::BTreeSet<_> = song
+            .notes
+            .iter()
+            .filter(|n| c.includes(n) && song.parts.get(n.part).is_some_and(|p| !p.percussion))
+            .map(|n| (n.start_us, n.key))
+            .collect();
+        let mut buckets = std::collections::BTreeMap::<u64, usize>::new();
+        for (at, _) in targets.difference(&hits) {
+            *buckets
+                .entry((at - c.passage.start_us) / 10_000_000)
+                .or_default() += 1;
+        }
+        let bucket = buckets
+            .iter()
+            .max_by(|a, b| a.1.cmp(b.1).then_with(|| b.0.cmp(a.0)))?
+            .0;
+        let start = c.passage.start_us + bucket * 10_000_000;
+        crate::passage::Passage::new(
+            start,
+            start.saturating_add(10_000_000).min(c.passage.end_us),
+            c.duration_us,
+        )
+    }
+    pub fn comparable_to(&self, other: &Self) -> bool {
+        self.mode == "play"
+            && other.mode == "play"
+            && self.finished
+            && other.finished
+            && self.piece_id.is_some()
+            && self.piece_id == other.piece_id
+            && self.context.is_some()
+            && self.context == other.context
+            && self.song_total == other.song_total
+            && self.input_sources.as_ref().is_some_and(|v| !v.is_empty())
+            && self.input_sources == other.input_sources
+    }
     pub fn validate(&self) -> bool {
         self.version == 1
+            && self.input_sources.as_ref().is_none_or(|sources| {
+                sources.len() <= 4
+                    && sources
+                        .iter()
+                        .all(|s| matches!(s.as_str(), "midi" | "computer" | "pointer" | "touch"))
+                    && sources.windows(2).all(|w| w[0] < w[1])
+            })
+            && self
+                .context
+                .as_ref()
+                .is_none_or(|c| self.mode == "play" && c.validate())
+            && self.matched_targets.as_ref().is_none_or(|hits| {
+                self.mode == "play"
+                    && self.context.as_ref().is_some_and(|c| {
+                        hits.len() == self.song_correct as usize
+                            && hits.len() <= 1_000_000
+                            && hits
+                                .iter()
+                                .all(|(at, key)| c.passage.contains(*at) && *key < 128)
+                            && hits.windows(2).all(|w| w[0] < w[1])
+                    })
+            })
             && self.id.len() >= 8
             && self.id.len() <= 100
             && self

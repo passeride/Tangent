@@ -89,4 +89,42 @@ mod tests {
             5
         );
     }
+    #[test]
+    fn passage_context_and_evidence_survive_native_checkpoints() {
+        use tangent_core::passage::{Passage, SongContext};
+        let db = Connection::open_in_memory().unwrap();
+        super::super::migrate(&db).unwrap();
+        let mut run = Run::song("passage-native-test".into(), "Synthetic".into(), 1);
+        run.context = Some(SongContext {
+            passage: Passage {
+                start_us: 100,
+                end_us: 200,
+            },
+            duration_us: 300,
+            speed_percent: 70,
+            part: Some(0),
+            evaluator: 1,
+            song_audio: false,
+        });
+        run.piece_id = Some("a".repeat(64));
+        run.input_sources = Some(vec!["midi".into()]);
+        run.song_input(tangent_core::practice::Grade::Correct);
+        run.matched_targets = Some(vec![(100, 60)]);
+        run.close(true);
+        save(&db, &run).unwrap();
+        let restored = read(&db).unwrap().remove(0);
+        assert_eq!(restored.context, run.context);
+        assert_eq!(restored.matched_targets, run.matched_targets);
+        assert!(restored.comparable_to(&run));
+        run.context.as_mut().unwrap().speed_percent = 0;
+        assert!(save(&db, &run).is_err());
+        assert_eq!(
+            read(&db).unwrap()[0]
+                .context
+                .as_ref()
+                .unwrap()
+                .speed_percent,
+            70
+        );
+    }
 }

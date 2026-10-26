@@ -145,6 +145,8 @@ struct Transport {
     instrument: usize,
     #[serde(default = "default_speed")]
     speed_percent: u16,
+    #[serde(default)]
+    loop_end_us: Option<u64>,
 }
 fn default_speed() -> u16 {
     100
@@ -274,6 +276,10 @@ impl Audio {
                 .rate()
                 .song_time(self.anchor.elapsed().as_micros() as u64),
         );
+        let position = self
+            .transport
+            .loop_end_us
+            .map_or(position, |end| position.min(end.saturating_sub(1)));
         if self.output.active() {
             self.output.tick(position);
             return;
@@ -281,7 +287,12 @@ impl Audio {
         let rate = self.transport.rate();
         let horizon = position.saturating_add(rate.song_time(LOOKAHEAD_US));
         while let Some(note) = self.song.notes.get(self.next) {
-            if note.start_us > horizon {
+            if note.start_us > horizon
+                || self
+                    .transport
+                    .loop_end_us
+                    .is_some_and(|end| note.start_us >= end)
+            {
                 break;
             }
             let (key, velocity, part, begin, end) = (

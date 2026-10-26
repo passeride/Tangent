@@ -191,3 +191,12 @@ Original bounded tempo model, audio-clock mapping, Bevy pause controls and
 synthetic MIDI/browser tests implement variable-speed song practice (ADR-0020).
 Existing audio/MIDI libraries and the original CC0 study are reused. No new
 dependencies, external samples or excluded legacy source/assets were imported.
+
+## Passage practice — 2026-10-26
+
+Owner authorized integration of the UX strategy and direct implementation on main.
+New original Rust/JS implements source-time loops, explicit imported-part targets,
+contextual pitch-coverage evidence and retry. Requirements are the strategy's
+UX-02/03/04/05/07/11 and ADR-0021. New synthetic MIDI sequences exercise boundaries;
+no competitor/fork code or assets were used. No dependency versions were added.
+Prior exposure and the limits of the clean room claim above remain unchanged.

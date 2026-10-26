@@ -90,7 +90,8 @@ export async function installPlatform() {
       const horizon = clock.position(audio.now, midiOutput.port ? 0 : 0.1);
       while (
         index < song.events.length &&
-        song.events[index].time_us <= horizon
+        song.events[index].time_us <= horizon &&
+        (transport.loop_end_us == null || song.events[index].time_us < transport.loop_end_us)
       ) {
         const e = song.events[index++];
         if(midiOutput.port)midiOutput.event(e);

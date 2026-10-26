@@ -24,3 +24,15 @@ const nativeMigration=nativeSource.match(/pub const MIGRATION: &str = "([\s\S]*?
 const native=new SQL.Database();native.run('PRAGMA foreign_keys=ON; CREATE TABLE practice_sessions(id TEXT PRIMARY KEY);');native.run(nativeMigration);
 for(const pragma of ['table_info(practice_details)','foreign_key_list(practice_details)','index_list(practice_details)'])assert.deepEqual(native.exec('PRAGMA '+pragma),db.exec('PRAGMA '+pragma));
 console.log('Native/web progress schema parity passed.');
+
+const context={passage:{start_us:1000000,end_us:11000000},duration_us:30000000,speed_percent:70,part:0,evaluator:1,song_audio:false};
+const song={...run,id:'song-context-test',mode:'play',trials:[],song_total:3,song_correct:1,song_missed:2,finished:true,context,matched_targets:[[1000000,60]],piece_id:'a'.repeat(64)};
+writeProgress(db,song);
+const contextDb=new SQL.Database(db.export());migrate(contextDb);
+assert.deepEqual(readProgress(contextDb).find(r=>r.id===song.id).context,context);
+assert.deepEqual(readProgress(contextDb).find(r=>r.id===song.id).matched_targets,[[1000000,60]]);
+for(const bad of [{...context,speed_percent:0},{...context,passage:{start_us:3,end_us:2}},{...context,evaluator:2},{...context,song_audio:null}])assert.throws(()=>writeProgress(db,{...song,context:bad}));
+assert.throws(()=>writeProgress(db,{...song,matched_targets:[[11000000,60]]}));
+assert.throws(()=>writeProgress(db,{...song,song_correct:2,song_missed:1,points:200,matched_targets:[[1000000,60],[1000000,60]]}));
+assert.equal(readProgress(db).find(r=>r.id==='test-session').context,undefined,'Legacy context stays unknown');
+console.log('Passage context: legacy absence, exact context/evidence round trip and malformed checkpoints passed.');

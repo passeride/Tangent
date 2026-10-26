@@ -32,6 +32,7 @@ pub struct Transport {
     pub duration_us: u64,
     rate: PlaybackRate,
     remainder: u8,
+    passage: Option<crate::passage::Passage>,
 }
 impl Transport {
     pub fn new(duration_us: u64) -> Self {
@@ -47,12 +48,35 @@ impl Transport {
         self.rate = rate;
         self.remainder = 0;
     }
-    pub fn advance(&mut self, elapsed_us: u64) {
+    pub fn passage(&self) -> Option<crate::passage::Passage> {
+        self.passage
+    }
+    pub fn set_passage(&mut self, passage: Option<crate::passage::Passage>) -> bool {
+        if passage.is_some_and(|p| {
+            crate::passage::Passage::new(p.start_us, p.end_us, self.duration_us).is_none()
+        }) {
+            return false;
+        }
+        self.passage = passage;
+        self.remainder = 0;
+        true
+    }
+    /// Returns crossed loop boundaries; large frames use bounded arithmetic.
+    pub fn advance(&mut self, elapsed_us: u64) -> u64 {
         if self.playing {
             let scaled = u128::from(elapsed_us) * u128::from(self.rate.percent())
                 + u128::from(self.remainder);
             self.remainder = (scaled % 100) as u8;
             let elapsed_us = (scaled / 100).min(u128::from(u64::MAX)) as u64;
+            if let Some(p) = self.passage {
+                let next = u128::from(self.position_us) + u128::from(elapsed_us);
+                if next >= u128::from(p.end_us) {
+                    let length = u128::from(p.end_us - p.start_us);
+                    let beyond = next - u128::from(p.end_us);
+                    self.position_us = p.start_us + (beyond % length) as u64;
+                    return (1 + beyond / length).min(u128::from(u64::MAX)) as u64;
+                }
+            }
             self.position_us = self
                 .position_us
                 .saturating_add(elapsed_us)
@@ -61,9 +85,14 @@ impl Transport {
                 self.playing = false;
             }
         }
+        0
     }
     pub fn seek(&mut self, position_us: u64) {
-        self.position_us = position_us.min(self.duration_us);
+        self.position_us = if let Some(p) = self.passage {
+            position_us.clamp(p.start_us, p.end_us.saturating_sub(1))
+        } else {
+            position_us.min(self.duration_us)
+        };
         self.remainder = 0;
     }
 }
@@ -94,6 +123,32 @@ mod tests {
         assert!(PlaybackRate::new(0).is_none());
         assert!(PlaybackRate::new(201).is_none());
         assert_eq!(PlaybackRate::new(25).unwrap().wall_time(u64::MAX), u64::MAX);
+    }
+    #[test]
+    fn loop_keeps_rate_and_handles_many_boundaries() {
+        let mut t = Transport::new(1000);
+        assert!(t.set_passage(crate::passage::Passage::new(100, 200, 1000)));
+        t.seek(100);
+        t.playing = true;
+        t.set_rate(PlaybackRate::new(70).unwrap());
+        assert_eq!(t.advance(100), 0);
+        assert_eq!(t.position_us, 170);
+        assert_eq!(t.advance(100), 1);
+        assert_eq!(t.position_us, 140);
+        assert!(t.playing);
+        assert_eq!(t.advance(1000), 7);
+        assert_eq!(t.position_us, 140);
+        t.playing = false;
+        assert_eq!(t.advance(u64::MAX), 0);
+        assert_eq!(t.position_us, 140);
+        t.seek(0);
+        assert_eq!(t.position_us, 100);
+        t.seek(900);
+        assert_eq!(t.position_us, 199);
+        assert!(!t.set_passage(Some(crate::passage::Passage {
+            start_us: 2,
+            end_us: 1
+        })));
     }
     #[test]
     fn pause_seek_end_are_bounded() {

@@ -403,6 +403,22 @@ pub fn render(
                 5.,
             );
         }
+        if state.mode == Mode::Play
+            && let Some(range) = state.transport.passage()
+        {
+            for (at, label) in [(range.start_us, "A"), (range.end_us, "B")] {
+                let x =
+                    l.progress.x + l.progress.w * at as f32 / state.song.duration_us.max(1) as f32;
+                d.rect(x - 3., l.progress.y - 5., 6., 20., t.colors[1], 2.);
+                d.text(
+                    (x - 5.).clamp(l.margin, l.width - l.margin - 9.),
+                    l.progress.y - 20.,
+                    label,
+                    10.,
+                    t.colors[1],
+                );
+            }
+        }
         // Symbolic recognition is visible during FreeForm, not only in Settings.
         if state.mode == Mode::FreeForm && !state.recognition_status.is_empty() {
             let width = (l.width - l.margin * 2.).min(690.);
@@ -491,7 +507,7 @@ pub fn render(
             })
             .collect();
         let mut report = serde_json::json!({"status":state.status,"title":state.song.title,"library_total":state.library.total,"library_items":state.library.items,"library_editing":state.library.edit.is_some(),"library_focus":state.library.focus.map(|f|match f {library::Field::Search=>"search",library::Field::Title=>"title",library::Field::Composer=>"composer"}),"library_query":state.library.query,"library_sort":library::SORTS[state.library.sort],"library_format":library::FORMATS[state.library.format],"library_status":state.library.status,"screen":format!("{:?}",state.screen),"mode":format!("{:?}",state.mode),"completed":state.practice.completed,"preferences":state.preferences(),"storage_status":state.storage_status,"target":state.practice.target(),"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"settings_open":state.settings_open,"settings_tab":state.settings_tab.title(),"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())});
-        report.as_object_mut().unwrap().extend(serde_json::json!({"practice_run":state.training.model.run,"practice_result":state.training.result,"progress_history":state.training.model.history.iter().take(12).collect::<Vec<_>>(),"progress_pending":state.training.pending.len(),"progress_status":state.training.status,"adaptive":state.training.model.adaptive,"focused_control":state.focused_button.and_then(|i|state.buttons.get(i)).map(|(_,a)|a.id()),"practice_played_label":d.labels.iter().find(|s|s.text.starts_with("Played ")).map(|s|s.text.as_str()),"reference_keys":state.reference_keys,"vfx_scale":effects::viewport_scale(l.width,l.height),"vfx_particles":state.particles.len(),"vfx_ripples":state.ripples.len(),"practice_waiting_release":state.practice.waiting_release,"streak":state.feedback.streak(),"best_streak":state.feedback.best(),"effects_backend":if cfg!(target_arch="wasm32") {"webgl2-fallback"} else {"hanabi+ui"},"practice_wrong":state.practice.wrong,"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output,"midi_output_preferred":state.preferred_midi_output,"midi_outputs":state.midi_outputs.iter().map(|p|serde_json::json!({"id":p.id,"name":p.name})).collect::<Vec<_>>(),"midi_dropdown_open":state.midi_dropdown_open,"midi_dropdown_page":state.midi_dropdown_page}).as_object().unwrap().clone());
+        report.as_object_mut().unwrap().extend(serde_json::json!({"practice_run":state.training.model.run,"practice_result":state.training.result,"progress_history":state.training.model.history.iter().take(12).collect::<Vec<_>>(),"progress_pending":state.training.pending.len(),"progress_status":state.training.status,"adaptive":state.training.model.adaptive,"loop":state.transport.passage(),"loop_a":state.loop_a,"selected_part":state.selected_part,"focused_control":state.focused_button.and_then(|i|state.buttons.get(i)).map(|(_,a)|a.id()),"practice_played_label":d.labels.iter().find(|s|s.text.starts_with("Played ")).map(|s|s.text.as_str()),"reference_keys":state.reference_keys,"vfx_scale":effects::viewport_scale(l.width,l.height),"vfx_particles":state.particles.len(),"vfx_ripples":state.ripples.len(),"practice_waiting_release":state.practice.waiting_release,"streak":state.feedback.streak(),"best_streak":state.feedback.best(),"effects_backend":if cfg!(target_arch="wasm32") {"webgl2-fallback"} else {"hanabi+ui"},"practice_wrong":state.practice.wrong,"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output,"midi_output_preferred":state.preferred_midi_output,"midi_outputs":state.midi_outputs.iter().map(|p|serde_json::json!({"id":p.id,"name":p.name})).collect::<Vec<_>>(),"midi_dropdown_open":state.midi_dropdown_open,"midi_dropdown_page":state.midi_dropdown_page}).as_object().unwrap().clone());
         platform::report(&report.to_string());
     }
     apply(&mut commands, &mut pool, d, &music_font.0);
@@ -600,7 +616,11 @@ fn expected_keys(state: &State) -> BTreeSet<u8> {
         .notes
         .iter()
         .take_while(|n| n.start_us <= now)
-        .filter(|n| n.end_us > now && !state.song.parts[n.part].percussion)
+        .filter(|n| {
+            n.end_us > now
+                && !state.song.parts[n.part].percussion
+                && passage::context(state).includes(n)
+        })
         .map(|n| n.key)
         .collect()
 }

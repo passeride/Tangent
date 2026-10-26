@@ -29,6 +29,14 @@ The UI v2 branch opens at a responsive, action-card main menu: **Play**, **Libra
 **Settings**. Train offers treble/bass note reading with three levels, optional hints and diatonic chord exercises; FreeForm
 keeps song playback silent. Return home from the corner-gear pause screen.
 
+Pause in Play now includes **Set A / Set B / Clear loop** and explicit **Targets**
+part selection. Repeat a passage at the saved playback speed; drag A/B on the
+bottom timeline while paused. Each repetition records its own pitch-coverage
+attempt. Completed results can suggest **Practice this section** from actual
+missed targets; retries open paused with the recorded range, part and speed.
+Legacy history remains readable with unknown tempo/selection and is excluded
+from new comparable-result summaries. See [passage practice](docs/practice-progress.md#passage-practice).
+
 ## Screenshots
 
 Actual running app, captured with Chromium at 1440 px width using Tangent's

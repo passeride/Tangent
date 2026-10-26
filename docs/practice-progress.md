@@ -75,3 +75,37 @@ Physical P-45 sound/latency and native GPU behavior still need hardware checks.
 See [ADR-0018](adr/0018-scored-sessions-and-adaptive-review.md).
 
 Reproduce scored-session screenshots with `TANGENT_CAPTURE_PROGRESS=1 node web/piano/capture.mjs` after building WASM.
+
+## Passage practice
+
+In Play, pause at the desired start and choose **Set A**. Seek forward with the
+existing timeline or +5 seconds, pause and choose **Set B**. Resume repeats [A,B)
+at the selected 25–200% speed. Drag the A/B markers on the bottom timeline to
+adjust a range; editing pauses playback. **Clear loop** returns to ordinary play.
+Restart returns to A while a loop is active. Source replacement clears the loop.
+
+**Targets** cycles All parts and explicit non-percussion imported parts. This
+filters the scored targets and expected-key glow. The full score and optional
+song audio remain backing context. This is part selection, not inferred hand
+or per-staff separation. MIDI ranges use time; authored measure snapping and
+repeat-visit selection are still follow-up work.
+
+Each observed loop iteration is an independent attempt. Changing range, part,
+rate or backing-audio policy and seeking closes the old attempt as partial;
+pause/resume retains it. No targets in a selection means no scored run.
+Results record source identity, range, part, tempo, backing audio, evaluator and
+actual input categories. Only complete attempts with identical known contexts,
+input categories and denominators contribute to compatible recent pitch-score
+comparisons. These are not timing grades or competitive personal bests.
+
+A completed attempt with recorded target evidence can offer **Practice this
+section** for the exact currently loaded source. It picks the ten-source-second
+range with most missed targets, earliest on ties, clipped to the attempt range.
+The retry restores tempo, part, audio and range, paused for inspection. No missing
+target evidence means no invented heatmap/recommendation. A different loaded
+file requires Choose music; automatic cross-source resolution is not yet added.
+
+SQLite remains schema v5: optional validated context/evidence fields live inside
+its existing versioned JSON payload. Older records stay unchanged and unknown
+context is visibly disclosed. No historical tempo is assumed. See
+[ADR-0021](adr/0021-passage-practice-and-comparable-context.md).

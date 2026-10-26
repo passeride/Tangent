@@ -53,11 +53,19 @@ pub(super) fn start(state: &mut State) {
 pub(super) fn start_song(state: &mut State) {
     state.training.serial += 1;
     let id = format!("song-{}-{}", session_nonce(), state.training.serial);
-    let count = tangent_core::progress::song_target_count(&state.song);
+    let context = passage::context(state);
+    let count = context.target_count(&state.song);
+    if count == 0 {
+        state.status = "No targets in this selection. Choose another range or part.".into();
+        return;
+    }
     state.training.model.run = Some(Run::song(id, state.song.title.clone(), count));
     if let Some(r) = &mut state.training.model.run {
         r.started_unix_ms = platform::wall_time_ms() as u64;
         r.piece_id = Some(state.piece_id.clone());
+        r.context = Some(context);
+        r.matched_targets = Some(vec![]);
+        r.input_sources = Some(vec![]);
     }
     state.song_hits.reset();
 }
@@ -77,7 +85,11 @@ pub(super) fn checkpoint(state: &mut State) {
 pub(super) fn end(state: &mut State, show: bool) {
     if let Some(mut run) = state.training.model.run.take() {
         let complete = if run.mode == "play" {
-            state.transport.position_us >= state.transport.duration_us
+            state.transport.position_us
+                >= run
+                    .context
+                    .as_ref()
+                    .map_or(state.transport.duration_us, |c| c.passage.end_us)
         } else {
             run.trials.len() >= SESSION_LENGTH
         };
@@ -103,6 +115,7 @@ pub(super) fn grade(state: &mut State, grade: effects::Grade) {
             && r.mode == "play"
         {
             r.song_input(grade);
+            r.matched_targets = Some(state.song_hits.targets());
         }
         return;
     }
@@ -297,7 +310,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 x,
                 218.,
                 if r.finished && r.mode == "play" {
-                    "Piece finished"
+                    "Selected passage finished"
                 } else if r.finished {
                     "12-task session complete"
                 } else {
@@ -331,20 +344,28 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 .model
                 .history
                 .iter()
-                .filter(|h| {
-                    h.mode == "play"
-                        && h.piece_id.is_some()
-                        && h.piece_id == r.piece_id
-                        && h.song_total == r.song_total
-                })
+                .filter(|h| h.comparable_to(r))
                 .map(|h| h.points)
-                .chain(std::iter::once(r.points))
+                .chain(
+                    r.finished
+                        .then_some(r.points)
+                        .filter(|_| r.context.is_some()),
+                )
                 .max()
                 .unwrap_or(0);
             d.text(
                 x,
                 310.,
-                format!("Best recent score for this file: {best}"),
+                if let Some(c) = &r.context {
+                    format!(
+                        "{}% / {}-{} / compatible recent: {best} pts",
+                        c.speed_percent,
+                        draw::time(c.passage.start_us),
+                        draw::time(c.passage.end_us)
+                    )
+                } else {
+                    "Legacy result: tempo/selection unknown; no comparison".into()
+                },
                 12.,
                 t.colors[0],
             );
@@ -394,6 +415,25 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             Action::Progress,
             t,
         );
+        if let Some(r) = &state.training.result
+            && r.mode == "play"
+            && r.piece_id.as_ref() == Some(&state.piece_id)
+            && let Some(p) = r.weak_passage(&state.song)
+        {
+            d.button(
+                state,
+                x,
+                350.,
+                w.min(450.),
+                format!(
+                    "Practice {}-{}",
+                    draw::time(p.start_us),
+                    draw::time(p.end_us)
+                ),
+                Action::PracticeSection,
+                t,
+            );
+        }
         if let Some(r) = &state.training.result {
             let rows = ((l.height - 405.) / 22.).clamp(0., 12.) as usize;
             for (i, trial) in r.trials.iter().take(rows).enumerate() {

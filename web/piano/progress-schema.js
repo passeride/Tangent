@@ -6,10 +6,23 @@ CREATE TABLE practice_details (
 );
 CREATE INDEX practice_recent ON practice_details(updated_at DESC);
 PRAGMA user_version = 5;`;
+function validContext(c) {
+ const int=n=>Number.isSafeInteger(n)&&n>=0;
+ return c && c.passage && int(c.duration_us) && int(c.passage.start_us) && int(c.passage.end_us)
+ && c.passage.start_us<c.passage.end_us && c.passage.end_us<=c.duration_us
+ && Number.isInteger(c.speed_percent)&&c.speed_percent>=25&&c.speed_percent<=200
+ && typeof c.song_audio==='boolean' && c.evaluator===1 && (c.part==null||int(c.part)&&c.part<100000);
+}
 function valid(r) {
  const int=(n,max)=>Number.isSafeInteger(n)&&n>=0&&n<=max;
  return r && (r.version??1)===1 && /^[a-zA-Z0-9-]{8,100}$/.test(r.id) && ['notes','chords','play'].includes(r.mode)
  && (r.piece_id==null||typeof r.piece_id==='string'&&/^[a-fA-F0-9]{64}$/.test(r.piece_id))
+ && (r.context==null || r.mode==='play' && validContext(r.context))
+ && (r.matched_targets==null || r.mode==='play' && r.context && Array.isArray(r.matched_targets)
+ && r.matched_targets.length===(r.song_correct??0) && r.matched_targets.length<=1000000
+ && r.matched_targets.every((p,i,a)=>Array.isArray(p)&&p.length===2&&Number.isSafeInteger(p[0])&&p[0]>=r.context.passage.start_us&&p[0]<r.context.passage.end_us
+ && Number.isInteger(p[1])&&p[1]>=0&&p[1]<128&&(!i||a[i-1][0]<p[0]||a[i-1][0]===p[0]&&a[i-1][1]<p[1])))
+ && (r.input_sources==null||Array.isArray(r.input_sources)&&r.input_sources.length<=4&&r.input_sources.every((s,i,a)=>['midi','computer','pointer','touch'].includes(s)&&(!i||a[i-1]<s)))
  && int(r.clef??0,2)&&int(r.level??0,2)
  && typeof r.label==='string'&&r.label.length<=100&&typeof r.finished==='boolean'
  && int(r.revision,4294967295)&&int(r.errors,100000)&&int(r.elapsed_ms,604800000)

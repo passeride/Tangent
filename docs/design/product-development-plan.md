@@ -214,3 +214,18 @@ Suggested branch: `feat/passage-practice-context`, based on the current integrat
 Scope: S0 result/state contradictions plus S1 proposed ADR, core passage/context model and backward-compatible storage. Keep loop UI for S2. Include migration fixtures and an updated story/gate checklist. This establishes the information necessary to deliver retries honestly.
 
 Planning completion check: all 24 stories mapped; R0–R6 sequenced; first release bounded; dependencies and unresolved decisions explicit; module ownership, estimates, risks and test/research gates supplied. Runtime implementation remains separate work.
+
+## Implementation log — 2026-10-26
+
+The owner subsequently authorized merging this plan and implementation on main.
+Initial S1/S2/S4 behavior is implemented in ADR-0021: source-time A–B loop,
+explicit imported parts, separate repetition attempts, context/evidence storage,
+compatible recent pitch-score summaries and direct weak-range retry. Loop markers
+are draggable; Set A/B and ordinary seek controls offer a non-drag path.
+
+This is an initial passage-practice slice, not all of G1/R1. Remaining gaps:
+authored measure/repeat-visit snapping, per-staff/voice targets, exact-source
+reopening from history, full R0 first-run/Continue audit, and physical P-45/native
+GPU validation. S5–S10 remain planned. Automated evidence is recorded in
+practice-progress and the committed passage-smoke test; no participant study or
+hardware measurements are claimed.

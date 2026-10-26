@@ -4,7 +4,7 @@ use super::{controls::Action, draw::Drawing, *};
 
 pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
     let w = (l.width - 28.).min(570.);
-    let h = (l.height - 24.).min(if state.mode == Mode::Play { 412. } else { 370. });
+    let h = (l.height - 24.).min(if state.mode == Mode::Play { 532. } else { 370. });
     let x = (l.width - w) * 0.5;
     let y = (l.height - h) * 0.5;
     d.rect(x, y, w, h, t.panel, 14.);
@@ -79,7 +79,7 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
         );
     }
 
-    let offset = if state.mode == Mode::Play { 42. } else { 0. };
+    let offset = if state.mode == Mode::Play { 162. } else { 0. };
     if state.mode == Mode::Play {
         let label = format!("{}% / reset", state.transport.rate().percent());
         for (i, (label, action)) in [
@@ -100,6 +100,33 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
                 t,
             );
         }
+    }
+    if state.mode == Mode::Play {
+        for (i, (label, action)) in [
+            ("Set A", Action::LoopA),
+            ("Set B", Action::LoopB),
+            ("Clear loop", Action::LoopClear),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            d.button(
+                state,
+                inner + i as f32 * (third + gap),
+                y + 220.,
+                third,
+                label,
+                action,
+                t,
+            );
+        }
+        d.text(inner, y + 260., passage::label(state), 11., t.colors[0]);
+        let part = state
+            .selected_part
+            .and_then(|i| state.song.parts.get(i))
+            .map_or("All parts", |p| p.name.as_str());
+        let label = format!("Targets: {}", part.chars().take(34).collect::<String>());
+        d.button(state, inner, y + 284., usable, label, Action::Part, t);
     }
     let half = (usable - gap) * 0.5;
     let view_label = format!("View: {}", state.view.name());
@@ -175,7 +202,15 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
         d.text(
             inner,
             y + 320. + offset,
-            "Space resumes / Esc closes while staying paused",
+            if state.mode == Mode::Play {
+                state
+                    .status
+                    .chars()
+                    .take((usable / 6.) as usize)
+                    .collect::<String>()
+            } else {
+                "Space resumes / Esc closes while staying paused".into()
+            },
             11.,
             t.muted,
         );

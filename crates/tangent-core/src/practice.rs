@@ -320,14 +320,27 @@ impl SongHits {
     pub fn reset(&mut self) {
         self.0.clear();
     }
+    pub fn targets(&self) -> Vec<(u64, u8)> {
+        self.0.iter().copied().collect()
+    }
     /// Award each target once per transport run. Reattacking a held target
     /// remains neutral instead of farming streak milestones.
     pub fn judge(&mut self, song: &crate::music::Song, position_us: u64, key: u8) -> Grade {
+        self.judge_selection(song, position_us, key, None)
+    }
+    pub fn judge_selection(
+        &mut self,
+        song: &crate::music::Song,
+        position_us: u64,
+        key: u8,
+        context: Option<&crate::passage::SongContext>,
+    ) -> Grade {
         let candidates: Vec<_> = song
             .notes
             .iter()
             .filter(|n| {
                 n.key == key
+                    && context.is_none_or(|c| c.includes(n))
                     && song.parts.get(n.part).is_some_and(|p| !p.percussion)
                     && n.start_us <= position_us.saturating_add(180_000)
                     && n.end_us.saturating_add(180_000) >= position_us

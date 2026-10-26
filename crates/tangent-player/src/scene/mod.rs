@@ -5,6 +5,7 @@ mod effects;
 mod layout;
 mod library;
 mod menu;
+mod passage;
 mod platform;
 mod practice_view;
 mod score;
@@ -97,6 +98,9 @@ pub struct State {
     song: Song,
     piece_id: String,
     transport: Transport,
+    loop_a: Option<u64>,
+    loop_drag: Option<(String, bool)>,
+    selected_part: Option<usize>,
     piano: PianoLayout,
     view: View,
     theme: usize,
@@ -176,6 +180,9 @@ impl State {
             .to_hex()
             .to_string(),
             transport: Transport::new(duration_us),
+            loop_a: None,
+            loop_drag: None,
+            selected_part: None,
             piano: PianoLayout::new(21, 108).unwrap(),
             view: View::Blocks,
             theme: 0,
@@ -299,7 +306,7 @@ impl State {
         // Zero matches: retain the preference and let a future Rescan retry.
     }
     fn sync(&self) {
-        platform::action("transport",&serde_json::json!({"position":self.transport.position_us,"playing":self.transport.playing && self.mode==Mode::Play && self.screen==Screen::Session && !self.help,"volume":self.volume,"hear":self.hear,"speed_percent":self.transport.rate().percent(),"instrument":self.instrument}).to_string());
+        platform::action("transport",&serde_json::json!({"position":self.transport.position_us,"playing":self.transport.playing && self.mode==Mode::Play && self.screen==Screen::Session && !self.help,"volume":self.volume,"hear":self.hear,"speed_percent":self.transport.rate().percent(),"loop_end_us":self.transport.passage().map(|p| p.end_us),"instrument":self.instrument}).to_string());
     }
     fn source(&mut self, id: String, key: Option<u8>, velocity: u8) {
         if self.held.get(&id).copied() == key {
@@ -332,13 +339,36 @@ impl State {
             self.stop_reference();
             self.held.insert(id.clone(), key);
             self.capture_for_recognition(key);
+            if self.mode == Mode::Play
+                && self.transport.playing
+                && let Some(run) = &mut self.training.model.run
+            {
+                let category = if id.starts_with("midi:") {
+                    "midi"
+                } else if id.starts_with("key:") {
+                    "computer"
+                } else if id.starts_with("touch:") {
+                    "touch"
+                } else {
+                    "pointer"
+                };
+                if let Some(sources) = &mut run.input_sources
+                    && !sources.iter().any(|s| s == category)
+                {
+                    sources.push(category.into());
+                    sources.sort();
+                    run.revision += 1;
+                }
+            }
             // Never judge backing-track playback as a player hit. A partial
             // chord is not wrong merely because the other fingers are pending.
+            let selection = passage::context(self);
             let grade = match self.mode {
-                Mode::Play if self.transport.playing => Some(self.song_hits.judge(
+                Mode::Play if self.transport.playing => Some(self.song_hits.judge_selection(
                     &self.song,
                     self.transport.position_us,
                     key,
+                    Some(&selection),
                 )),
                 Mode::Play | Mode::FreeForm => Some(effects::Grade::Neutral),
                 Mode::Notes | Mode::Chords => {
@@ -508,7 +538,19 @@ fn update(mut state: ResMut<State>, time: Res<Time>, windows: Query<&Window>) {
         state.panic();
     }
     let was = state.transport.playing;
-    state.transport.advance(elapsed);
+    let wraps = state.transport.advance(elapsed);
+    if wraps > 0 {
+        let next = state.transport.position_us;
+        if let Some(p) = state.transport.passage() {
+            state.transport.position_us = p.end_us;
+            training::end(&mut state, false);
+            state.transport.position_us = next;
+            training::start_song(&mut state);
+            state.previous.clear();
+            state.feedback.reset();
+            state.sync();
+        }
+    }
     if was && !state.transport.playing {
         if state.mode == Mode::Play && state.training.model.run.is_some() {
             training::end(&mut state, true);
@@ -689,6 +731,9 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
             state.panic();
             let rate = state.transport.rate();
             state.transport = Transport::new(song.duration_us);
+            state.loop_a = None;
+            state.loop_drag = None;
+            state.selected_part = None;
             state.transport.set_rate(rate);
             state.status = format!(
                 "{} notes loaded. {}",

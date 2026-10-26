@@ -47,5 +47,19 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     } else {
         detail
     };
-    d.text(x, 31., detail, 11., t.muted);
+    let detail = if state.transport.passage().is_some() {
+        format!("{detail} / {}", passage::label(state))
+    } else {
+        detail
+    };
+    d.text(
+        x,
+        31.,
+        detail
+            .chars()
+            .take(((l.width - x - 75.) / 6.).max(1.) as usize)
+            .collect::<String>(),
+        11.,
+        t.muted,
+    );
 }
