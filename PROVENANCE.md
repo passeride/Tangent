@@ -233,3 +233,12 @@ platform dependency; adapters only handle file bytes and existing SQLite setting
 No excluded project source or asset was consulted or imported. No package was
 added; serde's existing rc feature supports immutable shared accepted profiles.
 ADR-0025 records scope, persistence and explicit initial alignment limitations.
+
+## Internationalized UI text — 2026-10-26
+
+The unmodified, independently licensed Noto Sans Regular font is now embedded
+in the shared Bevy renderer for UI text, replacing use of the limited default
+Fira Mono subset. Bravura remains the notation font. Noto Sans is distributed
+under SIL OFL 1.1; pinned source, content hash, copyright and license are in
+[the design asset register](docs/design/assets/README.md). No legacy project
+assets or implementation were copied.
