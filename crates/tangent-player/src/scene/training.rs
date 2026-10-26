@@ -48,15 +48,12 @@ pub(super) fn checkpoint(state: &mut State) {
 }
 pub(super) fn end(state: &mut State, show: bool) {
     if let Some(mut run) = state.training.model.run.take() {
-        run.finished = if run.mode == "play" {
+        let complete = if run.mode == "play" {
             state.transport.position_us >= state.transport.duration_us
         } else {
             run.trials.len() >= SESSION_LENGTH
         };
-        if run.mode == "play" {
-            run.song_missed = run.song_total.saturating_sub(run.song_correct);
-        }
-        run.revision += 1;
+        run.close(complete);
         if run.meaningful() {
             state.training.pending.insert(run.id.clone(), run.clone());
             platform::action("progress-save", &serde_json::to_string(&run).unwrap());
@@ -77,15 +74,7 @@ pub(super) fn grade(state: &mut State, grade: effects::Grade) {
         if let Some(r) = &mut state.training.model.run
             && r.mode == "play"
         {
-            match grade {
-                effects::Grade::Correct => {
-                    r.song_correct += 1;
-                    r.points += 100;
-                }
-                effects::Grade::Wrong => r.errors += 1,
-                _ => return,
-            }
-            r.revision += 1;
+            r.song_input(grade);
         }
         return;
     }
@@ -97,7 +86,11 @@ pub(super) fn grade(state: &mut State, grade: effects::Grade) {
         effects::Grade::Wrong => state.training.model.mistake(),
         _ => return,
     }
-    checkpoint(state);
+    if grade == effects::Grade::Correct {
+        checkpoint(state);
+    } else if let Some(r) = &state.training.model.run {
+        state.training.pending.insert(r.id.clone(), r.clone());
+    }
 }
 pub(super) fn released(state: &mut State) {
     if state
@@ -212,7 +205,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 x,
                 188.,
                 format!(
-                    "{} input errors / {} assisted / {} skipped",
+                    "{} errors / {} assisted / {} skipped",
                     r.errors,
                     r.trials.iter().filter(|t| t.assisted).count(),
                     r.trials.iter().filter(|t| t.skipped).count()
@@ -237,7 +230,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         d.text(
             x,
             242.,
-            "100 first try / 40 corrected / 0 helped or skipped",
+            if state.mode == Mode::Play {
+                "100 per target / percentage is pitch coverage"
+            } else {
+                "100 first try / 40 corrected / 0 helped or skipped"
+            },
             if l.width < 600. { 10. } else { 12. },
             t.muted,
         );
@@ -246,7 +243,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             x,
             265.,
             (w / 2. - 6.).min(220.),
-            "Practice again",
+            if state.mode == Mode::Play {
+                "Play again"
+            } else {
+                "Practice again"
+            },
             Action::PracticeAgain,
             t,
         );
@@ -318,10 +319,15 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 x + 10.,
                 y + 28.,
                 format!(
-                    "{} pts / {} solved / {}% first try / {}",
+                    "{} pts / {} solved / {}% {} / {}",
                     r.points,
                     r.solved(),
                     r.accuracy().unwrap_or(0),
+                    if r.mode == "play" {
+                        "coverage"
+                    } else {
+                        "first try"
+                    },
                     if r.finished { "complete" } else { "partial" }
                 ),
                 11.,
@@ -342,4 +348,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         11.,
         t.muted,
     );
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(super) fn on_exit(mut state: ResMut<State>, mut exits: MessageReader<bevy::app::AppExit>) {
+    if exits.read().next().is_some() {
+        end(&mut state, false);
+    }
 }

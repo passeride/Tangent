@@ -56,6 +56,27 @@ impl Run {
         r.song_total = total;
         r
     }
+    pub fn song_input(&mut self, grade: crate::practice::Grade) {
+        if self.mode != "play" {
+            return;
+        }
+        match grade {
+            crate::practice::Grade::Correct if self.song_correct < self.song_total => {
+                self.song_correct += 1;
+                self.points += 100;
+            }
+            crate::practice::Grade::Wrong => self.errors = (self.errors + 1).min(100000),
+            _ => return,
+        }
+        self.revision += 1;
+    }
+    pub fn close(&mut self, complete: bool) {
+        self.finished = complete;
+        if self.mode == "play" {
+            self.song_missed = self.song_total.saturating_sub(self.song_correct);
+        }
+        self.revision += 1;
+    }
     pub fn solved(&self) -> usize {
         if self.mode == "play" {
             return self.song_correct as usize;
@@ -93,6 +114,11 @@ impl Run {
             && matches!(self.mode.as_str(), "notes" | "chords" | "play")
             && self.label.len() <= 100
             && self.trials.len() <= SESSION_LENGTH
+            && ((self.mode == "play" && self.trials.is_empty())
+                || (self.mode != "play"
+                    && self.song_total == 0
+                    && self.song_correct == 0
+                    && self.song_missed == 0))
             && self.song_total <= 100000
             && self.song_correct <= self.song_total
             && self.song_missed <= self.song_total
@@ -249,6 +275,24 @@ pub fn skill(p: &Practice) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn song_coverage_and_misses_are_not_rhythm_accuracy() {
+        let mut r = Run::song("song-session".into(), "Test".into(), 3);
+        r.song_input(crate::practice::Grade::Correct);
+        r.song_input(crate::practice::Grade::Neutral);
+        r.song_input(crate::practice::Grade::Wrong);
+        r.close(true);
+        assert_eq!(r.points, 100);
+        assert_eq!(r.song_missed, 2);
+        assert_eq!(r.accuracy(), Some(33));
+        assert!(r.validate());
+        let mut empty = Run::song("empty-session".into(), "Test".into(), 3);
+        empty.close(true);
+        assert!(empty.meaningful());
+        assert_eq!(empty.accuracy(), Some(0));
+        empty.song_correct = u32::MAX;
+        assert!(!empty.validate());
+    }
     #[test]
     fn fair_points_assistance_and_skip() {
         let p = Practice::default();

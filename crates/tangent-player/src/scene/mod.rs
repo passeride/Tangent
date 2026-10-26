@@ -478,7 +478,8 @@ pub fn run() {
     #[cfg(not(target_arch = "wasm32"))]
     effects::gpu::install(&mut app);
     #[cfg(not(target_arch = "wasm32"))]
-    app.add_systems(Update, platform::native_window);
+    app.add_systems(Update, platform::native_window)
+        .add_systems(Last, training::on_exit);
     app.run();
     #[cfg(not(target_arch = "wasm32"))]
     platform::shutdown();
