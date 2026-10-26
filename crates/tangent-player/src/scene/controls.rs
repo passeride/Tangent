@@ -169,7 +169,15 @@ impl Action {
 fn activate(state: &mut State, action: Action, shift: bool) {
     state.focused_button = None;
     if state.mode != Mode::Play
-        && matches!(action, Action::Restart | Action::Back | Action::Forward)
+        && matches!(
+            action,
+            Action::Restart
+                | Action::Back
+                | Action::Forward
+                | Action::Slower
+                | Action::Faster
+                | Action::NormalSpeed
+        )
     {
         return;
     }
@@ -829,8 +837,8 @@ pub fn input(
     for (key, action) in [
         (KeyCode::ArrowLeft, Action::Back),
         (KeyCode::ArrowRight, Action::Forward),
-        (KeyCode::ArrowDown, Action::Quieter),
-        (KeyCode::ArrowUp, Action::Louder),
+        (KeyCode::ArrowDown, Action::Slower),
+        (KeyCode::ArrowUp, Action::Faster),
     ] {
         if !state.help
             && (keys.just_pressed(key) || (keys.pressed(key) && state.arrow_repeat <= 0.))

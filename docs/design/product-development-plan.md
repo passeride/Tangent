@@ -269,3 +269,13 @@ release/self-test and archive checks. The 20,001-target fixture confirms bounded
 new detail, retained totals and legacy larger-record readability. Product captures
 reproduce through TANGENT_CAPTURE_PRODUCT=1 node web/piano/capture.mjs. Physical
 P-45/GPU testing and participant research remain separate gates.
+
+Historical-result comparison follow-up: the previous compatible attempt is selected
+by the nearest strictly earlier nonzero start timestamp, independent of history
+ordering. Future attempts, equal/unknown timestamps and the same run are excluded;
+compatibility still requires identical source, passage, tempo, aids and input.
+This prevents opening an older result from reporting a newer attempt as previous.
+Regression coverage includes unordered history and changed playback speed.
+Local validation for this follow-up: all 34 tangent-core tests, warnings-denied
+core Clippy, workspace formatting, diff checks and web/native progress-schema
+parity tests pass. Full application builds/browser regression run in CI.

@@ -78,7 +78,7 @@ inside one full-window GPU canvas. The former Canvas 2D modules are removed.
 The shell has only that canvas, a hidden OS file picker and a startup-error fallback.
 The renderer uses wgpu with WebGL2; unsupported GPUs/browsers show a startup error.
 
-Space plays/pauses; Left/Right seek 5s (Shift 15s); Up/Down adjust volume 5%;
+Space plays/pauses; Left/Right seek 5s (Shift 15s); Up/Down adjust playback speed by 5 percentage points;
 Home/End; F11 fullscreen; F1 settings; Esc closes settings; V view; B theme;
 M song sound; P sparkles; X piano; R range; Ctrl+O import; Ctrl+B XML demo; Ctrl+M MIDI.
 A W S E D F T G Y H U J K remain the piano keys.

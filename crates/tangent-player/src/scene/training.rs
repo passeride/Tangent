@@ -410,12 +410,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                         },
                         |p| p.name.clone(),
                     );
-                let previous = state
-                    .training
-                    .model
-                    .history
-                    .iter()
-                    .find(|h| h.id != r.id && h.comparable_to(r));
+                let previous = r.previous_comparable(&state.training.model.history);
                 let change = previous
                     .and_then(|h| r.matched_change(h))
                     .map_or("No comparable previous attempt".into(), |delta| {

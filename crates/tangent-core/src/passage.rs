@@ -191,6 +191,51 @@ mod integration_tests {
         assert!(!a.comparable_to(&b));
     }
     #[test]
+    fn previous_attempt_is_earlier_compatible_and_independent_of_history_order() {
+        let mut current = Run::song("current-attempt".into(), "Test".into(), 3);
+        current.piece_id = Some("a".repeat(64));
+        current.input_sources = Some(vec!["midi".into()]);
+        current.context = Some(context());
+        current.started_unix_ms = 300;
+        current.close(true);
+        let make = |id: &str, at| {
+            let mut run = current.clone();
+            run.id = id.into();
+            run.started_unix_ms = at;
+            run
+        };
+        let mut incompatible = make("different-speed", 250);
+        incompatible.context.as_mut().unwrap().speed_percent = 80;
+        let mut history = vec![
+            make("future-attempt", 400),
+            make("older-attempt", 100),
+            make("previous-attempt", 200),
+            make("same-time", 300),
+            make("unknown-time", 0),
+            incompatible,
+            current.clone(),
+        ];
+        assert_eq!(
+            current.previous_comparable(&history).unwrap().id,
+            "previous-attempt"
+        );
+        history.reverse();
+        assert_eq!(
+            current.previous_comparable(&history).unwrap().id,
+            "previous-attempt"
+        );
+        assert!(
+            history
+                .iter()
+                .find(|r| r.id == "older-attempt")
+                .unwrap()
+                .previous_comparable(&history)
+                .is_none()
+        );
+        current.started_unix_ms = 0;
+        assert!(current.previous_comparable(&history).is_none());
+    }
+    #[test]
     fn weak_section_uses_actual_missing_targets_and_stable_ties() {
         let song = song();
         let mut run = Run::song("test-session".into(), "Test".into(), 3);

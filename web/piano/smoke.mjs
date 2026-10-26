@@ -134,10 +134,16 @@ try {
   await page.waitForFunction(() => tangentDiagnostics().live.includes(61));
   await page.mouse.up();
   await page.waitForFunction(() => tangentDiagnostics().live.length === 0);
+  const beforeArrows = await page.evaluate(() => ({
+    speed: tangentDiagnostics().preferences.speed_percent,
+    volume: tangentDiagnostics().volume,
+  }));
   await page.keyboard.press("ArrowUp");
-  await page.waitForFunction(() => tangentDiagnostics().volume > 0.49);
+  await page.waitForFunction(speed => tangentDiagnostics().preferences.speed_percent === speed + 5, beforeArrows.speed);
   await page.keyboard.press("ArrowDown");
-  await page.waitForFunction(() => tangentDiagnostics().volume < 0.46);
+  await page.waitForFunction(speed => tangentDiagnostics().preferences.speed_percent === speed, beforeArrows.speed);
+  assert.equal(await page.evaluate(() => tangentDiagnostics().volume), beforeArrows.volume);
+  assert.equal(await page.evaluate(() => tangentDiagnostics().playing), false);
   await page.keyboard.press("ArrowRight");
   await page.waitForFunction(() => tangentDiagnostics().position === 5_000_000);
   await page.keyboard.press("Shift+ArrowRight");
@@ -309,7 +315,7 @@ try {
   await noGpu.close();
   assert.deepEqual(errors, []);
   console.log(
-    "Bevy GPU browser passed: one canvas, in-GPU controls, staff notes, sound, transport/volume shortcuts, fullscreen, settings, MusicXML measures/endings, repeats and responsive viewport.",
+    "Bevy GPU browser passed: one canvas, in-GPU controls, staff notes, sound, transport/tempo shortcuts, fullscreen, settings, MusicXML measures/endings, repeats and responsive viewport.",
   );
 } finally {
   await browser?.close();

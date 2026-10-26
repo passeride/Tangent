@@ -40,3 +40,11 @@ rounding. Browser clock tests check deadlines, lookahead and reanchoring. Real
 Bevy browser tests measure source-time progression, sound, persisted speed,
 reset, import retention, MIDI pitches/note-on/off spacing and mobile bounds.
 Native/WASM compilation, Clippy and packaged-site checks verify integration.
+
+## Keyboard controls — 2026-10-26
+
+In the Play session, Up/Down change speed by five percentage points using the
+same bounded, persisted actions as Pause. Left/Right seek five source seconds;
+Shift+Left/Right seek fifteen. Paused transport remains paused. Settings/pause
+overlays retain their existing focus navigation; tempo shortcuts do not change
+Train/FreeForm. Volume remains available in Audio & MIDI settings.

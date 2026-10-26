@@ -201,7 +201,7 @@ require their own records when introduced.
 | --- | --- |
 | Play / pause | Space |
 | Seek backward / forward | Left / Right (5s), Shift for 15s |
-| Volume down / up | Down / Up (5%) |
+| Playback speed down / up | Down / Up (5 percentage points; 25–200%) |
 | Beginning / end | Home / End |
 | Fullscreen | F11 or Settings → Visuals |
 | Pause / Settings | Corner gear or Esc/F1 (session); Settings from pause or Main; Space resumes from pause |

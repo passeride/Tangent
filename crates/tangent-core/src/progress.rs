@@ -215,6 +215,26 @@ impl Run {
             c.duration_us,
         )
     }
+    /// Nearest strictly earlier compatible attempt, independent of storage ordering.
+    /// Equal or absent timestamps cannot establish which attempt came first.
+    pub fn previous_comparable<'a>(&self, history: &'a [Self]) -> Option<&'a Self> {
+        if self.started_unix_ms == 0 {
+            return None;
+        }
+        history
+            .iter()
+            .filter(|run| {
+                run.id != self.id
+                    && run.started_unix_ms > 0
+                    && run.started_unix_ms < self.started_unix_ms
+                    && self.comparable_to(run)
+            })
+            .max_by(|a, b| {
+                a.started_unix_ms
+                    .cmp(&b.started_unix_ms)
+                    .then_with(|| a.id.cmp(&b.id))
+            })
+    }
     pub fn matched_change(&self, other: &Self) -> Option<i32> {
         self.comparable_to(other)
             .then_some(self.song_correct as i32 - other.song_correct as i32)
