@@ -16,6 +16,7 @@ struct Shape {
     r: Rect,
     color: Color,
     radius: f32,
+    image: Option<Handle<Image>>,
 }
 pub(super) struct Label {
     x: f32,
@@ -38,8 +39,17 @@ impl Drawing {
                 r: Rect { x, y, w, h },
                 color,
                 radius,
+                image: None,
             });
         }
+    }
+    fn image(&mut self, r: Rect, image: Handle<Image>) {
+        self.shapes.push(Shape {
+            r,
+            color: Color::WHITE,
+            radius: 0.,
+            image: Some(image),
+        });
     }
     pub(super) fn text(
         &mut self,
@@ -187,6 +197,7 @@ pub fn render(
     mut commands: Commands,
     mut state: ResMut<State>,
     mut pool: ResMut<Pool>,
+    piano_scene: Res<piano3d::PianoScene>,
     windows: Query<&Window>,
     music_font: Res<MusicFont>,
     ui_font: Res<UiFont>,
@@ -384,7 +395,7 @@ pub fn render(
                 );
             }
         }
-        keyboard(&mut d, &state, &l, t);
+        keyboard(&mut d, &state, &l, t, &piano_scene.image);
         if matches!(state.mode, Mode::Notes | Mode::Chords) {
             super::practice_view::render(&mut d, &mut state, &l, t);
         }
@@ -447,7 +458,7 @@ pub fn render(
                     falling(&mut d, &state, &l, t);
                 }
             }
-            keyboard(&mut d, &state, &l, t);
+            keyboard(&mut d, &state, &l, t, &piano_scene.image);
             d.labels.clear();
             d.rect(0., 0., l.width, l.height, t.bg.with_alpha(0.82), 0.);
         }
@@ -536,7 +547,7 @@ pub fn render(
             .collect();
         let mut report = serde_json::json!({"status":state.status,"title":state.song.title,"library_total":state.library.total,"library_items":state.library.items,"library_editing":state.library.edit.is_some(),"library_focus":state.library.focus.map(|f|match f {library::Field::Search=>"search",library::Field::Title=>"title",library::Field::Composer=>"composer"}),"library_query":state.library.query,"library_sort":library::SORTS[state.library.sort],"library_format":library::FORMATS[state.library.format],"library_status":state.library.status,"screen":format!("{:?}",state.screen),"mode":format!("{:?}",state.mode),"completed":state.practice.completed,"preferences":state.preferences(),"storage_status":state.storage_status,"target":state.practice.target(),"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"settings_open":state.settings_open,"settings_tab":state.settings_tab.title(),"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_ranges":state.song.notation.as_ref().map(|s|s.playback.iter().take(200).map(|v|serde_json::json!({"start_us":v.start_us,"end_us":v.end_us,"measure":v.measure,"pass":v.pass})).collect::<Vec<_>>()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())});
         report.as_object_mut().unwrap().extend(serde_json::json!({"practice_run":state.training.model.run,"practice_result":state.training.result,"progress_history":state.training.model.history.iter().take(12).collect::<Vec<_>>(),"progress_pending":state.training.pending.len(),"bindings_page":state.shortcuts.page,"bindings_status":state.shortcuts.status,"bindings_capture":state.shortcuts.capture.is_some(),"progress_status":state.training.status,"adaptive":state.training.model.adaptive,"hud_labels":d.labels.iter().filter(|s|s.y<70.).map(|s|s.text.as_str()).collect::<Vec<_>>(),"offscreen":super::session_hud::offscreen(&state),"goal":state.goal.as_ref().map(|g|serde_json::json!({"completed":g.model.completed(),"required":g.model.required(),"reached":g.model.reached()})),"loop":state.transport.passage(),"loop_a":state.loop_a,"selected_part":state.selected_part,"focused_control":state.focused_button.and_then(|i|state.buttons.get(i)).map(|(_,a)|a.id()),"practice_played_label":d.labels.iter().find(|s|s.text.starts_with("Played ")).map(|s|s.text.as_str()),"reference_keys":state.reference_keys,"vfx_scale":effects::viewport_scale(l.width,l.height),"vfx_particles":state.particles.len(),"vfx_ripples":state.ripples.len(),"practice_waiting_release":state.practice.waiting_release,"streak":state.feedback.streak(),"best_streak":state.feedback.best(),"effects_backend":if cfg!(target_arch="wasm32") {"webgl2-fallback"} else {"hanabi+ui"},"practice_wrong":state.practice.wrong,"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output,"midi_output_preferred":state.preferred_midi_output,"midi_outputs":state.midi_outputs.iter().map(|p|serde_json::json!({"id":p.id,"name":p.name})).collect::<Vec<_>>(),"midi_dropdown_open":state.midi_dropdown_open,"midi_dropdown_page":state.midi_dropdown_page}).as_object().unwrap().clone());
-        report.as_object_mut().unwrap().extend(serde_json::json!({"personal_open":state.personal.open,"personal_token":state.personal.token,"personal_status":state.personal.status,"personal_matched":state.personal.matched,"personal_unresolved":state.personal.unresolved}).as_object().unwrap().clone());
+        report.as_object_mut().unwrap().extend(serde_json::json!({"piano_renderer":"bevy-pbr-3d","piano_keys":state.piano.keys.len(),"personal_open":state.personal.open,"personal_token":state.personal.token,"personal_status":state.personal.status,"personal_matched":state.personal.matched,"personal_unresolved":state.personal.unresolved}).as_object().unwrap().clone());
         platform::report(&report.to_string());
     }
     apply(&mut commands, &mut pool, d, &music_font.0, &ui_font.0);
@@ -570,6 +581,13 @@ fn apply(
                 GlobalZIndex(i as i32),
                 Visibility::Visible,
             ));
+            if let Some(image) = &s.image {
+                commands
+                    .entity(entity)
+                    .insert(ImageNode::new(image.clone()));
+            } else {
+                commands.entity(entity).remove::<ImageNode>();
+            }
         } else {
             commands.entity(entity).insert(Visibility::Hidden);
         }
@@ -631,7 +649,7 @@ fn gear(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
         Action::Help,
     ));
 }
-fn expected_keys(state: &State) -> BTreeSet<u8> {
+pub(super) fn expected_keys(state: &State) -> BTreeSet<u8> {
     if matches!(state.mode, Mode::Notes | Mode::Chords) {
         return if state.practice.hint {
             state.practice.target().into_iter().collect()
@@ -656,75 +674,56 @@ fn expected_keys(state: &State) -> BTreeSet<u8> {
         .map(|n| n.key)
         .collect()
 }
-fn keyboard(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
+fn keyboard(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme, image: &Handle<Image>) {
+    d.image(piano3d::rect(l), image.clone());
     let expected = expected_keys(state);
+    let cues = piano3d::cue_colors(state, t);
     let played: BTreeSet<_> = state.held.values().copied().collect();
-    let now = state.transport.position_us;
-    let mut hand_edges: BTreeMap<u8, Vec<Color>> = BTreeMap::new();
-    for n in state
-        .song
-        .notes
-        .iter()
-        .take_while(|n| n.start_us <= now)
-        .filter(|n| n.end_us > now && passage::context(state).includes(n))
-    {
-        let c = super::personal::note_color(state, n.id, t);
-        let colours = hand_edges.entry(n.key).or_default();
-        if !colours.contains(&c) && colours.len() < 2 {
-            colours.push(c);
-        }
-    }
-
-    for black in [false, true] {
-        for k in state.piano.keys.iter().filter(|k| k.black == black) {
-            let r = l.key(&state.piano, k.key).unwrap();
-            d.rect(
-                r.x + 1.,
-                r.y + 1.,
-                (r.w - 2.).max(1.),
-                r.h - 3.,
-                if played.contains(&k.key) {
-                    t.colors[0]
-                } else if black {
-                    t.black
-                } else {
-                    t.white
-                },
-                3.,
-            );
-            if expected.contains(&k.key) {
-                // Inset feathered edges keep the key body unfilled and avoid
-                // painting neighbouring keys. Black keys remain above whites.
-                let max = (r.w * 0.22).clamp(1., 5.);
-                for i in 0..4 {
-                    let inset = 1. + i as f32 * max / 4.;
-                    let w = (r.w - 2. * inset).max(1.);
-                    let h = (r.h - 3. - 2. * inset).max(1.);
-                    let base = hand_edges
-                        .get(&k.key)
-                        .filter(|v| !v.is_empty())
-                        .map_or(t.colors[0], |v| v[i % v.len()]);
-                    let color = base.with_alpha(0.8 - i as f32 * 0.17);
-                    let edge = (max / 4.).max(0.7);
-                    d.rect(r.x + inset, r.y + inset, w, edge, color, 1.);
-                    d.rect(r.x + inset, r.y + inset + h - edge, w, edge, color, 1.);
-                    d.rect(r.x + inset, r.y + inset, edge, h, color, 1.);
-                    d.rect(r.x + inset + w - edge, r.y + inset, edge, h, color, 1.);
-                }
-            }
-            if k.key % 12 == 0 && !black {
-                d.text(
-                    r.x + 3.,
-                    r.y + r.h - 19.,
-                    format!("C{}", k.key as i16 / 12 - 1),
-                    9.,
-                    t.muted,
+    for k in &state.piano.keys {
+        let r = l.key(&state.piano, k.key).unwrap();
+        let active = expected.contains(&k.key);
+        let down = played.contains(&k.key);
+        let color = if active {
+            cues.get(&k.key).copied().unwrap_or(t.colors[0])
+        } else {
+            t.colors[0]
+        };
+        if active || (down && state.effects) {
+            // Soft light spills above the strike rail, away from the playing
+            // surface. The actual key edges are emissive, occluded 3D geometry.
+            let spread = (l.unit * 0.45).clamp(3., 13.);
+            for i in (1..=5).rev() {
+                let halo = i as f32 * spread * 0.35;
+                d.rect(
+                    r.x + r.w * 0.12 - halo,
+                    l.strike - halo * 2.2,
+                    r.w * 0.76 + halo * 2.,
+                    halo * 2.2 + 2.,
+                    color.with_alpha(if active { 0.035 } else { 0.02 }),
+                    halo,
                 );
             }
+            d.rect(
+                r.x + r.w * 0.15,
+                l.strike - 1.,
+                r.w * 0.7,
+                2.,
+                color.with_alpha(0.85),
+                1.,
+            );
+        }
+        if k.key % 12 == 0 && !k.black && l.unit >= 12. {
+            d.text(
+                r.x + r.w * 0.25,
+                r.y + r.h - 20.,
+                format!("C{}", k.key as i16 / 12 - 1),
+                9.,
+                if down { t.bg } else { t.muted },
+            );
         }
     }
-    d.line(l.margin, l.strike, l.width - 2. * l.margin, 1., t.colors[0]);
 }
+
 fn staff(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
     for key in [43, 47, 50, 53, 57, 64, 67, 71, 74, 77] {
         if let Some(x) = l.center(&state.piano, key) {
@@ -811,8 +810,25 @@ fn falling(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
                 top,
                 r.w * 0.7,
                 (onset.min(l.strike) - top).max(3.),
-                color,
+                color.with_alpha(0.82),
                 4.,
+            );
+            let h = (onset.min(l.strike) - top).max(3.);
+            d.rect(
+                r.x + r.w * 0.19,
+                top + 1.,
+                (r.w * 0.08).max(1.),
+                (h - 2.).max(1.),
+                color.with_alpha(0.75),
+                2.,
+            );
+            d.rect(
+                r.x + r.w * 0.23,
+                top + 1.,
+                r.w * 0.48,
+                1.5,
+                t.ink.with_alpha(0.3),
+                1.,
             );
         }
     }

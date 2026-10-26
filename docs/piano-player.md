@@ -268,3 +268,7 @@ See ADR-0025 for exact limits and the broader design's follow-up work.
 
 Double-clicking library row text/background runs the same action as Open. It does
 not change the transport behavior of Open; Edit/Remove remain separate controls.
+
+## 3D keyboard — 2026-10-26
+
+The session keyboard now uses procedural chamfered 3D keys, case/cheeks, broad PBR lighting and live-key depression. A separate layer renders into the same Bevy UI surface; no extra canvas or JS renderer is used. Expected notes have luminous mesh edges and rail spill, held keys fill and depress, and reduced motion snaps their state. The target is capped at 2x density/4096px width. See [ADR-0026](adr/0026-procedural-3d-piano.md) for geometry and platform limits.

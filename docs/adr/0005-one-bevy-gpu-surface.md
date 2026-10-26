@@ -83,3 +83,7 @@ The pinned toolchain produced zero-length object/archive failures in multi-CGU
 WASM release builds in this environment. Release codegen-units is set to 1 after
 reproducing the failure with a clean target directory; keep this workaround visible
 and re-evaluate on a future toolchain update rather than silently changing Rust.
+
+## Camera composition amendment — 2026-10-26
+
+[ADR-0026](0026-procedural-3d-piano.md) amends the one-camera detail: a layer-isolated Camera3d renders the procedural piano into a Bevy UI texture. One App, one window/canvas, Bevy controls and the platform boundaries remain in force.

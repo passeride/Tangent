@@ -7,6 +7,7 @@ mod library;
 mod menu;
 mod passage;
 mod personal;
+mod piano3d;
 mod platform;
 mod practice_view;
 mod score;
@@ -539,7 +540,7 @@ pub fn run() {
         .add_systems(
             Startup,
             |mut commands: Commands, mut fonts: ResMut<Assets<Font>>| {
-                commands.spawn(Camera2d);
+                commands.spawn((Camera2d, IsDefaultUiCamera));
                 // Ship full UI typography with native and WASM builds.
                 commands.insert_resource(draw::UiFont(fonts.add(Font::from_bytes(
                     include_bytes!("../../assets/NotoSans-Regular.ttf").to_vec(),
@@ -550,6 +551,7 @@ pub fn run() {
             },
         )
         .add_systems(Update, (update, controls::input, draw::render).chain());
+    piano3d::install(&mut app);
     #[cfg(not(target_arch = "wasm32"))]
     effects::gpu::install(&mut app);
     #[cfg(not(target_arch = "wasm32"))]
