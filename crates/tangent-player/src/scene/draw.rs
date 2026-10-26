@@ -3,6 +3,9 @@ use super::{controls::Action, layout::Rect, *};
 use bevy::text::{FontSize, LineHeight};
 #[derive(Resource)]
 pub struct MusicFont(pub Handle<Font>);
+/// Unicode-capable text font, separate from the SMuFL music font.
+#[derive(Resource)]
+pub struct UiFont(pub Handle<Font>);
 use tangent_core::notation::{ledger_steps, reading_pitch};
 #[derive(Resource, Default)]
 pub struct Pool {
@@ -186,6 +189,7 @@ pub fn render(
     mut pool: ResMut<Pool>,
     windows: Query<&Window>,
     music_font: Res<MusicFont>,
+    ui_font: Res<UiFont>,
     mut clear_color: ResMut<ClearColor>,
 ) {
     let Ok(window) = windows.single() else {
@@ -577,10 +581,7 @@ fn apply(commands: &mut Commands, pool: &mut Pool, d: Drawing, music_font: &Hand
                 if s.music {
                     TextFont::from_font_size(s.size).with_font(music_font.clone())
                 } else {
-                    TextFont {
-                        font_size: FontSize::Px(s.size),
-                        ..default()
-                    }
+                    TextFont::from_font_size(s.size).with_font(ui_font.0.clone())
                 },
                 if s.music {
                     LineHeight::Px(s.size)
