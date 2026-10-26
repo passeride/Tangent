@@ -34,7 +34,11 @@ impl Run {
             id,
             revision: 0,
             mode: if p.chords { "chords" } else { "notes" }.into(),
-            label: format!("{} / {}", p.clef.name(), p.level.name()),
+            label: if p.chords {
+                p.curriculum_name().into()
+            } else {
+                format!("{} / {}", p.clef.name(), p.curriculum_name())
+            },
             points: 0,
             errors: 0,
             elapsed_ms: 0,

@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict';
+import {mkdir} from 'node:fs/promises';
+import {chromium} from 'playwright';
+import {serve,ready,click,gpuArgs} from './browser-helpers.mjs';
+const server=await serve(new URL('./',import.meta.url).pathname);
+const browser=await chromium.launch({headless:true,args:gpuArgs});
+try {
+ const page=await browser.newPage({viewport:{width:1280,height:800}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await ready(page,server.url);await click(page,'train');await click(page,'train-notes');
+ async function down(key) {
+  const r=await page.evaluate(key=>tangentDiagnostics().key_rects.find(r=>r.key===key),key);
+  await page.mouse.move(r.x+r.w/2,r.y+r.h*.85);await page.mouse.down();
+  await page.waitForFunction(key=>tangentDiagnostics().solid_keys.includes(key),key);
+ }
+ async function answer() {
+  const key=await page.evaluate(()=>tangentDiagnostics().target[0]);
+  await down(key);await page.waitForFunction(()=>tangentDiagnostics().practice_waiting_release);
+  await page.mouse.up();await page.waitForFunction(()=>tangentDiagnostics().solid_keys.length===0);
+ }
+ await answer();
+ await click(page,'practice-hint');await answer();
+ const target=await page.evaluate(()=>tangentDiagnostics().target[0]);
+ await down(target+1);await page.waitForFunction(()=>tangentDiagnostics().practice_wrong);await page.mouse.up();
+ await page.waitForFunction(()=>tangentDiagnostics().solid_keys.length===0);await answer();
+ await click(page,'practice-skip');
+ for(let i=4;i<12;i++)await answer();
+ await page.waitForFunction(()=>tangentDiagnostics().screen==='Results');
+ const result=await page.evaluate(()=>tangentDiagnostics().practice_result);
+ assert.equal(result.points,940);assert.equal(result.trials.length,12);assert.equal(result.errors,1);assert(result.finished);
+ assert.equal(result.trials.filter(t=>t.skipped).length,1);assert.equal(result.trials.filter(t=>t.assisted).length,1);
+ await page.waitForFunction(()=>tangentDiagnostics().progress_pending===0);
+ await mkdir(new URL('../../dist/verification/',import.meta.url),{recursive:true});
+ await page.screenshot({path:new URL('../../dist/verification/practice-results.png',import.meta.url).pathname});
+ await click(page,'progress');await page.waitForFunction(()=>tangentDiagnostics().progress_history.some(r=>r.id===tangentDiagnostics().practice_result.id));
+ await page.screenshot({path:new URL('../../dist/verification/practice-progress.png',import.meta.url).pathname});
+ await page.reload();await page.waitForFunction(()=>window.tangentDiagnostics?.()?.storage.ready);
+ await click(page,'progress');await page.waitForFunction(()=>tangentDiagnostics().progress_history.some(r=>r.points===940));
+ assert.equal((await page.evaluate(()=>tangentDiagnostics().progress_history)).filter(r=>r.id===result.id).length,1,'No duplicate history after checkpoints/reload');
+ await click(page,'main');await click(page,'train');await click(page,'train-notes');await click(page,'practice-adaptive');
+ const first=await page.evaluate(()=>tangentDiagnostics().target[0]);await answer();
+ const next=await page.evaluate(()=>tangentDiagnostics().target[0]);assert.notEqual(next,first);
+ await click(page,'practice-finish');await page.waitForFunction(()=>tangentDiagnostics().screen==='Results');
+ assert.equal((await page.evaluate(()=>tangentDiagnostics().practice_result)).finished,false);
+ await page.setViewportSize({width:390,height:844});
+ await page.waitForFunction(()=>tangentDiagnostics().width===390);
+ const small=await page.evaluate(()=>tangentDiagnostics());
+ assert(small.buttons.every(b=>b.x>=0&&b.x+b.w<=390&&b.y>=0&&b.y+b.h<=844));
+ await page.screenshot({path:new URL('../../dist/verification/practice-results-mobile.png',import.meta.url).pathname});
+ assert.deepEqual(errors,[]);
+ console.log('Scored practice browser: 12 tasks, assistance, correction, skip, exact points, results, durable unique history, adaptive review and mobile passed.');
+}finally{await browser.close();await server.close();}

@@ -63,6 +63,17 @@ impl Practice {
             ..Default::default()
         }
     }
+    pub fn curriculum_name(&self) -> &'static str {
+        if self.chords {
+            match self.level {
+                Level::Stepwise => "Diatonic triads",
+                Level::Mixed => "Major/minor triads",
+                Level::Chromatic => "Seventh chords",
+            }
+        } else {
+            self.level.name()
+        }
+    }
     pub fn target(&self) -> Vec<u8> {
         if let Some(keys) = &self.review_target {
             return keys.clone();
