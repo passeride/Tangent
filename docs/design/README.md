@@ -15,6 +15,22 @@ wireframes in [sketches](sketches/README.md), asset records in
 | [Piano player](piano-player.md) | Initial implementation | Owner-supplied sketch; not bundled | Four views, piano, sound and themes |
 | [Tangent UI/UX v2](tangent-ui-v2.md) | Design direction approved; not implemented | Interactive concept reviewed 2026-10-25; not bundled | Menus, navigation flow, player HUD, settings categories and design principles |
 
+## Current UX product research (2026-10-26)
+
+These documents are **research/proposals**, not shipped features or accepted architecture:
+
+| Document | Purpose |
+| --- | --- |
+| [Product north star](product-north-star.md) | Positioning, existing capability audit, product principles and learning loop |
+| [Competitive benchmark](competitive-benchmark-2026-10.md) | Clone Hero, Synthesia, Piano Marvel, Yousician, flowkey and Melodics, with primary sources |
+| [Personas and jobs](personas-and-jobs.md) | Four provisional personas and their conflicting needs |
+| [User journeys and stories](user-stories-and-journeys.md) | Four end-to-end journeys and 24 prioritized acceptance-testable stories |
+| [Gamification and feedback](gamification-and-feedback.md) | Feedback hierarchy, truthful score vocabulary, effects and game mechanics |
+| [UX roadmap](ux-roadmap.md) | Milestones R0–R6, dependencies, gates and suggested next slice |
+| [UX research plan](ux-research-plan.md) | Small user study, usability tasks, evidence collection and validation matrix |
+
+**Read order:** product strategy → benchmark → personas → journeys/stories → feedback → roadmap. Research plan validates the hypotheses. Existing approved [UI v2](tangent-ui-v2.md) remains the current presentation contract; this new strategy proposes later product capabilities rather than silently rewriting it.
+
 ## Initial design questions
 
 - **First use:** sound activation, device permissions, unsupported capabilities
