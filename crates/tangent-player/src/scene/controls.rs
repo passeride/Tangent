@@ -33,6 +33,9 @@ pub enum Action {
     TrainChords,
     Play,
     Restart,
+    Slower,
+    Faster,
+    NormalSpeed,
     Back,
     Forward,
     Quieter,
@@ -96,6 +99,9 @@ impl Action {
             Self::TrainNotes => "train-notes",
             Self::TrainChords => "train-chords",
             Self::Play => "play",
+            Self::Slower => "speed-slower",
+            Self::Faster => "speed-faster",
+            Self::NormalSpeed => "speed-reset",
             Self::Restart => "restart",
             Self::Back => "back",
             Self::Forward => "forward",
@@ -353,6 +359,22 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             }
             state.transport.playing = !state.transport.playing;
             state.clock = platform::clock_us();
+            state.sync();
+        }
+        Action::Slower | Action::Faster | Action::NormalSpeed => {
+            use tangent_core::transport::PlaybackRate;
+            let now = platform::clock_us();
+            state.transport.advance((now - state.clock).max(0.) as u64);
+            state.clock = now;
+            let current = state.transport.rate().percent();
+            let percent = match action {
+                Action::Slower => current.saturating_sub(5).max(PlaybackRate::MIN),
+                Action::Faster => (current + 5).min(PlaybackRate::MAX),
+                _ => 100,
+            };
+            state
+                .transport
+                .set_rate(PlaybackRate::new(percent).unwrap());
             state.sync();
         }
         Action::Restart => {

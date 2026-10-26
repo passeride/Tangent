@@ -184,3 +184,10 @@ art or samples were imported. Existing pinned BLAKE3 is now shared with WASM for
 exact source-file score identity; its original notices remain included. The
 bundled original CC0 study and Bravura/Fira font notices are preserved. Earlier
 source exposure remains disclosed above.
+
+## Playback speed — 2026-10-26
+
+Original bounded tempo model, audio-clock mapping, Bevy pause controls and
+synthetic MIDI/browser tests implement variable-speed song practice (ADR-0020).
+Existing audio/MIDI libraries and the original CC0 study are reused. No new
+dependencies, external samples or excluded legacy source/assets were imported.

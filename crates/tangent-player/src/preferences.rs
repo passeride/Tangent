@@ -19,6 +19,8 @@ pub struct Preferences {
     pub volume: f32,
     pub instrument: usize,
     pub hear: bool,
+    #[serde(default = "default_speed")]
+    pub speed_percent: u16,
     #[serde(default)]
     pub practice_hear: bool,
     pub first_key: u8,
@@ -27,6 +29,9 @@ pub struct Preferences {
     #[serde(default)]
     pub midi_output_name: Option<String>,
 }
+fn default_speed() -> u16 {
+    100
+}
 fn default_effect_strength() -> u8 {
     1
 }
@@ -34,6 +39,9 @@ impl Preferences {
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.version != 1 {
             return Err("Unsupported settings version");
+        }
+        if tangent_core::transport::PlaybackRate::new(self.speed_percent).is_none() {
+            return Err("Invalid playback speed");
         }
         if self.view > 3
             || self.theme > 2
@@ -78,6 +86,7 @@ mod tests {
             volume: 0.25,
             instrument: 1,
             hear: false,
+            speed_percent: 70,
             practice_hear: true,
             first_key: 36,
             last_key: 84,
@@ -100,15 +109,25 @@ mod tests {
         legacy.as_object_mut().unwrap().remove("practice_level");
         legacy.as_object_mut().unwrap().remove("adaptive_practice");
         legacy.as_object_mut().unwrap().remove("practice_hear");
+        legacy.as_object_mut().unwrap().remove("speed_percent");
         let old: Preferences = serde_json::from_value(legacy).unwrap();
         assert_eq!(old.midi_output_name, None);
         assert!(!old.reduced_motion);
         assert!(!old.practice_hear);
+        assert_eq!(old.speed_percent, 100);
         assert_eq!(old.effect_strength, 1);
         assert_eq!(old.practice_clef, 0);
         assert_eq!(old.practice_level, 0);
         assert!(old.validate().is_ok());
         for bad in [
+            Preferences {
+                speed_percent: 0,
+                ..settings()
+            },
+            Preferences {
+                speed_percent: 201,
+                ..settings()
+            },
             Preferences {
                 practice_clef: 3,
                 ..settings()

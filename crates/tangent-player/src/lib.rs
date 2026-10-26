@@ -46,10 +46,7 @@ impl Default for Player {
 impl Player {
     pub fn new() -> Self {
         let song = import::study();
-        let transport = Transport {
-            duration_us: song.duration_us,
-            ..Default::default()
-        };
+        let transport = Transport::new(song.duration_us);
         let mut app = App::new();
         app.insert_resource(Playback {
             song,
@@ -68,10 +65,7 @@ impl Player {
     pub fn load_music(&mut self, bytes: &[u8], title: String) -> Result<String, String> {
         let song = import::song(bytes, title)?;
         let json = serde_json::to_string(&song).unwrap();
-        let transport = Transport {
-            duration_us: song.duration_us,
-            ..Default::default()
-        };
+        let transport = Transport::new(song.duration_us);
         self.app.insert_resource(Playback {
             song,
             transport,

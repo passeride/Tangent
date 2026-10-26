@@ -216,3 +216,20 @@ CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_CODEGEN_UNITS=1; these are build workaround
 not runtime scoring options. The pinned toolchain was not changed. Physical P-45
 sound, hardware latency and Windows/native GPU behavior still require target-device
 checks; a Linux executable/import smoke is not that verification.
+
+## Playback tempo
+
+Open the pause gear in Play to select 25–200% speed in 5% steps. The percentage
+button resets to 100%; Resume continues from the same song position. The HUD
+shows the multiplier and the saved choice survives reload and music imports.
+Notation, synthesized song voices and external MIDI events follow the same
+source-song timeline while pitches stay unchanged. Existing MusicXML tempo
+changes are scaled too. Seeking moves source-song seconds. Reading exercises
+and live keyboard notes retain their normal behavior. See [ADR-0020](adr/0020-variable-playback-speed.md).
+
+Verification: 84 workspace Rust tests, native/WASM warnings-denied Clippy,
+release WASM and native executable self-test, source-time browser checks at
+60/70/120%, scaled MIDI note-on/off spacing, persisted settings/import retention,
+mobile pause bounds and packaged `/Tangent/` playback. The clock mapping tests
+are in `web/piano/playback-clock.test.mjs`; real-app acceptance is in
+`web/piano/speed-smoke.mjs`. Physical MIDI latency remains a device check.

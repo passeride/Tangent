@@ -4,7 +4,7 @@ use super::{controls::Action, draw::Drawing, *};
 
 pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
     let w = (l.width - 28.).min(570.);
-    let h = (l.height - 24.).min(370.);
+    let h = (l.height - 24.).min(if state.mode == Mode::Play { 412. } else { 370. });
     let x = (l.width - w) * 0.5;
     let y = (l.height - h) * 0.5;
     d.rect(x, y, w, h, t.panel, 14.);
@@ -79,6 +79,28 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
         );
     }
 
+    let offset = if state.mode == Mode::Play { 42. } else { 0. };
+    if state.mode == Mode::Play {
+        let label = format!("{}% / reset", state.transport.rate().percent());
+        for (i, (label, action)) in [
+            ("Slower".to_string(), Action::Slower),
+            (label, Action::NormalSpeed),
+            ("Faster".to_string(), Action::Faster),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            d.button(
+                state,
+                inner + i as f32 * (third + gap),
+                y + 178.,
+                third,
+                label,
+                action,
+                t,
+            );
+        }
+    }
     let half = (usable - gap) * 0.5;
     let view_label = format!("View: {}", state.view.name());
     let sound_label = format!("Song audio: {}", if state.hear { "On" } else { "Off" });
@@ -86,19 +108,27 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
         d.button(
             state,
             inner,
-            y + 178.,
+            y + 178. + offset,
             half,
             "Finish session",
             Action::PracticeFinish,
             t,
         );
     } else {
-        d.button(state, inner, y + 178., half, view_label, Action::View, t);
+        d.button(
+            state,
+            inner,
+            y + 178. + offset,
+            half,
+            view_label,
+            Action::View,
+            t,
+        );
     }
     d.button(
         state,
         inner + half + gap,
-        y + 178.,
+        y + 178. + offset,
         half,
         sound_label,
         Action::Hear,
@@ -107,7 +137,7 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
     d.button(
         state,
         inner,
-        y + 220.,
+        y + 220. + offset,
         half,
         "Settings",
         Action::Settings,
@@ -116,27 +146,35 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
     d.button(
         state,
         inner + half + gap,
-        y + 220.,
+        y + 220. + offset,
         half,
         "Open library",
         Action::Library,
         t,
     );
-    d.button(state, inner, y + 262., half, "Main menu", Action::Main, t);
+    d.button(
+        state,
+        inner,
+        y + 262. + offset,
+        half,
+        "Main menu",
+        Action::Main,
+        t,
+    );
     d.button(
         state,
         inner + half + gap,
-        y + 262.,
+        y + 262. + offset,
         half,
         "Close  [Esc]",
         Action::Help,
         t,
     );
 
-    if h > 330. {
+    if h > 330. + offset {
         d.text(
             inner,
-            y + 320.,
+            y + 320. + offset,
             "Space resumes / Esc closes while staying paused",
             11.,
             t.muted,

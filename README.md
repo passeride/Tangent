@@ -18,7 +18,9 @@ The bundled **First light** MusicXML piano study includes bass/treble staves,
 Choose **Play** from the new main menu, then press **Space** to play, **V** for the note views, or choose **Load sample** in **Settings → Data & About**. The original demo is [CC0 1.0](web/piano/samples/ATTRIBUTION.md).
 
 During play, only the corner gear and timeline remain. The pause overlay has
-Resume, transport, quick view/audio, Settings and navigation. Full settings are
+Resume, transport, playback speed (25–200%), quick view/audio, Settings and navigation.
+Use Slower/Faster in Pause to change by 5%; the percentage button resets to 100%.
+Speed is saved locally and leaves note pitches unchanged. Full settings are
 organized into Audio & MIDI, Visuals, Practice, Effects, Accessibility (planned),
 and Data & About. Opening Pause stops playback and releases live notes; returning
 from Settings stays paused until Resume.

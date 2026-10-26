@@ -143,6 +143,16 @@ struct Transport {
     volume: f32,
     hear: bool,
     instrument: usize,
+    #[serde(default = "default_speed")]
+    speed_percent: u16,
+}
+fn default_speed() -> u16 {
+    100
+}
+impl Transport {
+    fn rate(&self) -> tangent_core::transport::PlaybackRate {
+        tangent_core::transport::PlaybackRate::new(self.speed_percent).unwrap_or_default()
+    }
 }
 struct Audio {
     output: midi_output::Output,
@@ -188,6 +198,33 @@ impl Audio {
             self.transport.position,
             self.transport.playing && self.transport.hear,
         );
+        // Changing tempo rebuilds sustained song voices at the same musical
+        // position; stretching the timeline never transposes the oscillator.
+        if self.transport.playing && self.transport.hear && !self.output.active() {
+            let position = self.transport.position;
+            let rate = self.transport.rate();
+            let held: Vec<_> = self
+                .song
+                .notes
+                .iter()
+                .enumerate()
+                .filter(|(_, n)| {
+                    n.start_us < position
+                        && n.end_us > position
+                        && !self.song.parts.get(n.part).is_some_and(|p| p.percussion)
+                })
+                .map(|(i, n)| (i, n.key, n.velocity, rate.wall_time(n.end_us - position)))
+                .collect();
+            for (i, key, velocity, length) in held {
+                self.play_note(
+                    format!("song:{}", i + 1),
+                    key,
+                    velocity,
+                    Duration::from_micros(length.max(1)),
+                    Duration::ZERO,
+                );
+            }
+        }
     }
     fn play_note(
         &mut self,
@@ -232,15 +269,17 @@ impl Audio {
         if !self.transport.playing || !self.transport.hear {
             return;
         }
-        let position = self
-            .transport
-            .position
-            .saturating_add(self.anchor.elapsed().as_micros() as u64);
+        let position = self.transport.position.saturating_add(
+            self.transport
+                .rate()
+                .song_time(self.anchor.elapsed().as_micros() as u64),
+        );
         if self.output.active() {
             self.output.tick(position);
             return;
         }
-        let horizon = position.saturating_add(LOOKAHEAD_US);
+        let rate = self.transport.rate();
+        let horizon = position.saturating_add(rate.song_time(LOOKAHEAD_US));
         while let Some(note) = self.song.notes.get(self.next) {
             if note.start_us > horizon {
                 break;
@@ -256,8 +295,11 @@ impl Audio {
             if self.song.parts.get(part).is_some_and(|p| p.percussion) || end <= position {
                 continue;
             }
-            let delay = Duration::from_micros(begin.saturating_sub(position));
-            let length = Duration::from_micros(end.saturating_sub(begin.max(position)).max(50_000));
+            let delay = Duration::from_micros(rate.wall_time(begin.saturating_sub(position)));
+            let length = Duration::from_micros(
+                rate.wall_time(end.saturating_sub(begin.max(position)))
+                    .max(1),
+            );
             self.play_note(format!("song:{}", self.next), key, velocity, length, delay);
         }
     }

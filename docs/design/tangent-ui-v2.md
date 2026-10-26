@@ -273,3 +273,9 @@ the remaining unchecked items are still follow-up work.
 Scored sessions, adaptive review and progress history are delivered in ADR-0018.
 Score labels distinguish first-try practice outcomes from song pitch coverage;
 there is no calibrated rhythmic-accuracy or public leaderboard claim.
+
+### Delivered tempo controls
+
+Play's pause overlay includes Slower / percentage + reset / Faster under its
+seek row. Steps are 5% from 25–200%, saved locally, and the HUD displays the
+active speed. This keeps tempo configuration contextual to the paused music.

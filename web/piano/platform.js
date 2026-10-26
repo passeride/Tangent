@@ -1,5 +1,6 @@
 // Browser capability adapter: audio, files, MIDI and the fullscreen API.
 // No rendering, menus, note placement or transport rules live in this module.
+import { PlaybackClock } from "./playback-clock.js";
 import { MidiOutput } from "./midi-output.js";
 import { PianoAudio } from "./audio.js";
 import { openStorage } from "./storage.js";
@@ -16,7 +17,7 @@ export async function installPlatform() {
       hear: true,
       instrument: 0,
     },
-    anchor = 0,
+    clock = new PlaybackClock(),
     index = 0,
     generation = 0,
     access = null,
@@ -76,7 +77,7 @@ export async function installPlatform() {
     if (!song) return;
     index = song.events.findIndex((e) => e.time_us >= transport.position);
     if (index < 0) index = song.events.length;
-    anchor = audio.now - transport.position / 1e6;
+    clock.reset(audio.now, transport.position, transport.speed_percent ?? 100);
     if (transport.playing && transport.hear) {
       if(midiOutput.port) midiOutput.restore(song.events,transport.position);
       else audio.restore(song.events, transport.position);
@@ -86,14 +87,14 @@ export async function installPlatform() {
     if (song && transport.playing && transport.hear) {
       // Physical output is sent only when due, so pause cannot leave scheduled
       // attacks behind. Web Audio keeps its independent 100ms lookahead.
-      const horizon = (audio.now - anchor) * 1e6 + (midiOutput.port?0:100000);
+      const horizon = clock.position(audio.now, midiOutput.port ? 0 : 0.1);
       while (
         index < song.events.length &&
         song.events[index].time_us <= horizon
       ) {
         const e = song.events[index++];
         if(midiOutput.port)midiOutput.event(e);
-        else audio.event(e, Math.max(audio.now, anchor + e.time_us / 1e6));
+        else audio.event(e, Math.max(audio.now, clock.time(e.time_us)));
       }
     }
   }

@@ -175,10 +175,7 @@ impl State {
             ))
             .to_hex()
             .to_string(),
-            transport: Transport {
-                duration_us,
-                ..default()
-            },
+            transport: Transport::new(duration_us),
             piano: PianoLayout::new(21, 108).unwrap(),
             view: View::Blocks,
             theme: 0,
@@ -242,6 +239,7 @@ impl State {
             volume: self.volume,
             instrument: self.instrument,
             hear: self.hear,
+            speed_percent: self.transport.rate().percent(),
             practice_hear: self.practice_hear,
             first_key: self.piano.keys.first().unwrap().key,
             last_key: self.piano.keys.last().unwrap().key,
@@ -263,6 +261,9 @@ impl State {
         self.volume = p.volume;
         self.instrument = p.instrument;
         self.hear = p.hear;
+        self.transport.set_rate(
+            tangent_core::transport::PlaybackRate::new(p.speed_percent).unwrap_or_default(),
+        );
         self.practice_hear = p.practice_hear;
         self.preferred_midi_output = p.midi_output_name;
         self.midi_restore_pending = self.preferred_midi_output.is_some();
@@ -298,7 +299,7 @@ impl State {
         // Zero matches: retain the preference and let a future Rescan retry.
     }
     fn sync(&self) {
-        platform::action("transport",&serde_json::json!({"position":self.transport.position_us,"playing":self.transport.playing && self.mode==Mode::Play && self.screen==Screen::Session && !self.help,"volume":self.volume,"hear":self.hear,"instrument":self.instrument}).to_string());
+        platform::action("transport",&serde_json::json!({"position":self.transport.position_us,"playing":self.transport.playing && self.mode==Mode::Play && self.screen==Screen::Session && !self.help,"volume":self.volume,"hear":self.hear,"speed_percent":self.transport.rate().percent(),"instrument":self.instrument}).to_string());
     }
     fn source(&mut self, id: String, key: Option<u8>, velocity: u8) {
         if self.held.get(&id).copied() == key {
@@ -686,10 +687,9 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
                 training::end(state, false);
             }
             state.panic();
-            state.transport = Transport {
-                duration_us: song.duration_us,
-                ..default()
-            };
+            let rate = state.transport.rate();
+            state.transport = Transport::new(song.duration_us);
+            state.transport.set_rate(rate);
             state.status = format!(
                 "{} notes loaded. {}",
                 song.notes.len(),

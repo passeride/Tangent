@@ -19,9 +19,10 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     let title: String = state.song.title.chars().take(max).collect();
     d.text(x, 10., title, 14., t.ink);
     let detail = format!(
-        "{} / {}",
+        "{} / {} / {}%",
         time(state.transport.position_us),
-        time(state.transport.duration_us)
+        time(state.transport.duration_us),
+        state.transport.rate().percent()
     );
     let output = if state.midi_output.is_empty() {
         "Computer"
