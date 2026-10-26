@@ -537,6 +537,10 @@ pub fn run() {
             Startup,
             |mut commands: Commands, mut fonts: ResMut<Assets<Font>>| {
                 commands.spawn(Camera2d);
+                // Ship full UI typography with native and WASM builds.
+                commands.insert_resource(draw::UiFont(fonts.add(Font::from_bytes(
+                    include_bytes!("../../assets/NotoSans-Regular.ttf").to_vec(),
+                ))));
                 commands.insert_resource(draw::MusicFont(fonts.add(Font::from_bytes(
                     include_bytes!("../../assets/Bravura.otf").to_vec(),
                 ))));
