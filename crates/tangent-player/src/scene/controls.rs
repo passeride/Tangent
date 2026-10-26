@@ -337,6 +337,10 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.song_hits.reset();
             state.feedback.reset();
             state.transport.seek(0);
+            state.clock = platform::clock_us();
+            if state.transport.playing {
+                training::start_song(state);
+            }
             state.sync();
         }
         Action::Back => {

@@ -95,6 +95,7 @@ mod tests {
         legacy.as_object_mut().unwrap().remove("effect_strength");
         legacy.as_object_mut().unwrap().remove("practice_clef");
         legacy.as_object_mut().unwrap().remove("practice_level");
+        legacy.as_object_mut().unwrap().remove("adaptive_practice");
         let old: Preferences = serde_json::from_value(legacy).unwrap();
         assert_eq!(old.midi_output_name, None);
         assert!(!old.reduced_motion);
