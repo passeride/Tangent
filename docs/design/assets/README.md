@@ -59,3 +59,14 @@ The prior Mutopia MIDI was retired at the owner's request; its record is retaine
 in `docs/retired-midi-sample.md` and git history.
 
 Bravura SHA-256: `cdf0f893ee1fdb64b7f6713d71ee0dcfc349c0ac01429a8e451b01a9e79f5f3b`.
+
+## Noto Sans UI font — 2026-10-26
+
+- File: `crates/tangent-player/assets/NotoSans-Regular.ttf` (unmodified; 569,208 bytes).
+- Source: The Noto Project Authors, https://github.com/notofonts/noto-fonts.
+- Pinned source commit: `ffebf8c1ee449e544955a7e813c54f9b73848eac`.
+- Git blob SHA-1: `d55220958aa51eeeb85048d746eabe43d2cd9f14`.
+- Upstream file: https://github.com/notofonts/noto-fonts/blob/ffebf8c1ee449e544955a7e813c54f9b73848eac/hinted/ttf/NotoSans/NotoSans-Regular.ttf
+- SIL Open Font License 1.1 (unmodified font): `licenses/NotoSans-OFL.txt`.
+- Embedded directly in Bevy for native and WASM. Interface text uses Noto Sans while notation glyphs continue to use Bravura.
+- Covers Latin accented text (e.g. `Für Elise`, `Lettre à Élise`, Norwegian `æøå`), Greek and Cyrillic. Not intended as complete Unicode/CJK/emoji coverage.
