@@ -3,6 +3,8 @@
 Keep implemented behavior separate from planned work. Decisions belong in ADRs;
 this file tracks the remaining work, not an authorization gate.
 
+For user-facing sequencing, see the **proposed** [UX roadmap](design/ux-roadmap.md), [user stories](design/user-stories-and-journeys.md) and [product north star](design/product-north-star.md). The prioritized practice-loop bet is passage looping, honest hand/part isolation and action-oriented results. This is **not** a claim of implementation. Keep this engineering backlog and new UX roadmap aligned as work lands.
+
 ## Piano/playback foundation
 
 - Profile the delivered Bevy UI/wgpu surface on real desktop/mobile GPUs.

@@ -279,3 +279,12 @@ there is no calibrated rhythmic-accuracy or public leaderboard claim.
 Play's pause overlay includes Slower / percentage + reset / Faster under its
 seek row. Steps are 5% from 25–200%, saved locally, and the HUD displays the
 active speed. This keeps tempo configuration contextual to the paused music.
+
+
+## Product research companion — 2026-10-26 (proposal only)
+
+The [product north star](product-north-star.md), [competitive UX benchmark](competitive-benchmark-2026-10.md), [personas](personas-and-jobs.md), [user stories](user-stories-and-journeys.md), [feedback design](gamification-and-feedback.md) and [roadmap](ux-roadmap.md) explore an optional more gamified Tangent beyond this approved UI-v2 baseline.
+
+They **do not supersede** its one-Bevy-surface requirement, calm default reading hierarchy, solid-pressed-key/edge-glow semantics, or implemented score contracts. A future Arcade HUD and Perform mode must be explicitly opted into and rely on genuine evaluator support. Existing song score is pitch coverage, not timing precision, even when particle streak feedback is visible. Tempo is already implemented at 25–200%, but looping/hand-isolation/timing grading are proposals until separately implemented and tested.
+
+The legacy checkbox in Slice D about adding supported HUD speed/tempo is partially obsolete: ADR-0020 delivered persistent speed controls and HUD speed display on 2026-10-26. This addendum clarifies status without erasing the earlier design history.
