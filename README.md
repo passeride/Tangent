@@ -143,7 +143,7 @@ notation layout, sampled sound and further formats require separate decisions.
 | [MIDI import](docs/midi-import.md) | Implemented scope, limitations and build/test commands |
 | [Documentation index](docs/README.md) | Entry point for architecture and design work |
 | [Architecture decisions](docs/adr/README.md) | Decision history, statuses and ADR template |
-| [Product and visual design](docs/design/README.md) | Design questions, briefs and sketch index |
+| [Product and visual design](docs/design/README.md) | UI v2, UX product strategy, benchmark, provisional personas, gamification and roadmap |
 | [Sketches](docs/design/sketches/README.md) | Wireframes, flows and visual explorations |
 | [Design assets](docs/design/assets/README.md) | Source files and asset provenance |
 | [Provenance](PROVENANCE.md) | Source boundaries, exposure and future dependency records |
