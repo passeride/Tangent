@@ -215,6 +215,8 @@ export async function installPlatform() {
       }
     },
     clock_us: () => audio.now * 1e6,
+    wall_time_ms: () => Date.now(),
+    session_nonce: () => {const a=crypto.getRandomValues(new Uint32Array(2));return (BigInt(a[0])<<32n)|BigInt(a[1]);},
     pull: () => {
       schedule();
       const messages = queue;
@@ -224,6 +226,15 @@ export async function installPlatform() {
     action: (name, data) => {
       try {
         switch (name) {
+          case "progress-list":
+            if(storage)storage.readProgress().then(runs=>queue.push({type:"progress",runs})).catch(e=>queue.push({type:"progress-error",text:String(e.message??e)}));
+            break;
+          case "progress-save": {
+            const run=JSON.parse(data);
+            if(storage)storage.saveProgress(run).then(()=>queue.push({type:"progress-saved",id:run.id,revision:run.revision})).catch(e=>queue.push({type:"progress-error",text:String(e.message??e)}));
+            else queue.push({type:"progress-error",text:"Practice is not saved: local storage unavailable."});
+            break;
+          }
           case "save-settings":
             if (storage) {
               storageStatus("Saving settings…");

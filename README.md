@@ -36,6 +36,10 @@ original demonstration study. These are app screenshots, not design mockups.
 
 ![Note practice](docs/screenshots/train-notes.png)
 
+| Scored session | Recent progress |
+| --- | --- |
+| ![Session results](docs/screenshots/practice-results.png) | ![Progress history](docs/screenshots/practice-progress.png) |
+
 ![Piano with falling blocks](docs/screenshots/piano-blocks.png)
 
 | Staff lanes with ledger lines | Falling noteheads |
@@ -95,7 +99,9 @@ Partwise MusicXML (.xml/.musicxml/.mxl) import is an [explicit subset](docs/musi
 Desktop build and MIDI/audio behavior require physical machine verification,
 especially low-latency playing. The native instrument is currently an efficient
 harmonic voice, not the same timbre as the browser synthesizer. The local
-music library now saves original imports locally; recording meaningful scores remains future work.
+music library saves original imports locally. Scored practice, adaptive review,
+recent history and song pitch-coverage results are delivered; see
+[practice and progress](docs/practice-progress.md).
 
 The implementation is not certified as a completed clean room process. Prior
 source exposure remains documented in [PROVENANCE.md](PROVENANCE.md).
@@ -130,6 +136,7 @@ notation layout, sampled sound and further formats require separate decisions.
 | Area | Purpose |
 | --- | --- |
 | [Piano player](docs/piano-player.md) | Playable web slice and run/test commands |
+| [Practice and progress](docs/practice-progress.md) | Scores, adaptive review and saved session history |
 | [Follow-up work](docs/TODO.md) | Remaining implementation and architecture work |
 | [MIDI import](docs/midi-import.md) | Implemented scope, limitations and build/test commands |
 | [Documentation index](docs/README.md) | Entry point for architecture and design work |

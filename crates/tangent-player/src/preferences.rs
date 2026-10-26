@@ -14,6 +14,8 @@ pub struct Preferences {
     pub practice_clef: u8,
     #[serde(default)]
     pub practice_level: u8,
+    #[serde(default)]
+    pub adaptive_practice: bool,
     pub volume: f32,
     pub instrument: usize,
     pub hear: bool,
@@ -70,6 +72,7 @@ mod tests {
             effect_strength: 1,
             practice_clef: 0,
             practice_level: 0,
+            adaptive_practice: false,
             volume: 0.25,
             instrument: 1,
             hear: false,
@@ -92,6 +95,7 @@ mod tests {
         legacy.as_object_mut().unwrap().remove("effect_strength");
         legacy.as_object_mut().unwrap().remove("practice_clef");
         legacy.as_object_mut().unwrap().remove("practice_level");
+        legacy.as_object_mut().unwrap().remove("adaptive_practice");
         let old: Preferences = serde_json::from_value(legacy).unwrap();
         assert_eq!(old.midi_output_name, None);
         assert!(!old.reduced_motion);

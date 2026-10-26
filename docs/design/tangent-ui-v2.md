@@ -242,8 +242,9 @@ The owner has authorized initial menu implementation. Preserve working playback,
 
 ### Slice D — Optional future product features (not part of UI-only refactor)
 
-- [ ] Add evaluation-driven score/accuracy/streak data and results screens.
-- [ ] Add adaptive practice, goals and progress history backed by actual saved data.
+- [x] Evaluation-driven points, first-try/pitch-coverage data and result screens (ADR-0018).
+- [x] Adaptive practice and progress history backed by actual saved data (ADR-0018).
+- [ ] Practice goals and broader curriculum progression.
 - [x] Effect intensity/presets and reduced-motion preference (ADR-0017).
 - [ ] Richer accessibility semantics and contrast verification.
 - [ ] Add reliable restore/import of SQLite backups, after integrity/migration handling.
@@ -268,3 +269,7 @@ visible focus and Enter activation. Practice supports optional target audio, exa
 coloured live staff pointers and persisted clef/difficulty. Effects have persistent
 intensity and reduced motion. Full screen-reader semantics, calibrated scores and
 the remaining unchecked items are still follow-up work.
+
+Scored sessions, adaptive review and progress history are delivered in ADR-0018.
+Score labels distinguish first-try practice outcomes from song pitch coverage;
+there is no calibrated rhythmic-accuracy or public leaderboard claim.

@@ -54,6 +54,7 @@ pub struct Practice {
     pub hint: bool,
     pub waiting_release: bool,
     pub wrong: bool,
+    pub review_target: Option<Vec<u8>>,
 }
 impl Practice {
     pub fn new(chords: bool) -> Self {
@@ -62,7 +63,30 @@ impl Practice {
             ..Default::default()
         }
     }
+    pub fn curriculum_name(&self) -> &'static str {
+        if self.chords {
+            match self.level {
+                Level::Stepwise => "Diatonic triads",
+                Level::Mixed => "Major/minor triads",
+                Level::Chromatic => "Seventh chords",
+            }
+        } else {
+            self.level.name()
+        }
+    }
     pub fn target(&self) -> Vec<u8> {
+        if let Some(keys) = &self.review_target {
+            return keys.clone();
+        }
+        if self.chords && self.level != Level::Stepwise {
+            let root = 60 + (self.completed % 12) as u8;
+            let minor = (self.completed / 12) % 2 == 1;
+            return if self.level == Level::Chromatic {
+                vec![root, root + if minor { 3 } else { 4 }, root + 7, root + 10]
+            } else {
+                vec![root, root + if minor { 3 } else { 4 }, root + 7]
+            };
+        }
         let root = if self.chords {
             [60, 62, 64, 65, 67, 69, 71][self.completed % 7]
         } else {
@@ -105,7 +129,26 @@ impl Practice {
         }
     }
     pub fn label(&self) -> String {
-        if self.chords {
+        if self.chords && (self.level != Level::Stepwise || self.review_target.is_some()) {
+            let keys = self.target();
+            let name = [
+                "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+            ][keys[0] as usize % 12];
+            let kind = if keys.len() == 4 {
+                if keys[1] - keys[0] == 3 {
+                    "minor seventh"
+                } else {
+                    "dominant seventh"
+                }
+            } else if keys[2] - keys[0] == 6 {
+                "diminished"
+            } else if keys[1] - keys[0] == 3 {
+                "minor"
+            } else {
+                "major"
+            };
+            format!("{name} {kind}")
+        } else if self.chords {
             format!(
                 "{} {}",
                 ["C", "D", "E", "F", "G", "A", "B"][self.completed % 7],
@@ -120,7 +163,7 @@ impl Practice {
                 ][self.completed % 7]
             )
         } else {
-            let key = self.note_target();
+            let key = self.target()[0];
             format!(
                 "{}{}",
                 [
@@ -143,6 +186,7 @@ impl Practice {
             if self.waiting_release {
                 self.completed += 1;
                 self.hint = false;
+                self.review_target = None;
             }
             self.waiting_release = false;
             self.wrong = false;
@@ -271,7 +315,7 @@ pub enum Grade {
     Neutral,
 }
 #[derive(Default)]
-pub struct SongHits(std::collections::BTreeSet<usize>);
+pub struct SongHits(std::collections::BTreeSet<(u64, u8)>);
 impl SongHits {
     pub fn reset(&mut self) {
         self.0.clear();
@@ -291,10 +335,10 @@ impl SongHits {
             .collect();
         if let Some(note) = candidates
             .iter()
-            .filter(|n| !self.0.contains(&n.id))
+            .filter(|n| !self.0.contains(&(n.start_us, n.key)))
             .min_by_key(|n| n.start_us.abs_diff(position_us))
         {
-            self.0.insert(note.id);
+            self.0.insert((note.start_us, note.key));
             Grade::Correct
         } else if candidates.is_empty() {
             Grade::Wrong
@@ -307,6 +351,37 @@ impl SongHits {
 mod hit_tests {
     use super::*;
     use crate::music::{Part, PerformanceNote, Song};
+    #[test]
+    fn simultaneous_unison_parts_are_one_physical_target() {
+        let mut song = Song {
+            title: String::new(),
+            composer: None,
+            duration_us: 2000000,
+            parts: vec![Part {
+                name: String::new(),
+                percussion: false,
+            }],
+            notes: vec![],
+            notation: None,
+            warnings: vec![],
+            events: vec![],
+        };
+        for id in 0..2 {
+            song.notes.push(PerformanceNote {
+                id,
+                part: 0,
+                key: 60,
+                velocity: 90,
+                start_us: 0,
+                end_us: 1000000,
+                written: None,
+            });
+        }
+        let mut hits = SongHits::default();
+        assert_eq!(hits.judge(&song, 0, 60), Grade::Correct);
+        assert_eq!(hits.judge(&song, 10000, 60), Grade::Neutral);
+        assert_eq!(crate::progress::song_target_count(&song), 1);
+    }
     #[test]
     fn repeated_input_cannot_award_same_target_twice_and_seek_can_reset() {
         let mut song = Song {
@@ -340,5 +415,36 @@ mod hit_tests {
         assert_eq!(hits.judge(&song, 1_200_000, 60), Grade::Correct);
         song.parts[0].percussion = true;
         assert_eq!(hits.judge(&song, 1_200_000, 60), Grade::Wrong);
+    }
+}
+
+#[cfg(test)]
+mod curriculum_tests {
+    use super::*;
+    #[test]
+    fn expanded_chord_pools_cover_every_root_and_quality() {
+        for level in [Level::Mixed, Level::Chromatic] {
+            let mut p = Practice::new(true);
+            p.level = level;
+            let mut seen = std::collections::BTreeSet::new();
+            for i in 0..24 {
+                p.completed = i;
+                let target = p.target();
+                assert_eq!(target.len(), if level == Level::Mixed { 3 } else { 4 });
+                seen.insert(target);
+            }
+            assert_eq!(seen.len(), 24);
+        }
+    }
+    #[test]
+    fn seventh_inversions_match_and_review_labels_keep_quality() {
+        let mut p = Practice::new(true);
+        p.level = Level::Chromatic;
+        assert_eq!(p.label(), "C dominant seventh");
+        assert!(p.answer(&[52, 55, 58, 60]));
+        p.answer(&[]);
+        p.level = Level::Stepwise;
+        p.review_target = Some(vec![71, 74, 77]);
+        assert_eq!(p.label(), "B diminished");
     }
 }

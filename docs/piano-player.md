@@ -193,3 +193,25 @@ MusicXML/MIDI browser import and packaged `/Tangent/` smoke pass locally. Actual
 app screenshots are refreshed with capture.mjs. Upstream Hanabi/transitive
 notices are included. Physical P-45 speakers/latency, native GPU appearance and
 4K hardware performance remain manual verification, not claims of these tests.
+
+## Scores and adaptive practice — 2026-10-26
+
+[Practice and progress](practice-progress.md) describes 12-task scored sessions,
+results/task details, saved recent history, adaptive review and expanded chord
+pools. Song scores use unique playable pitch/onset targets, grouping layered
+unisons; percentages are pitch coverage rather than calibrated rhythm accuracy.
+SQLite v5 migrates existing data and retries failed revisioned checkpoints.
+
+Validation: 82 workspace Rust tests, native/WASM warnings-denied Clippy, native
+release/self-test, release WASM, all browser tests, focused history/profile replay,
+save-failure recovery, song restart/pause/unison scoring, non-overlapping mobile
+touch controls and packaged-site smoke pass locally. Native packages include the
+practice guide. Screenshots are from the actual Bevy app; capture.mjs supports
+TANGENT_CAPTURE_PROGRESS=1 for reproducible scored results and history.
+
+The local executor reproduced the pinned toolchain's multi-CGU archive/link
+failures. Local verification used CARGO_PROFILE_DEV_CODEGEN_UNITS=1 and
+CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_CODEGEN_UNITS=1; these are build workarounds,
+not runtime scoring options. The pinned toolchain was not changed. Physical P-45
+sound, hardware latency and Windows/native GPU behavior still require target-device
+checks; a Linux executable/import smoke is not that verification.

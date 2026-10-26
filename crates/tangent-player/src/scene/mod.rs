@@ -11,6 +11,7 @@ mod score;
 mod session_hud;
 mod settings;
 mod theme;
+mod training;
 use super::{import, preferences::Preferences};
 use bevy::{prelude::*, window::WindowResolution};
 use layout::Layout;
@@ -39,6 +40,8 @@ enum Screen {
     Train,
     Library,
     Session,
+    Progress,
+    Results,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Mode {
@@ -88,9 +91,11 @@ pub struct State {
     library: library::Library,
     mode: Mode,
     practice: tangent_core::practice::Practice,
+    training: training::Sessions,
     reference_remaining: f32,
     reference_keys: Vec<u8>,
     song: Song,
+    piece_id: String,
     transport: Transport,
     piano: PianoLayout,
     view: View,
@@ -159,9 +164,15 @@ impl State {
             library: library::Library::default(),
             mode: Mode::Play,
             practice: tangent_core::practice::Practice::default(),
+            training: training::Sessions::default(),
             reference_remaining: 0.,
             reference_keys: vec![],
             song,
+            piece_id: blake3::hash(include_bytes!(
+                "../../../../web/piano/samples/first-light.musicxml"
+            ))
+            .to_hex()
+            .to_string(),
             transport: Transport {
                 duration_us,
                 ..default()
@@ -223,6 +234,7 @@ impl State {
             effect_strength: self.effect_strength,
             practice_clef: self.practice.clef as u8,
             practice_level: self.practice.level as u8,
+            adaptive_practice: self.training.model.adaptive,
             volume: self.volume,
             instrument: self.instrument,
             hear: self.hear,
@@ -237,6 +249,7 @@ impl State {
         self.effects = p.effects;
         self.reduced_motion = p.reduced_motion;
         self.effect_strength = p.effect_strength;
+        self.training.model.adaptive = p.adaptive_practice;
         use tangent_core::practice::{Level, ReadingClef};
         self.practice.configure(
             [ReadingClef::Treble, ReadingClef::Bass, ReadingClef::Mixed][p.practice_clef as usize],
@@ -288,10 +301,15 @@ impl State {
         if self.held.remove(&id).is_some() {
             platform::action("off", &id);
             if self.held.is_empty() {
+                let answered = self.practice.waiting_release;
                 self.practice.answer(&[]);
+                if answered {
+                    training::released(self);
+                }
             } else if key.is_none() && matches!(self.mode, Mode::Notes | Mode::Chords) {
                 let held: Vec<_> = self.held.values().copied().collect();
                 if self.practice.answer(&held) {
+                    training::grade(self, effects::Grade::Correct);
                     let preset = self.feedback.register(effects::Grade::Correct);
                     self.live_bursts.push(effects::Burst {
                         key: held[0],
@@ -329,6 +347,7 @@ impl State {
                 }
             };
             if let Some(grade) = grade {
+                training::grade(self, grade);
                 let preset = self.feedback.register(grade);
                 self.live_bursts.push(effects::Burst { key, preset });
             }
@@ -389,6 +408,9 @@ impl State {
         if !matches!(self.mode, Mode::Notes | Mode::Chords) || self.help {
             return;
         }
+        if !self.practice.waiting_release {
+            self.training.model.assist();
+        }
         self.reference_keys = self.practice.target();
         self.reference_remaining = 0.7;
         for &key in &self.reference_keys {
@@ -409,7 +431,7 @@ impl State {
         #[cfg(not(target_arch = "wasm32"))]
         self.gpu_bursts.clear();
         self.feedback.reset();
-        self.song_hits.reset();
+
         self.recognition_notes.clear();
         self.recognition_status.clear();
         self.recognition_ticket += 1;
@@ -462,12 +484,13 @@ pub fn run() {
     #[cfg(not(target_arch = "wasm32"))]
     effects::gpu::install(&mut app);
     #[cfg(not(target_arch = "wasm32"))]
-    app.add_systems(Update, platform::native_window);
+    app.add_systems(Update, platform::native_window)
+        .add_systems(Last, training::on_exit);
     app.run();
     #[cfg(not(target_arch = "wasm32"))]
     platform::shutdown();
 }
-fn update(mut state: ResMut<State>, time: Res<Time>) {
+fn update(mut state: ResMut<State>, time: Res<Time>, windows: Query<&Window>) {
     let now = platform::clock_us();
     let elapsed = (now - state.clock).max(0.) as u64;
     state.clock = now;
@@ -480,9 +503,15 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
     let was = state.transport.playing;
     state.transport.advance(elapsed);
     if was && !state.transport.playing {
+        if state.mode == Mode::Play && state.training.model.run.is_some() {
+            training::end(&mut state, true);
+        }
         state.sync();
     }
     for m in messages {
+        if training::message(&mut state, &m) {
+            continue;
+        }
         match m["type"].as_str().unwrap_or("") {
             "midi-outputs" => {
                 state.midi_outputs = serde_json::from_value(m["ports"].clone()).unwrap_or_default();
@@ -502,6 +531,7 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
                 }
                 state.saved_preferences = Some(state.preferences());
                 state.storage_ready = true;
+                platform::action("progress-list", "");
             }
             "storage-status" => state.storage_status = m["text"].as_str().unwrap_or("").into(),
             "file" => {
@@ -613,6 +643,11 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
             state.saved_preferences = Some(p);
         }
     }
+    training::tick(
+        &mut state,
+        time.delta_secs().min(0.25),
+        windows.single().is_ok_and(|w| w.focused),
+    );
     let dt = time.delta_secs().min(0.05);
     if state.reference_remaining > 0. {
         state.reference_remaining -= time.delta_secs();
@@ -641,6 +676,9 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
             if from_library {
                 song.title = title;
             }
+            if state.mode == Mode::Play {
+                training::end(state, false);
+            }
             state.panic();
             state.transport = Transport {
                 duration_us: song.duration_us,
@@ -651,6 +689,7 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
                 song.notes.len(),
                 song.warnings.join(" ")
             );
+            state.piece_id = blake3::hash(bytes).to_hex().to_string();
             state.song = song;
             platform::action("song", &serde_json::to_string(&state.song).unwrap());
             state.previous.clear();

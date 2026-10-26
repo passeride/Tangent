@@ -48,3 +48,4 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0015: MIDI output and reading practice](0015-midi-output-and-reading-practice.md) — accepted; no echo, played/glow cues and clef/level exercises (output persistence superseded by ADR-0016).
 - [ADR-0016: Persistent MIDI output selection](0016-persistent-midi-output-selection.md) — accepted; Bevy dropdown, SQLite preference and safe name-based reconnection.
 - [ADR-0017: Practice reference and motion](0017-practice-reference-and-motion.md) — accepted; exact live pitch pointers, optional reference audio and persistent effect/motion choices.
+- [ADR-0018: Scores, history and adaptive review](0018-scored-sessions-and-adaptive-review.md) — scored training/song sessions, SQLite checkpoints and recent-history review.

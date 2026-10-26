@@ -37,5 +37,14 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     } else {
         format!("{detail}  /  {output}")
     };
+    let detail = if l.width > 650. {
+        if let Some(r) = &state.training.model.run {
+            format!("{detail} / {} pts", r.points)
+        } else {
+            detail
+        }
+    } else {
+        detail
+    };
     d.text(x, 31., detail, 11., t.muted);
 }
