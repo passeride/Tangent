@@ -1,6 +1,6 @@
 //! Versioned portable appearance and source-specific accepted hand annotations.
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Tokens {
@@ -155,6 +155,73 @@ impl Personalization {
             })
     }
 }
+/// A lightweight, non-persistent starting point for unconfigured hand colours.
+/// Authored MusicXML staff clefs take priority; MIDI or unlinked performance
+/// notes use middle C (MIDI 60). These are suggestions, not observed hands.
+pub fn suggested_hands(song: &tangent_core::music::Song) -> BTreeMap<usize, Hand> {
+    use tangent_core::notation::Clef;
+
+    let mut authored = BTreeMap::new();
+    let mut conflicts = BTreeSet::new();
+    if let Some(score) = &song.notation {
+        let staff_hands: BTreeMap<_, _> = score
+            .staves
+            .iter()
+            .map(|s| {
+                (
+                    s.id,
+                    match s.clef {
+                        Clef::Treble => Hand::Right,
+                        Clef::Bass => Hand::Left,
+                    },
+                )
+            })
+            .collect();
+        for written in score.measures.iter().flat_map(|m| &m.notes) {
+            if written.pitch.is_none() {
+                continue;
+            }
+            if let (Some(id), Some(&hand)) =
+                (written.performance_note, staff_hands.get(&written.staff))
+            {
+                if authored.insert(id, hand).is_some_and(|old| old != hand) {
+                    conflicts.insert(id);
+                }
+            }
+        }
+    }
+
+    song.notes
+        .iter()
+        .filter(|note| !song.parts.get(note.part).is_some_and(|p| p.percussion))
+        .map(|note| {
+            let hand = if conflicts.contains(&note.id) {
+                None
+            } else {
+                authored.get(&note.id).copied()
+            }
+            .unwrap_or(if note.key >= 60 {
+                Hand::Right
+            } else {
+                Hand::Left
+            });
+            (note.id, hand)
+        })
+        .collect()
+}
+
+/// Any explicit choice (including Unassigned) overrides the suggested hand.
+pub fn resolved_hand(
+    profile: Option<&HandProfile>,
+    suggested: &BTreeMap<usize, Hand>,
+    id: usize,
+) -> Hand {
+    profile
+        .and_then(|p| p.notes.get(&id).copied())
+        .or_else(|| suggested.get(&id).copied())
+        .unwrap_or(Hand::Unassigned)
+}
+
 /// Conservative demonstration alignment: accept only a uniquely compatible onset.
 /// Ambiguous repeated/unison attacks remain unresolved, never assigned by pitch split.
 pub fn match_attack(song: &tangent_core::music::Song, at: u64, key: u8) -> Option<usize> {
@@ -232,6 +299,80 @@ mod demonstration_tests {
             serde_json::from_str(&serde_json::to_string(&p).unwrap()).unwrap();
         assert_eq!(p, restored);
         assert!(restored.validate());
+    }
+}
+
+#[cfg(test)]
+mod suggested_hand_tests {
+    use super::*;
+    use tangent_core::notation::Clef;
+
+    fn sample() -> tangent_core::music::Song {
+        crate::import::song(
+            include_bytes!("../../../web/piano/samples/first-light.musicxml"),
+            "Sample".into(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn written_clefs_take_priority_over_pitch() {
+        let mut song = sample();
+        let score = song.notation.as_ref().unwrap();
+        let staff: BTreeMap<_, _> = score
+            .staves
+            .iter()
+            .map(|s| (s.id, match s.clef {
+                Clef::Treble => Hand::Right,
+                Clef::Bass => Hand::Left,
+            }))
+            .collect();
+        // Confirm both clefs are represented by linked performed notes.
+        let mut checked = BTreeSet::new();
+        for written in score.measures.iter().flat_map(|m| &m.notes) {
+            if let (Some(id), Some(&hand)) =
+                (written.performance_note, staff.get(&written.staff))
+                && written.pitch.is_some()
+                && !score.measures.iter().flat_map(|m| &m.notes).any(|other| {
+                    other.performance_note == Some(id)
+                        && other.pitch.is_some()
+                        && staff.get(&other.staff).is_some_and(|h| *h != hand)
+                })
+            {
+                assert_eq!(suggested_hands(&song).get(&id), Some(&hand));
+                checked.insert(hand.label());
+            }
+        }
+        assert!(checked.contains("Left") && checked.contains("Right"));
+        // Without notation, the same song must use a middle-C split.
+        song.notation = None;
+        let fallback = suggested_hands(&song);
+        for note in &song.notes {
+            assert_eq!(
+                fallback.get(&note.id),
+                Some(&if note.key >= 60 { Hand::Right } else { Hand::Left })
+            );
+        }
+    }
+
+    #[test]
+    fn explicit_override_including_unassigned_wins() {
+        let suggested = BTreeMap::from([
+            (3, Hand::Right),
+            (4, Hand::Left),
+        ]);
+        let profile = HandProfile {
+            mapping_version: 1,
+            revision: 1,
+            notes: BTreeMap::from([
+                (3, Hand::Unassigned),
+                (4, Hand::Right),
+            ]),
+        };
+        assert_eq!(resolved_hand(None, &suggested, 3), Hand::Right);
+        assert_eq!(resolved_hand(Some(&profile), &suggested, 3), Hand::Unassigned);
+        assert_eq!(resolved_hand(Some(&profile), &suggested, 4), Hand::Right);
+        assert_eq!(resolved_hand(Some(&profile), &suggested, 99), Hand::Unassigned);
     }
 }
 

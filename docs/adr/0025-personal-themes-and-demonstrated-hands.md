@@ -94,3 +94,17 @@ the library test explicitly waits for asynchronous source loading after Open.
 The theme editor screenshot was inspected and compact control bounds checked at
 640×360 and 390×844. Hardware timing and native file-picker usability remain
 manual checks. Later automatic hand inference is not represented as shipped.
+
+## Default colour fallback (2026-10-26)
+
+When a piece has no saved hand annotation, display an immediate, explicitly
+heuristic suggestion: performed notes linked to treble-clef notation are Right;
+those linked to bass-clef notation are Left. MIDI and notes without usable staff
+links are split at middle C (C4, MIDI note 60): C4 and above Right, below Left.
+Conflicting written-staff links fall back to the pitch split. Percussion is not
+classified. These proposals are cached on song import, never written as an
+accepted hand profile, and use the existing editable hand palette. A saved,
+source-specific note assignment always wins, including an explicit Unassigned.
+
+This supersedes the earlier neutral-by-default presentation for unlabelled
+sources; it does not infer physical hand identity or change scoring.

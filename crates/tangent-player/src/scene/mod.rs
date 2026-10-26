@@ -98,6 +98,7 @@ pub struct State {
     reference_remaining: f32,
     reference_keys: Vec<u8>,
     song: Song,
+    suggested_hands: BTreeMap<usize, crate::personalization::Hand>,
     piece_id: String,
     transport: Transport,
     loop_a: Option<u64>,
@@ -172,6 +173,7 @@ impl State {
     fn new() -> Self {
         let song = import::study();
         let duration_us = song.duration_us;
+        let suggested_hands = crate::personalization::suggested_hands(&song);
         Self {
             screen: Screen::Main,
             library: library::Library::default(),
@@ -181,6 +183,7 @@ impl State {
             reference_remaining: 0.,
             reference_keys: vec![],
             song,
+            suggested_hands,
             piece_id: blake3::hash(include_bytes!(
                 "../../../../web/piano/samples/first-light.musicxml"
             ))
@@ -801,6 +804,7 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
                 song.warnings.join(" ")
             );
             state.piece_id = blake3::hash(bytes).to_hex().to_string();
+            state.suggested_hands = crate::personalization::suggested_hands(&song);
             state.song = song;
             platform::action("song", &serde_json::to_string(&state.song).unwrap());
             state.previous.clear();

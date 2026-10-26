@@ -96,10 +96,7 @@ pub(super) fn note_color(state: &State, id: usize, t: theme::Theme) -> Color {
             .get(&state.piece_id)
             .map(std::sync::Arc::as_ref)
     };
-    let hand = profile
-        .and_then(|p| p.notes.get(&id))
-        .copied()
-        .unwrap_or(Hand::Unassigned);
+    let hand = crate::personalization::resolved_hand(profile, &state.suggested_hands, id);
     let file = if state.personal.open == 1 {
         state
             .personal
