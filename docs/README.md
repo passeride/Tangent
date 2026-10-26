@@ -26,3 +26,4 @@ GitHub without a documentation server. No docs framework is required yet.
 - [MusicXML import subset](musicxml-import.md)
 
 - [Scores, progress and adaptive practice](practice-progress.md) — usage, score meanings and persistence limits.
+- [Piano exercise catalog](piano-exercise-catalog.md) — 83 proposed piano, theory, rhythm, technique and ear-training exercises.
