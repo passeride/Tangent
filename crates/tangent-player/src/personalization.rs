@@ -322,16 +322,21 @@ mod suggested_hand_tests {
         let staff: BTreeMap<_, _> = score
             .staves
             .iter()
-            .map(|s| (s.id, match s.clef {
-                Clef::Treble => Hand::Right,
-                Clef::Bass => Hand::Left,
-            }))
+            .map(|s| {
+                (
+                    s.id,
+                    match s.clef {
+                        Clef::Treble => Hand::Right,
+                        Clef::Bass => Hand::Left,
+                    },
+                )
+            })
             .collect();
         // Confirm both clefs are represented by linked performed notes.
         let mut checked = BTreeSet::new();
+        let suggested = suggested_hands(&song);
         for written in score.measures.iter().flat_map(|m| &m.notes) {
-            if let (Some(id), Some(&hand)) =
-                (written.performance_note, staff.get(&written.staff))
+            if let (Some(id), Some(&hand)) = (written.performance_note, staff.get(&written.staff))
                 && written.pitch.is_some()
                 && !score.measures.iter().flat_map(|m| &m.notes).any(|other| {
                     other.performance_note == Some(id)
@@ -339,7 +344,7 @@ mod suggested_hand_tests {
                         && staff.get(&other.staff).is_some_and(|h| *h != hand)
                 })
             {
-                assert_eq!(suggested_hands(&song).get(&id), Some(&hand));
+                assert_eq!(suggested.get(&id), Some(&hand));
                 checked.insert(hand.label());
             }
         }
@@ -350,29 +355,33 @@ mod suggested_hand_tests {
         for note in &song.notes {
             assert_eq!(
                 fallback.get(&note.id),
-                Some(&if note.key >= 60 { Hand::Right } else { Hand::Left })
+                Some(&if note.key >= 60 {
+                    Hand::Right
+                } else {
+                    Hand::Left
+                })
             );
         }
     }
 
     #[test]
     fn explicit_override_including_unassigned_wins() {
-        let suggested = BTreeMap::from([
-            (3, Hand::Right),
-            (4, Hand::Left),
-        ]);
+        let suggested = BTreeMap::from([(3, Hand::Right), (4, Hand::Left)]);
         let profile = HandProfile {
             mapping_version: 1,
             revision: 1,
-            notes: BTreeMap::from([
-                (3, Hand::Unassigned),
-                (4, Hand::Right),
-            ]),
+            notes: BTreeMap::from([(3, Hand::Unassigned), (4, Hand::Right)]),
         };
         assert_eq!(resolved_hand(None, &suggested, 3), Hand::Right);
-        assert_eq!(resolved_hand(Some(&profile), &suggested, 3), Hand::Unassigned);
+        assert_eq!(
+            resolved_hand(Some(&profile), &suggested, 3),
+            Hand::Unassigned
+        );
         assert_eq!(resolved_hand(Some(&profile), &suggested, 4), Hand::Right);
-        assert_eq!(resolved_hand(Some(&profile), &suggested, 99), Hand::Unassigned);
+        assert_eq!(
+            resolved_hand(Some(&profile), &suggested, 99),
+            Hand::Unassigned
+        );
     }
 }
 
