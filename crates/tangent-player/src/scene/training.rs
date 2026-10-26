@@ -379,7 +379,17 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 .as_ref()
                 .is_some_and(|r| r.mode == "play")
             {
-                "100 per target / percentage is pitch coverage"
+                if state
+                    .training
+                    .result
+                    .as_ref()
+                    .and_then(|r| r.context.as_ref())
+                    .is_some_and(|c| c.guided.is_some())
+                {
+                    "Sequential: pitch coverage after waiting, not timing"
+                } else {
+                    "100 per target / percentage is pitch coverage"
+                }
             } else {
                 "100 first try / 40 corrected / 0 assisted or skipped"
             },

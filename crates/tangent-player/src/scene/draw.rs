@@ -448,6 +448,7 @@ pub fn render(
         }
         super::session_hud::render(&mut d, &mut state, &l, t);
         // HUD goes above every musical layer, including moving ending brackets.
+        guided::render(&mut d, &state, &l, t);
         gear(&mut d, &mut state, &l, t);
     } else {
         if state.screen == Screen::Session {
@@ -550,7 +551,7 @@ pub fn render(
             .collect();
         let mut report = serde_json::json!({"status":state.status,"title":state.song.title,"library_total":state.library.total,"library_items":state.library.items,"library_editing":state.library.edit.is_some(),"library_focus":state.library.focus.map(|f|match f {library::Field::Search=>"search",library::Field::Title=>"title",library::Field::Composer=>"composer"}),"library_query":state.library.query,"library_sort":library::SORTS[state.library.sort],"library_format":library::FORMATS[state.library.format],"library_status":state.library.status,"screen":format!("{:?}",state.screen),"mode":format!("{:?}",state.mode),"completed":state.practice.completed,"preferences":state.preferences(),"storage_status":state.storage_status,"target":state.practice.target(),"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"settings_open":state.settings_open,"settings_tab":state.settings_tab.title(),"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_ranges":state.song.notation.as_ref().map(|s|s.playback.iter().take(200).map(|v|serde_json::json!({"start_us":v.start_us,"end_us":v.end_us,"measure":v.measure,"pass":v.pass})).collect::<Vec<_>>()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())});
         report.as_object_mut().unwrap().extend(serde_json::json!({"practice_run":state.training.model.run,"practice_result":state.training.result,"progress_history":state.training.model.history.iter().take(12).collect::<Vec<_>>(),"progress_pending":state.training.pending.len(),"bindings_page":state.shortcuts.page,"bindings_status":state.shortcuts.status,"bindings_capture":state.shortcuts.capture.is_some(),"progress_status":state.training.status,"adaptive":state.training.model.adaptive,"hud_labels":d.labels.iter().filter(|s|s.y<70.).map(|s|s.text.as_str()).collect::<Vec<_>>(),"offscreen":super::session_hud::offscreen(&state),"goal":state.goal.as_ref().map(|g|serde_json::json!({"completed":g.model.completed(),"required":g.model.required(),"reached":g.model.reached()})),"loop":state.transport.passage(),"loop_a":state.loop_a,"selected_part":state.selected_part,"focused_control":state.focused_button.and_then(|i|state.buttons.get(i)).map(|(_,a)|a.id()),"practice_played_label":d.labels.iter().find(|s|s.text.starts_with("Played ")).map(|s|s.text.as_str()),"reference_keys":state.reference_keys,"vfx_scale":effects::viewport_scale(l.width,l.height),"vfx_particles":state.particles.len(),"vfx_ripples":state.ripples.len(),"practice_waiting_release":state.practice.waiting_release(),"streak":state.feedback.streak(),"best_streak":state.feedback.best(),"effects_backend":if cfg!(target_arch="wasm32") {"webgl2-fallback"} else {"hanabi+ui"},"practice_wrong":state.practice.wrong(),"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output,"midi_output_preferred":state.preferred_midi_output,"midi_outputs":state.midi_outputs.iter().map(|p|serde_json::json!({"id":p.id,"name":p.name})).collect::<Vec<_>>(),"midi_dropdown_open":state.midi_dropdown_open,"midi_dropdown_page":state.midi_dropdown_page}).as_object().unwrap().clone());
-        report.as_object_mut().unwrap().extend(serde_json::json!({"flow_notes":state.practice.flow_task().map(|p|p.notes),"flow_step":state.practice.sequence_step(),"flow_left":state.practice.flow_task().map(|p|p.left),"explorer_source":state.practice.explorer_task().map(|task|task.source),"piano_renderer":"bevy-pbr-3d","piano_keys":state.piano.keys.len(),"personal_open":state.personal.open,"personal_token":state.personal.token,"personal_status":state.personal.status,"personal_matched":state.personal.matched,"personal_unresolved":state.personal.unresolved}).as_object().unwrap().clone());
+        report.as_object_mut().unwrap().extend(serde_json::json!({"guided_waiting":guided::waiting(&state),"guided_gate":state.guidance.engine.barrier(),"guided_targets":state.guidance.engine.targets(),"flow_notes":state.practice.flow_task().map(|p|p.notes),"flow_step":state.practice.sequence_step(),"flow_left":state.practice.flow_task().map(|p|p.left),"explorer_source":state.practice.explorer_task().map(|task|task.source),"piano_renderer":"bevy-pbr-3d","piano_keys":state.piano.keys.len(),"personal_open":state.personal.open,"personal_token":state.personal.token,"personal_status":state.personal.status,"personal_matched":state.personal.matched,"personal_unresolved":state.personal.unresolved}).as_object().unwrap().clone());
         platform::report(&report.to_string());
     }
     apply(&mut commands, &mut pool, d, &music_font.0, &ui_font.0);
@@ -653,6 +654,27 @@ fn gear(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
     ));
 }
 pub(super) fn expected_keys(state: &State) -> BTreeSet<u8> {
+    if guided::active(state) {
+        let window = state
+            .transport
+            .rate()
+            .song_time(u64::from(state.guidance.early_ms) * 1000);
+        return if state
+            .guidance
+            .engine
+            .barrier()
+            .is_some_and(|at| state.transport.position_us.saturating_add(window) >= at)
+        {
+            state
+                .guidance
+                .engine
+                .remaining(&state.held.values().copied().collect())
+                .into_iter()
+                .collect()
+        } else {
+            BTreeSet::new()
+        };
+    }
     if matches!(
         state.mode,
         Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger

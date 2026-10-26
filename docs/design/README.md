@@ -62,3 +62,5 @@ Create original layouts; reference material needs a source and rights record.
 - [Keyboard Explorer](keyboard-explorer.md) — N02 keyboard orientation through exact octave transfers, levels and saved progress.
 
 - [Five Finger Flow](five-finger-flow.md) — T01 five-note positions, suggested fingers and whole-pattern progress.
+
+- [Sequential Play](sequential-play.md) — first-pass note/chord waiting with saved early-input tolerance.

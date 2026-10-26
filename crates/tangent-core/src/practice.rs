@@ -418,6 +418,15 @@ impl SongHits {
         self.0.clear();
         self.1 = None;
     }
+    pub fn accept_target(&mut self, target: (u64, u8)) -> Grade {
+        self.1 = None;
+        if self.0.insert(target) {
+            self.1 = Some(target);
+            Grade::Correct
+        } else {
+            Grade::Neutral
+        }
+    }
     pub fn latest_target(&self) -> Option<(u64, u8)> {
         self.1
     }

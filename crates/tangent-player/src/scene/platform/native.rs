@@ -147,6 +147,10 @@ struct Transport {
     speed_percent: u16,
     #[serde(default)]
     loop_end_us: Option<u64>,
+    #[serde(default)]
+    gate_us: Option<u64>,
+    #[serde(default)]
+    guided: bool,
 }
 fn default_speed() -> u16 {
     100
@@ -190,7 +194,18 @@ impl Audio {
         }
     }
     fn reset(&mut self) {
-        self.silence();
+        if self.transport.guided {
+            self.voices.retain(|id, voice| {
+                if id.starts_with("song:") {
+                    voice.stop();
+                    false
+                } else {
+                    true
+                }
+            });
+        } else {
+            self.silence();
+        }
         self.next = self
             .song
             .notes
@@ -199,6 +214,7 @@ impl Audio {
         self.output.reset(
             self.transport.position,
             self.transport.playing && self.transport.hear,
+            self.transport.guided,
         );
         // Changing tempo rebuilds sustained song voices at the same musical
         // position; stretching the timeline never transposes the oscillator.
@@ -280,6 +296,13 @@ impl Audio {
             .transport
             .loop_end_us
             .map_or(position, |end| position.min(end.saturating_sub(1)));
+        if self.transport.gate_us == Some(0) {
+            return;
+        }
+        let position = self
+            .transport
+            .gate_us
+            .map_or(position, |gate| position.min(gate - 1));
         if self.output.active() {
             self.output.tick(position);
             return;
@@ -288,6 +311,10 @@ impl Audio {
         let horizon = position.saturating_add(rate.song_time(LOOKAHEAD_US));
         while let Some(note) = self.song.notes.get(self.next) {
             if note.start_us > horizon
+                || self
+                    .transport
+                    .gate_us
+                    .is_some_and(|gate| note.start_us >= gate)
                 || self
                     .transport
                     .loop_end_us

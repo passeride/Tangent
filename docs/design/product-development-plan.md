@@ -254,7 +254,8 @@ session-local 3×80% pitch-coverage goals advance only from completed evidenced
 user-input attempts, reset on context changes and never reward autoplay. Results
 show matched-note change versus the previous compatible attempt. ADR-0023 records
 the semantics. Per-staff/voice selection, saved resume, persistent goals and
-guided wait-for-note remain separate follow-up slices.
+guided wait-for-note were separate follow-up slices; guided waiting is now
+implemented by ADR-0029, while the other listed work remains pending.
 
 Integration/performance follow-up: restored access to exercise defaults from
 paused-song Practice settings (CI caught this regression); preserved the paused
@@ -304,3 +305,8 @@ Demonstration matching deliberately abstains on ambiguous onsets and does not
 infer an opposite hand from omissions. Global colour presets and accepted custom
 documents remain separate. Robust rubato sequence alignment, authored all-visits
 annotation editing, automatic separation and hand-only scoring remain future work.
+
+Sequential Play iteration (ADR-0029): shared clock/output gates now wait for exact
+notes/chords, with release/replay for repeated pitches and a saved 0–500 ms early
+window. This delivers the waiting portion of S5/UX-09; broader recommended drills
+and mastery claims remain outside this slice. See [the brief](sequential-play.md).

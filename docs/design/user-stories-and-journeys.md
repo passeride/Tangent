@@ -45,7 +45,7 @@ Choose Train (clef and difficulty) → optionally hear each target (marked assis
 | UX-06 | P0 | As P2 I understand two key states | Actual presses solid, expected notes glow; simultaneous states legible with effects off, in three themes, high DPI and reduced-motion |
 | UX-07 | P0 | As P1/P3 I can interpret a result | Existing song metric is explicitly pitch coverage; practice first-try and help rules are separate; interrupted/unsaved runs labelled; no timing accuracy claims |
 | UX-08 | P0 | As P1 I can recover from a MIDI failure | Input/output states separate; device loss pauses or changes output safely, all notes off, retries or computer fallback shown, no accidental echo |
-| UX-09 | P1 | As P2 I can enable wait-for-note | Guided Practice stops musical advancement until intended input, with safe chord-release behavior; reference output never earns score; off by default in Perform |
+| UX-09 | P1 | As P2 I can enable wait-for-note | Sequential Play stops musical advancement until exact input, with safe repeated-key release; reference output never earns score; off by default (ADR-0029) |
 | UX-10 | P1 | As P2 I get a useful 5–10 minute challenge | Appropriate achievable skill goal; review offers one next exercise based on measured recent attempts, not fabricated mastery |
 | UX-11 | P1 | As P1 I see session-vs-session passage progress | Same file identity + passage + scoring mode + tempo/assistance recorded; show trend only if comparable, else side-by-side descriptors |
 | UX-12 | P1 | As P3 I can choose readable or arcade HUD | Focus/Standard/Arcade density; no overlays over score/strike line; intensity independent from information; settings persistent only with migration |
@@ -70,7 +70,7 @@ Choose Train (clef and difficulty) → optionally hear each target (marked assis
 
 **UX-07:** Given a saved song score that checks only matching pitches, when Results opens, then the label says 'Pitch coverage', not 'Timing accuracy' or 'Perfect run'. A 70% speed run is visibly tagged.
 
-**UX-09:** Given guided note input with reference sound enabled, when the target arrives, then the reference may play through selected output but does not answer itself; when the user plays it, advancement waits for full release.
+**UX-09 (delivered ADR-0029):** Given Sequential Play, when a target arrives, then the shared clock/output stop before its backing attack. Fresh correct attacks held together complete a chord; repeated keys require release/replay. An early input window is configurable, late input waits indefinitely, and automatic sound never answers a target.
 
 **UX-12:** Given a 4K display with effects enabled, when a correct note lands, then relative impact and staff legibility are consistent with 1080p; given reduced motion, essential strike and correctness cues remain.
 

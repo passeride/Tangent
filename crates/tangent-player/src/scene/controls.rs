@@ -10,6 +10,8 @@ pub enum Action {
     ProgressOpen(usize),
     PracticeFinish,
     PracticeAgain,
+    Sequential,
+    SequentialWindow,
     PracticeSection,
     PracticeSkip,
     PracticeAdaptive,
@@ -97,6 +99,8 @@ impl Action {
             Self::ProgressOpen(_) => "progress-open",
             Self::PracticeFinish => "practice-finish",
             Self::PracticeAgain => "practice-again",
+            Self::Sequential => "sequential",
+            Self::SequentialWindow => "sequential-window",
             Self::PracticeSection => "practice-section",
             Self::PracticeSkip => "practice-skip",
             Self::PracticeAdaptive => "practice-adaptive",
@@ -330,6 +334,22 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             state.screen = Screen::Progress;
             platform::action("progress-list", "");
         }
+        Action::Sequential | Action::SequentialWindow => {
+            training::end(state, false);
+            state.panic();
+            if matches!(action, Action::Sequential) {
+                state.guidance.enabled = !state.guidance.enabled;
+            } else {
+                state.guidance.early_ms = match state.guidance.early_ms {
+                    0 => 100,
+                    100 => 250,
+                    250 => 500,
+                    _ => 0,
+                };
+            }
+            state.guidance.invalidate();
+            state.sync();
+        }
         Action::PracticeFinish => training::end(state, true),
         Action::PracticeSection | Action::PracticeAgain => {
             if let Some(run) = state.training.result.clone() {
@@ -343,6 +363,11 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
                     if let Some(c) = run.context.as_ref() {
                         state.selected_part = c.part;
                         state.hear = c.song_audio;
+                        state.guidance.enabled = c.guided.is_some();
+                        if let Some(g) = c.guided {
+                            state.guidance.early_ms = g.early_ms;
+                        }
+                        state.guidance.invalidate();
                         if let Some(rate) =
                             tangent_core::transport::PlaybackRate::new(c.speed_percent)
                         {
@@ -538,6 +563,7 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             }
             if state.transport.position_us >= state.transport.duration_us {
                 state.transport.seek(0);
+                state.guidance.invalidate();
             }
             if !state.transport.playing
                 && state.transport.position_us
@@ -563,7 +589,7 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             training::end(state, false);
             use tangent_core::transport::PlaybackRate;
             let now = platform::clock_us();
-            state.transport.advance((now - state.clock).max(0.) as u64);
+            guided::advance(state, (now - state.clock).max(0.) as u64);
             state.clock = now;
             let current = state.transport.rate().percent();
             let percent = match action {
@@ -577,6 +603,7 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             state.sync();
         }
         Action::Restart => {
+            state.guidance.invalidate();
             training::end(state, false);
             state.song_hits.reset();
             state.feedback.reset();
@@ -594,6 +621,7 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             state.feedback.reset();
             let pos = state.transport.position_us.saturating_sub(step);
             state.transport.seek(pos);
+            state.guidance.invalidate();
             state.sync();
         }
         Action::Forward => {
@@ -602,6 +630,7 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             state.feedback.reset();
             let pos = state.transport.position_us.saturating_add(step);
             state.transport.seek(pos);
+            state.guidance.invalidate();
             state.sync();
         }
         Action::Quieter => {
@@ -985,6 +1014,7 @@ pub fn input(
                 if let Some(p) = next {
                     state.transport.set_passage(Some(p));
                     state.transport.seek(p.start_us);
+                    state.guidance.invalidate();
                     state.loop_a = Some(p.start_us);
                     state.sync();
                 }
@@ -998,6 +1028,7 @@ pub fn input(
             state.song_hits.reset();
             state.feedback.reset();
             state.transport.seek(at as u64);
+            state.guidance.invalidate();
             state.sync();
             state.source(id, None, 0);
             return;

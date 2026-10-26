@@ -22,11 +22,16 @@ pub struct SongContext {
     pub part: Option<usize>,
     pub evaluator: u16,
     pub song_audio: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guided: Option<crate::guided::GuidedConfig>,
 }
 impl SongContext {
     pub fn validate(&self) -> bool {
         Passage::new(self.passage.start_us, self.passage.end_us, self.duration_us).is_some()
             && crate::transport::PlaybackRate::new(self.speed_percent).is_some()
+            && self
+                .guided
+                .is_none_or(crate::guided::GuidedConfig::validate)
             && self.evaluator == 1
             && self.part.is_none_or(|p| p < 100000)
     }
@@ -65,6 +70,7 @@ mod tests {
             part: None,
             evaluator: 1,
             song_audio: true,
+            guided: None,
         };
         assert!(c.validate());
         c.speed_percent = 0;
@@ -131,6 +137,7 @@ mod integration_tests {
             part: Some(0),
             evaluator: 1,
             song_audio: false,
+            guided: None,
         }
     }
     #[test]
@@ -379,6 +386,7 @@ mod goal_tests {
             part: None,
             evaluator: 1,
             song_audio: true,
+            guided: None,
         });
         r.piece_id = Some("a".repeat(64));
         r.matched_targets = Some(vec![]);
@@ -430,6 +438,7 @@ mod bounded_evidence_tests {
             part: None,
             evaluator: 1,
             song_audio: false,
+            guided: None,
         });
         run.matched_targets = Some(vec![]);
         run.piece_id = Some("a".repeat(64));

@@ -28,12 +28,19 @@ pub struct Preferences {
     #[serde(default = "default_speed")]
     pub speed_percent: u16,
     #[serde(default)]
+    pub sequential: bool,
+    #[serde(default = "default_early_ms")]
+    pub sequential_early_ms: u16,
+    #[serde(default)]
     pub practice_hear: bool,
     pub first_key: u8,
     pub last_key: u8,
     /// Stable device name rather than a transient OS port index; optional for v1 data.
     #[serde(default)]
     pub midi_output_name: Option<String>,
+}
+fn default_early_ms() -> u16 {
+    250
 }
 fn default_hud() -> u8 {
     1
@@ -57,6 +64,9 @@ impl Preferences {
         }
         if tangent_core::transport::PlaybackRate::new(self.speed_percent).is_none() {
             return Err("Invalid playback speed");
+        }
+        if self.sequential_early_ms > 500 {
+            return Err("Invalid sequential input window");
         }
         if self.hud > 2
             || self.view > 3
@@ -106,6 +116,8 @@ mod tests {
             instrument: 1,
             hear: false,
             speed_percent: 70,
+            sequential: false,
+            sequential_early_ms: 250,
             practice_hear: true,
             first_key: 36,
             last_key: 84,
@@ -155,7 +167,14 @@ mod tests {
         legacy.as_object_mut().unwrap().remove("hud");
         legacy.as_object_mut().unwrap().remove("bindings");
         legacy.as_object_mut().unwrap().remove("personalization");
+        legacy.as_object_mut().unwrap().remove("sequential");
+        legacy
+            .as_object_mut()
+            .unwrap()
+            .remove("sequential_early_ms");
         let old: Preferences = serde_json::from_value(legacy).unwrap();
+        assert!(!old.sequential);
+        assert_eq!(old.sequential_early_ms, 250);
         assert_eq!(old.midi_output_name, None);
         assert!(!old.reduced_motion);
         assert!(!old.practice_hear);
@@ -167,6 +186,10 @@ mod tests {
         assert_eq!(old.practice_level, 0);
         assert!(old.validate().is_ok());
         for bad in [
+            Preferences {
+                sequential_early_ms: 501,
+                ..settings()
+            },
             Preferences {
                 hud: 3,
                 ..settings()

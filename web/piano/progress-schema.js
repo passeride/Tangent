@@ -11,6 +11,7 @@ function validContext(c) {
  return c && c.passage && int(c.duration_us) && int(c.passage.start_us) && int(c.passage.end_us)
  && c.passage.start_us<c.passage.end_us && c.passage.end_us<=c.duration_us
  && Number.isInteger(c.speed_percent)&&c.speed_percent>=25&&c.speed_percent<=200
+ && (c.guided==null||c.guided&&Number.isInteger(c.guided.early_ms)&&c.guided.early_ms>=0&&c.guided.early_ms<=500)
  && typeof c.song_audio==='boolean' && c.evaluator===1 && (c.part==null||int(c.part)&&c.part<100000);
 }
 function valid(r) {

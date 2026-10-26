@@ -52,3 +52,10 @@ assert.equal(readProgress(flowDb).find(r=>r.id===flow.id).trials[0].skill,flow.t
 for(const skill of ['flow:1:R:60-62','flow:2:R:60-62-64-65-67-65-64-62-60','flow:1:R:60-62-64-65-67-65-64-62-61','flow:1:R:125-127-129-130-132-130-129-127-125'])
  assert.throws(()=>writeProgress(db,{...flow,trials:[{...flow.trials[0],skill}]}));
 console.log('Five Finger Flow checkpoint: whole-pattern evidence, export/reopen and invalid sequence rejection passed.');
+
+const guidedContext={...context,guided:{early_ms:250}};
+writeProgress(db,{...song,id:'guided-context-test',context:guidedContext});
+const guidedDb=new SQL.Database(db.export());migrate(guidedDb);
+assert.deepEqual(readProgress(guidedDb).find(r=>r.id==='guided-context-test').context.guided,{early_ms:250});
+for(const early_ms of [-1,501,1.5])assert.throws(()=>writeProgress(db,{...song,context:{...context,guided:{early_ms}}}));
+console.log('Guided context: saved input window and invalid tolerance rejection passed.');

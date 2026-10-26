@@ -65,6 +65,18 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
         t,
     );
 
+    if state.mode == Mode::Play {
+        let width = (usable - 120.).min(180.);
+        d.button(
+            state,
+            inner + usable - width,
+            y + 15.,
+            width,
+            guided::label(state),
+            Action::Sequential,
+            t,
+        );
+    }
     let gap = 8.;
     let third = (usable - 2. * gap) / 3.;
     if state.mode == Mode::Play {
@@ -451,7 +463,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 "Note/chord exercise defaults".into(),
                 Action::PracticeDefaults,
             ));
-            "Goal: 3 complete repeats at 80% pitch coverage. Backing audio is allowed."
+            "Sequential waits for exact notes/chords. Early input is a 0-500 ms window; late input waits."
         }
         SettingsTab::Practice => {
             entries.extend([
@@ -519,12 +531,24 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             "Your library and preferences are stored locally. Database restore is not yet available."
         }
     };
+    if state.settings_tab == SettingsTab::Practice
+        && (state.screen != Screen::Session || state.mode == Mode::Play)
+    {
+        entries.insert(
+            0,
+            (
+                format!("Early input: {} ms", state.guidance.early_ms),
+                Action::SequentialWindow,
+            ),
+        );
+        entries.insert(0, (guided::label(state), Action::Sequential));
+    }
     let desc_y = content_y + 34.;
     let max_text = ((content_w / 7.0).max(10.)) as usize;
     let text: String = explanation.chars().take(max_text).collect();
     d.text(content_x, desc_y, text, 11., t.muted);
 
-    let cols = if l.height < 420. && entries.len() > 6 {
+    let cols = if (l.height < 420. && entries.len() > 6) || (l.height < 500. && entries.len() > 8) {
         3
     } else if content_w >= 500. || l.height < 500. {
         2

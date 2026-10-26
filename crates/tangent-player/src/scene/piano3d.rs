@@ -388,15 +388,27 @@ fn update_material(
 pub(super) fn cue_colors(state: &State, t: theme::Theme) -> BTreeMap<u8, Color> {
     let mut colors = BTreeMap::new();
     if state.mode == Mode::Play {
-        let now = state.transport.position_us;
+        let guide = super::guided::active(state);
+        let now = if guide {
+            state
+                .guidance
+                .engine
+                .barrier()
+                .unwrap_or(state.transport.position_us)
+        } else {
+            state.transport.position_us
+        };
         for n in state
             .song
             .notes
             .iter()
             .take_while(|n| n.start_us <= now)
             .filter(|n| {
-                n.end_us > now
-                    && !state.song.parts[n.part].percussion
+                (if guide {
+                    n.start_us == now
+                } else {
+                    n.end_us > now
+                }) && !state.song.parts[n.part].percussion
                     && passage::context(state).includes(n)
             })
         {

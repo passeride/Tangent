@@ -148,3 +148,12 @@ keep accurate aggregate points/coverage but omit detailed weak-section analysis;
 Results explicitly says when detail is unavailable. Older valid detailed records
 remain readable. Repetition goals use actual evaluator totals and input even when
 this detail cap has been exceeded. No historical data is deleted or rewritten.
+
+## Sequential song walkthroughs
+
+Play's Sequential mode waits for exact notes/chords with a saved early window
+(0/100/250/500 ms). A completed guided run measures pitch coverage after waiting,
+not rhythmic accuracy. History includes optional `context.guided.early_ms`; normal
+play and different windows are excluded from comparable summaries. Practice again
+restores the mode/window, selection and speed, initially paused. Existing history
+without `guided` remains normal playback. See [ADR-0029](adr/0029-sequential-play.md).

@@ -67,3 +67,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0027: Keyboard Explorer](0027-keyboard-explorer.md) — N02 octave transfers, explicit exercise kind and saved source/target evidence.
 
 - [ADR-0028: Five Finger Flow](0028-five-finger-sequences.md) — reusable release-gated sequences, whole-pattern scoring and versioned pattern evidence.
+
+- [ADR-0029: Sequential Play](0029-sequential-play.md) — shared clock/output barriers, exact chords, early input and comparable guided history.

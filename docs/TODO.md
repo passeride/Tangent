@@ -78,7 +78,7 @@ For user-facing sequencing, see the **proposed** [UX roadmap](design/ux-roadmap.
 
 - Retain per-performance staff/voice identifiers from MusicXML across repeated
   visits, then expose explicit staff/voice target selection; never infer MIDI hands.
-- Add guided wait-for-note with shared clock/output gating and chord release rules.
+- [x] Add guided wait-for-note with shared clock/output gating and chord release rules ([ADR-0029](adr/0029-sequential-play.md)).
 - Resolve exact saved sources and restore practice context safely paused after restart.
 - Add persistent goals and richer compatible passage trends without inventing legacy tempo.
 - Validate P-45 loop boundaries, output switching, sustained notes and native GPU layouts.

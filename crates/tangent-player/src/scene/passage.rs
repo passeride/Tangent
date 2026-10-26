@@ -12,6 +12,12 @@ pub(super) fn context(state: &State) -> SongContext {
         part: state.selected_part,
         evaluator: 1,
         song_audio: state.hear,
+        guided: state
+            .guidance
+            .enabled
+            .then_some(tangent_core::guided::GuidedConfig {
+                early_ms: state.guidance.early_ms,
+            }),
     }
 }
 pub(super) fn change(state: &mut State, action: controls::Action) {

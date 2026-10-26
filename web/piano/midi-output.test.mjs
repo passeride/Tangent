@@ -15,3 +15,15 @@ assert.deepEqual(restoreMidi(events,31),[[0xb0,64,0]]);
 sent.length=0;const next=[];out.select({send:b=>next.push(b),clear(){}});assert.ok(sent.length>0);assert.equal(next.length,0);
 out.select({send(){throw Error('unplugged')},clear(){}});out.on('key:0',60,90);assert.equal(out.port,null);assert.equal(fail.length,1);
 console.log('MIDI output: encoding, seek/sustain, no echo, release, switch and disconnect passed.');
+
+const boundaryEvents=[{time_us:0,channel:0,message:{On:{key:60,velocity:90}}},{time_us:500,channel:0,message:{Off:{key:60}}},{time_us:500,channel:0,message:{On:{key:62,velocity:90}}}];
+assert.equal(restoreMidi(boundaryEvents,500,true).filter(b=>(b[0]&240)===144).length,0,'A guided gate restores releases, never its pending attack');
+const captured=[];const preserved=new MidiOutput(()=>{});preserved.port={send:b=>captured.push([...b]),clear(){}};
+preserved.on('key:test',64,90);preserved.event({channel:15,message:{On:{key:67,velocity:90}}});captured.length=0;
+preserved.panic(true);
+assert.equal(preserved.live.get('key:test'),64);
+assert(!captured.some(b=>b[0]===0xbf&&(b[1]===120||b[1]===123)));
+assert(!captured.some(b=>b[0]===0x8f&&b[1]===64));
+assert(captured.some(b=>b[0]===0x8f&&b[1]===67));
+preserved.off('key:test');assert.deepEqual(captured.at(-1),[0x8f,64,0]);
+console.log('Guided MIDI boundary: no pending/ended attacks and held live voices survive song resets.');

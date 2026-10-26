@@ -105,6 +105,7 @@ mod tests {
             part: Some(0),
             evaluator: 1,
             song_audio: false,
+            guided: None,
         });
         run.piece_id = Some("a".repeat(64));
         run.input_sources = Some(vec!["midi".into()]);

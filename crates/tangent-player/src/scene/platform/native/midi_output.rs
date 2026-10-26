@@ -2,7 +2,10 @@
 use midir::{MidiOutput, MidiOutputConnection, MidiOutputPort};
 use serde::Deserialize;
 use serde_json::{Value, json};
-use std::{collections::BTreeMap, sync::mpsc::Sender};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::mpsc::Sender,
+};
 
 #[derive(Clone, Deserialize)]
 pub(super) struct Event {
@@ -42,11 +45,20 @@ impl Event {
 }
 /// Restore channel state and notes at a seek, without replaying historical attacks.
 pub(super) fn restore(events: &[Event], position: u64) -> Vec<Vec<u8>> {
+    restore_at(events, position, false)
+}
+fn restore_at(events: &[Event], position: u64, boundary: bool) -> Vec<Vec<u8>> {
     let mut controls = BTreeMap::new();
     let mut keys: BTreeMap<(u8, u8), Vec<u8>> = BTreeMap::new();
     let mut pedal = [false; 16];
     let mut sustained: BTreeMap<(u8, u8), Vec<u8>> = BTreeMap::new();
-    for e in events.iter().take_while(|e| e.time_us < position) {
+    for e in events
+        .iter()
+        .take_while(|e| e.time_us < position || boundary && e.time_us == position)
+    {
+        if boundary && e.time_us == position && matches!(e.message, Message::On { .. }) {
+            continue;
+        }
         let Some(bytes) = e.bytes() else {
             continue;
         };
@@ -122,6 +134,8 @@ pub(super) struct Output {
     next: usize,
     live: BTreeMap<String, u8>,
     epoch: u64,
+    boundary: Option<u64>,
+    song_keys: BTreeSet<u8>,
 }
 impl Output {
     pub fn new(out: Sender<Value>) -> Self {
@@ -134,6 +148,8 @@ impl Output {
             next: 0,
             live: BTreeMap::new(),
             epoch: 0,
+            boundary: None,
+            song_keys: BTreeSet::new(),
         };
         s.scan();
         s
@@ -207,17 +223,31 @@ impl Output {
         }
     }
     pub fn panic(&mut self) {
+        self.silence(false);
+    }
+    fn silence(&mut self, preserve: bool) {
         for ch in 0..16 {
             if ch == 9 {
                 continue;
             }
             self.send(&[0xb0 | ch, 64, 0]);
-            self.send(&[0xb0 | ch, 123, 0]);
-            self.send(&[0xb0 | ch, 120, 0]);
+            if preserve && ch == 15 {
+                for key in self.song_keys.iter().copied().collect::<Vec<_>>() {
+                    if !self.live.values().any(|k| *k == key) {
+                        self.send(&[0x8f, key, 0]);
+                    }
+                }
+            } else {
+                self.send(&[0xb0 | ch, 123, 0]);
+                self.send(&[0xb0 | ch, 120, 0]);
+            }
             self.send(&[0xe0 | ch, 0, 64]);
             self.send(&[0xb0 | ch, 121, 0]);
         }
-        self.live.clear();
+        self.song_keys.clear();
+        if !preserve {
+            self.live.clear();
+        }
     }
     pub fn song(&mut self, value: &str) {
         self.panic();
@@ -226,11 +256,20 @@ impl Output {
             .and_then(|s| serde_json::from_value(s["events"].clone()).ok())
             .unwrap_or_default();
     }
-    pub fn reset(&mut self, position: u64, playing: bool) {
-        self.panic();
+    pub fn reset(&mut self, position: u64, playing: bool, guided: bool) {
+        self.silence(guided);
+        self.boundary = guided.then_some(position);
         self.next = self.events.partition_point(|e| e.time_us < position);
         if playing && self.active() {
-            for bytes in restore(&self.events, position) {
+            let restored = if guided {
+                restore_at(&self.events, position, true)
+            } else {
+                restore(&self.events, position)
+            };
+            for bytes in restored {
+                if bytes.first() == Some(&0x9f) && bytes.get(2).is_some_and(|v| *v > 0) {
+                    self.song_keys.insert(bytes[1]);
+                }
                 self.send(&bytes);
             }
         }
@@ -240,9 +279,17 @@ impl Output {
             if e.time_us > position {
                 break;
             }
-            let bytes = e.bytes();
+            let bytes =
+                if self.boundary == Some(e.time_us) && !matches!(e.message, Message::On { .. }) {
+                    None
+                } else {
+                    e.bytes()
+                };
             self.next += 1;
             if let Some(bytes) = bytes {
+                if bytes.first() == Some(&0x9f) && bytes.get(2).is_some_and(|v| *v > 0) {
+                    self.song_keys.insert(bytes[1]);
+                }
                 self.send(&bytes);
             }
         }
@@ -295,5 +342,46 @@ mod tests {
             vec![vec![0xb0, 64, 127], vec![0x90, 60, 80], vec![0x80, 60, 0]]
         );
         assert_eq!(restore(&e, 31), vec![vec![0xb0, 64, 0]]);
+    }
+}
+
+#[cfg(test)]
+mod guided_tests {
+    use super::*;
+    #[test]
+    fn gate_snapshot_consumes_releases_and_leaves_attacks_pending() {
+        let events: Vec<Event> = serde_json::from_str(
+            r#"[
+          {"time_us":0,"channel":0,"message":{"On":{"key":60,"velocity":90}}},
+          {"time_us":500,"channel":0,"message":{"Off":{"key":60}}},
+          {"time_us":500,"channel":0,"message":{"On":{"key":62,"velocity":90}}}]
+        "#,
+        )
+        .unwrap();
+        assert!(restore_at(&events, 500, true).is_empty());
+        assert_eq!(restore(&events, 500), vec![vec![0x90, 60, 90]]);
+    }
+    #[test]
+    fn guided_resets_keep_live_voice_identity() {
+        let (out, _) = std::sync::mpsc::channel();
+        let mut output = Output {
+            ports: vec![],
+            connection: None,
+            selected: String::new(),
+            out,
+            events: vec![],
+            next: 0,
+            live: BTreeMap::new(),
+            epoch: 0,
+            boundary: None,
+            song_keys: BTreeSet::new(),
+        };
+        output.on("key:test", 64, 90);
+        output.song_keys.insert(67);
+        output.reset(500, false, true);
+        assert_eq!(output.live.get("key:test"), Some(&64));
+        assert!(output.song_keys.is_empty());
+        output.off("key:test");
+        assert!(output.live.is_empty());
     }
 }

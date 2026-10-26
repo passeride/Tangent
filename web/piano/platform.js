@@ -73,14 +73,14 @@ export async function installPlatform() {
   }
   function reset() {
     audio.stopSong();
-    midiOutput.panic();
+    midiOutput.panic(transport.guided ?? false);
     if (!song) return;
     index = song.events.findIndex((e) => e.time_us >= transport.position);
     if (index < 0) index = song.events.length;
     clock.reset(audio.now, transport.position, transport.speed_percent ?? 100);
     if (transport.playing && transport.hear) {
-      if(midiOutput.port) midiOutput.restore(song.events,transport.position);
-      else audio.restore(song.events, transport.position);
+      if(midiOutput.port) midiOutput.restore(song.events,transport.position,transport.guided??false);
+      else audio.restore(song.events, transport.position, transport.guided??false);
     }
   }
   function schedule() {
@@ -91,9 +91,12 @@ export async function installPlatform() {
       while (
         index < song.events.length &&
         song.events[index].time_us <= horizon &&
-        (transport.loop_end_us == null || song.events[index].time_us < transport.loop_end_us)
+        (transport.loop_end_us == null || song.events[index].time_us < transport.loop_end_us) &&
+        (transport.gate_us == null || song.events[index].time_us < transport.gate_us)
       ) {
         const e = song.events[index++];
+        // Guided restore already consumed boundary releases/controllers, never attacks.
+        if(transport.guided && e.time_us===transport.position && !e.message.On)continue;
         if(midiOutput.port)midiOutput.event(e);
         else audio.event(e, Math.max(audio.now, clock.time(e.time_us)));
       }

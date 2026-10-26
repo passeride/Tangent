@@ -37,6 +37,12 @@ missed targets; retries open paused with the recorded range, part and speed.
 Legacy history remains readable with unknown tempo/selection and is excluded
 from new comparable-result summaries. See [passage practice](docs/practice-progress.md#passage-practice).
 
+**Sequential Play** waits at each note/chord until you play the correct keys.
+Enable **Sequential** in Pause or Settings → Practice. Set **Early input** to
+0/100/250/500 ms (default 250); late input waits as long as needed. Repeated notes
+require release and replay. The mode/window are saved, and guided results remain
+separate from continuous playback. See [the guide](docs/design/sequential-play.md).
+
 Settings → Visuals now offers saved **Focus / Standard / Arcade** HUD density,
 independent of effects. **Fit keys** and out-of-range warnings help keep selected
 music visible on the keyboard.

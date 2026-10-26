@@ -63,11 +63,23 @@ impl Transport {
     }
     /// Returns crossed loop boundaries; large frames use bounded arithmetic.
     pub fn advance(&mut self, elapsed_us: u64) -> u64 {
+        self.advance_until(elapsed_us, None)
+    }
+    /// An exclusive output barrier may be reached, but never crossed by song time.
+    pub fn advance_until(&mut self, elapsed_us: u64, barrier: Option<u64>) -> u64 {
         if self.playing {
             let scaled = u128::from(elapsed_us) * u128::from(self.rate.percent())
                 + u128::from(self.remainder);
             self.remainder = (scaled % 100) as u8;
             let elapsed_us = (scaled / 100).min(u128::from(u64::MAX)) as u64;
+            if let Some(at) =
+                barrier.filter(|at| *at >= self.position_us && *at <= self.duration_us)
+                && self.position_us.saturating_add(elapsed_us) >= at
+            {
+                self.position_us = at;
+                self.remainder = 0;
+                return 0;
+            }
             if let Some(p) = self.passage {
                 let next = u128::from(self.position_us) + u128::from(elapsed_us);
                 if next >= u128::from(p.end_us) {

@@ -10,12 +10,13 @@ export function midiBytes(e) {
   if(m.Bend&&Number.isInteger(m.Bend.value)&&m.Bend.value>=0&&m.Bend.value<16384) return [0xe0|ch,m.Bend.value&127,m.Bend.value>>7];
   return null;
 }
-export function restoreMidi(events,position) {
+export function restoreMidi(events,position,boundary=false) {
   const controls=new Map(), keys=new Map(), sustained=new Map(), pedal=new Set();
   const clearChannel=(map,ch)=>{for(const [k,v] of map) if(v.ch===ch) map.delete(k);};
   const push=(map,ch,key,velocity)=>{const id=`${ch}:${key}`;if(!map.has(id))map.set(id,{ch,key,velocities:[]});map.get(id).velocities.push(velocity);};
   for(const e of events) {
-    if(e.time_us>=position) break;
+    if(e.time_us>position||e.time_us===position&&!boundary) break;
+    if(boundary&&e.time_us===position&&e.message.On)continue;
     const b=midiBytes(e);if(!b)continue;
     const ch=e.channel,m=e.message;
     if(m.On&&m.On.velocity) push(keys,ch,m.On.key,m.On.velocity);
@@ -40,19 +41,23 @@ export function restoreMidi(events,position) {
 export class MidiOutput {
   port=null;
   live=new Map();
+  songKeys=new Set();
   constructor(fail) {this.fail=fail;}
   send(bytes) {
     try {this.port?.send(bytes);} catch(e) {this.port=null;this.live.clear();this.fail(e);}
   }
-  panic() {
+  panic(preserveLive=false) {
     // No future timestamped messages: clearing and silencing also cancels
     // queued output on pause, seek, focus loss, device change and navigation.
     try{this.port?.clear();}catch{}
     for(let ch=0;ch<16;ch++)if(ch!==9) {
-      for(const [c,v] of [[64,0],[123,0],[120,0],[121,0]])this.send([0xb0|ch,c,v]);
+      const preserve=preserveLive&&ch===15;
+      for(const [c,v] of (preserve?[[64,0],[121,0]]:[[64,0],[123,0],[120,0],[121,0]]))this.send([0xb0|ch,c,v]);
+      if(preserve)for(const key of this.songKeys)if(![...this.live.values()].includes(key))this.send([0x8f,key,0]);
       this.send([0xe0|ch,0,64]);
     }
-    this.live.clear();
+    this.songKeys.clear();
+    if(!preserveLive)this.live.clear();
   }
   select(port) {this.panic();this.port=port;}
   on(id,key,velocity) {
@@ -60,6 +65,6 @@ export class MidiOutput {
     this.off(id);this.send([0x9f,key,velocity]);this.live.set(id,key);
   }
   off(id) {const key=this.live.get(id);this.live.delete(id);if(key!==undefined&&![...this.live.values()].includes(key))this.send([0x8f,key,0]);}
-  event(e) {const bytes=midiBytes(e);if(bytes)this.send(bytes);}
-  restore(events,position) {for(const bytes of restoreMidi(events,position))this.send(bytes);}
+  event(e) {const bytes=midiBytes(e);if(bytes){if(bytes[0]===0x9f&&bytes[2])this.songKeys.add(bytes[1]);this.send(bytes);}}
+  restore(events,position,boundary=false) {for(const bytes of restoreMidi(events,position,boundary)){if(bytes[0]===0x9f&&bytes[2])this.songKeys.add(bytes[1]);this.send(bytes);}}
 }

@@ -97,6 +97,7 @@ Record decisions that alter timing, scoring or persistence in new ADRs; update t
 ADR-0021–0023 deliver initial time loops and measure-visit snapping, explicit
 imported parts, per-attempt context/evidence, contextual retry/comparison,
 Focus/Standard/Arcade HUDs, keyboard fitting and voluntary session-local goals.
-This does not close all R0–R3 gates: per-staff/voice targets, guided waiting,
+ADR-0029 subsequently delivers guided waiting with exact chord gates and saved
+early-input tolerance. This does not close all R0–R3 gates: per-staff/voice targets,
 persisted resume/goals, physical P-45/GPU checks and participant research remain.
 See [execution-plan log](product-development-plan.md#implementation-log--2026-10-26).

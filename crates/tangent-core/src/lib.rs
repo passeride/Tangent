@@ -15,3 +15,5 @@ pub mod explorer;
 
 pub mod five_finger;
 pub mod sequence;
+
+pub mod guided;

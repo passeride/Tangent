@@ -181,11 +181,12 @@ export class PianoAudio {
       }
     }
   }
-  restore(events, position) {
+  restore(events, position, boundary = false) {
     // Reconstruct silent state first; do not replay historical attacks at seek.
     const channels = new Map();
     for (const e of events) {
-      if (e.time_us >= position) break;
+      if (e.time_us > position || e.time_us === position && !boundary) break;
+      if (boundary && e.time_us === position && e.message.On) continue;
       if (e.channel === 9) continue;
       const id = `${e.port}:${e.channel}`;
       if (!channels.has(id))

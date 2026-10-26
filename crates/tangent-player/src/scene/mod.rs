@@ -4,6 +4,7 @@ mod draw;
 mod effects;
 mod explorer_view;
 mod flow_view;
+mod guided;
 mod layout;
 mod library;
 mod menu;
@@ -106,6 +107,7 @@ pub struct State {
     suggested_hands: BTreeMap<usize, crate::personalization::Hand>,
     piece_id: String,
     transport: Transport,
+    guidance: guided::Session,
     loop_a: Option<u64>,
     loop_drag: Option<(String, bool)>,
     goal: Option<passage::Goal>,
@@ -195,6 +197,7 @@ impl State {
             .to_hex()
             .to_string(),
             transport: Transport::new(duration_us),
+            guidance: guided::Session::new(),
             loop_a: None,
             loop_drag: None,
             goal: None,
@@ -271,6 +274,8 @@ impl State {
             instrument: self.instrument,
             hear: self.hear,
             speed_percent: self.transport.rate().percent(),
+            sequential: self.guidance.enabled,
+            sequential_early_ms: self.guidance.early_ms,
             practice_hear: self.practice_hear,
             first_key: self.piano.keys.first().unwrap().key,
             last_key: self.piano.keys.last().unwrap().key,
@@ -300,6 +305,9 @@ impl State {
         self.transport.set_rate(
             tangent_core::transport::PlaybackRate::new(p.speed_percent).unwrap_or_default(),
         );
+        self.guidance.enabled = p.sequential;
+        self.guidance.early_ms = p.sequential_early_ms;
+        self.guidance.invalidate();
         self.practice_hear = p.practice_hear;
         self.preferred_midi_output = p.midi_output_name;
         self.midi_restore_pending = self.preferred_midi_output.is_some();
@@ -334,8 +342,9 @@ impl State {
         }
         // Zero matches: retain the preference and let a future Rescan retry.
     }
-    fn sync(&self) {
-        platform::action("transport",&serde_json::json!({"position":self.transport.position_us,"playing":self.transport.playing && self.mode==Mode::Play && self.screen==Screen::Session && !self.help,"volume":self.volume,"hear":self.hear,"speed_percent":self.transport.rate().percent(),"loop_end_us":self.transport.passage().map(|p| p.end_us),"instrument":self.instrument}).to_string());
+    fn sync(&mut self) {
+        guided::ensure(self);
+        platform::action("transport",&serde_json::json!({"position":self.transport.position_us,"playing":self.transport.playing && self.mode==Mode::Play && self.screen==Screen::Session && !self.help && !guided::waiting(self),"guided":guided::active(self),"gate_us":if guided::active(self){self.guidance.engine.barrier()}else{None},"volume":self.volume,"hear":self.hear,"speed_percent":self.transport.rate().percent(),"loop_end_us":self.transport.passage().map(|p| p.end_us),"instrument":self.instrument}).to_string());
     }
     fn source(&mut self, id: String, key: Option<u8>, velocity: u8) {
         if self.held.get(&id).copied() == key {
@@ -371,6 +380,7 @@ impl State {
                 return;
             }
             self.stop_reference();
+            let fresh = !self.held.values().any(|&held| held == key);
             self.held.insert(id.clone(), key);
             personal::capture(self, key);
             self.capture_for_recognition(key);
@@ -399,6 +409,9 @@ impl State {
             // chord is not wrong merely because the other fingers are pending.
             let selection = passage::context(self);
             let grade = match self.mode {
+                Mode::Play if self.transport.playing && guided::active(self) => {
+                    Some(guided::judge(self, key, fresh))
+                }
                 Mode::Play if self.transport.playing => Some(self.song_hits.judge_selection(
                     &self.song,
                     self.transport.position_us,
@@ -585,7 +598,7 @@ fn update(mut state: ResMut<State>, time: Res<Time>, windows: Query<&Window>) {
         state.panic();
     }
     let was = state.transport.playing;
-    let wraps = state.transport.advance(elapsed);
+    let wraps = guided::advance(&mut state, elapsed);
     if wraps > 0 {
         state.personal.teaching = None;
         let next = state.transport.position_us;

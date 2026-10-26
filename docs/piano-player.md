@@ -280,3 +280,16 @@ Train → Keyboard Explorer marks a reference key and asks for the same note exa
 ## Five Finger Flow (T01)
 
 Train → Five Finger Flow teaches a five-note major position up and down in nine steps. Three levels cover Right C, Left C and moving C/G/F positions. Full release advances each step; twelve whole patterns form a session. Mistakes/hints/Hear affect the whole pattern. Finger numbers are advice, not measured input; there is no timing or legato score. See [ADR-0028](adr/0028-five-finger-sequences.md).
+
+## Sequential Play
+
+Pause → **Sequential: On**, or Settings → Practice, enables note-by-note waiting.
+Resume starts the guided transport. Exact pitches/octaves advance; chords require
+fresh attacks held together, and repeated keys need release/replay. **Early input**
+cycles 0/100/250/500 ms, default 250, independent of playback speed. Late input has
+no deadline. Manual pause suspends matching. Audio, MIDI output and notation share
+the same stop; manually played notes remain sounding through automatic waits.
+Mode/window persist, and results/retries save them with the passage context.
+Sequential coverage is distinct from continuous coverage and is not a timing score.
+See [ADR-0029](adr/0029-sequential-play.md) and [screenshots/brief](design/sequential-play.md).
+Run `cd web/piano && node guided-smoke.mjs` for the real WASM/MIDI integration check.

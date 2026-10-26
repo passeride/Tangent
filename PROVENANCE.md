@@ -254,3 +254,12 @@ N02 octave-transfer generation, evidence, UI and tests are original project code
 ## Five Finger Flow — 2026-10-26
 
 The release-gated sequence runner, original major pentascale patterns, fingering guidance and T01 UI/tests are project-authored from the internal catalogue. No exercise files, recordings, external model assets or implementation sources were imported.
+
+## Sequential Play — 2026-10-26
+
+The owner requested first-pass note/chord waiting with adjustable tolerance. The
+shared Rust gate engine, adapters, controls, tests and documentation are newly
+authored for Tangent in the same disclosed context above. No dependencies or
+external assets were added. The browser fixture is an original generated five-note
+MusicXML sequence; its three screenshots show the actual Bevy app, not mockups.
+See [ADR-0029](docs/adr/0029-sequential-play.md).
