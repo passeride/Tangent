@@ -61,3 +61,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0024: Configurable keyboard and piano bindings](0024-configurable-keyboard-and-piano-bindings.md) — persistent two-column matrix, capture/conflicts, shared actions and MIDI control-key prefix/chords.
 
 - [ADR-0025: Personal themes and demonstrated hands](0025-personal-themes-and-demonstrated-hands.md) — persistent JSON themes, reviewed hand demonstrations and library-row double-click.
+
+- [ADR-0026: Procedural 3D piano](0026-procedural-3d-piano.md) — PBR keyboard, one-surface texture composition and projected input geometry.

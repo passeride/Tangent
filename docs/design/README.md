@@ -56,3 +56,5 @@ not be the sole carrier of correctness or state; provide text or shape feedback.
 Record decisions and open questions after a sketch is reviewed. Do not label a
 mockup as an implemented screenshot or claim device/browser support from an image.
 Create original layouts; reference material needs a source and rights record.
+
+- [3D piano stage](3d-piano-stage.md) — procedural lit keyboard, key motion and essential expected-note glow; see ADR-0026.

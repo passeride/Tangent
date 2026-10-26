@@ -230,3 +230,5 @@ MusicXML's sheet view now uses written measures, real Bravura G/F clefs, meter,
 tempo, key signatures, repeat signs and first/second-ending brackets. The playhead
 follows repeat visits. Falling staff/notes show faint clef watermarks plus moving
 measure/beat guides and endings. MIDI remains an approximate reading view.
+
+The session piano is a procedural, lit 3D keyboard with chamfered keys, key depression and expected-note edge glow, composited into the same Bevy surface. See [3D piano stage](docs/design/3d-piano-stage.md).

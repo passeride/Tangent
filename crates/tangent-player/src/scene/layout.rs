@@ -1,4 +1,5 @@
 use tangent_core::piano::PianoLayout;
+pub const BLACK_RISE: f32 = 12.;
 #[derive(Clone, Copy)]
 pub struct Rect {
     pub x: f32,
@@ -51,18 +52,54 @@ impl Layout {
     pub fn key(&self, piano: &PianoLayout, key: u8) -> Option<Rect> {
         piano.keys.iter().find(|k| k.key == key).map(|k| Rect {
             x: self.margin + k.x * self.unit,
-            y: self.strike,
+            y: self.strike - if k.black { BLACK_RISE } else { 0. },
             w: k.width * self.unit,
-            h: self.key_h * if k.black { 0.62 } else { 1. },
+            h: self.key_h * if k.black { 0.62 } else { 1. } + if k.black { BLACK_RISE } else { 0. },
         })
     }
     pub fn center(&self, piano: &PianoLayout, key: u8) -> Option<f32> {
         self.key(piano, key).map(|r| r.x + r.w / 2.)
     }
     pub fn hit(&self, piano: &PianoLayout, x: f32, y: f32) -> Option<u8> {
-        piano.hit(
-            (x - self.margin) / self.unit,
-            (y - self.strike) / self.key_h,
-        )
+        // Raised black-key backs project above the strike rail. Use the same
+        // projected rectangles as drawing, always checking black keys first.
+        [true, false].into_iter().find_map(|black| {
+            piano
+                .keys
+                .iter()
+                .filter(|k| k.black == black)
+                .find_map(|k| {
+                    self.key(piano, k.key)
+                        .filter(|r| r.contains(x, y))
+                        .map(|_| k.key)
+                })
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn projected_keyboard_keeps_lane_centers_and_black_key_priority() {
+        for (first, last) in [(36, 84), (36, 96), (21, 108)] {
+            let piano = PianoLayout::new(first, last).unwrap();
+            for (width, height) in [(390., 700.), (1280., 420.), (3840., 2160.)] {
+                let l = Layout::new(width, height, &piano);
+                for key in &piano.keys {
+                    let r = l.key(&piano, key.key).unwrap();
+                    assert!((l.center(&piano, key.key).unwrap() - (r.x + r.w * 0.5)).abs() < 0.001);
+                    let y = if key.black {
+                        r.y + 2.
+                    } else {
+                        l.strike + l.key_h * 0.9
+                    };
+                    assert_eq!(l.hit(&piano, r.x + r.w * 0.5, y), Some(key.key));
+                }
+                assert_eq!(l.hit(&piano, -1., l.strike), None);
+                assert_eq!(l.hit(&piano, width + 1., l.strike), None);
+            }
+        }
     }
 }

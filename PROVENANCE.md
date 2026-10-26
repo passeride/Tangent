@@ -242,3 +242,7 @@ Fira Mono subset. Bravura remains the notation font. Noto Sans is distributed
 under SIL OFL 1.1; pinned source, content hash, copyright and license are in
 [the design asset register](docs/design/assets/README.md). No legacy project
 assets or implementation were copied.
+
+## Procedural 3D piano — 2026-10-26
+
+The chamfered key mesh, case, lighting and light-spill geometry in `scene/piano3d.rs` and `scene/draw.rs` are original project code. Bevy 0.20.0 PBR/light features use the already pinned MIT/Apache-2.0 engine. Official Bevy render-to-texture and orthographic examples/API were consulted; no external piano model, texture or shader was imported. Prior source-exposure limitations documented above remain unchanged.

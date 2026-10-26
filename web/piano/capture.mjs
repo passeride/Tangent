@@ -1,3 +1,8 @@
+// Optional dedicated real-app 3D piano captures.
+if (process.env.TANGENT_CAPTURE_3D === '1') {
+  await import('./piano3d-smoke.mjs');
+  process.exit(0);
+}
 import { chromium } from "playwright";
 import { serve, ready, click, gpuArgs } from "./browser-helpers.mjs";
 // Product-strategy captures are made by real input scenarios in the same app.
