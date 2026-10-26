@@ -21,21 +21,41 @@ pub(super) fn start(state: &mut State) {
     state.training.model.start(id, &state.practice);
     state.training.model.choose(&mut state.practice);
 }
+pub(super) fn start_song(state: &mut State) {
+    state.training.serial += 1;
+    let id = format!("song-{}-{}", session_nonce(), state.training.serial);
+    let count = state
+        .song
+        .notes
+        .iter()
+        .filter(|n| state.song.parts.get(n.part).is_some_and(|p| !p.percussion))
+        .count() as u32;
+    state.training.model.run = Some(Run::song(id, state.song.title.clone(), count));
+    state.song_hits.reset();
+}
 fn session_nonce() -> u64 {
     // The platform supplies a wall-clock/random identifier on both targets.
     platform::session_nonce()
 }
 pub(super) fn checkpoint(state: &mut State) {
-    if let Some(run) = &state.training.model.run
+    if let Some(run) = &mut state.training.model.run
         && run.meaningful()
     {
+        run.revision += 1;
         state.training.pending.insert(run.id.clone(), run.clone());
         platform::action("progress-save", &serde_json::to_string(run).unwrap());
     }
 }
 pub(super) fn end(state: &mut State, show: bool) {
     if let Some(mut run) = state.training.model.run.take() {
-        run.finished = run.trials.len() >= SESSION_LENGTH;
+        run.finished = if run.mode == "play" {
+            state.transport.position_us >= state.transport.duration_us
+        } else {
+            run.trials.len() >= SESSION_LENGTH
+        };
+        if run.mode == "play" {
+            run.song_missed = run.song_total.saturating_sub(run.song_correct);
+        }
         run.revision += 1;
         if run.meaningful() {
             state.training.pending.insert(run.id.clone(), run.clone());
@@ -53,6 +73,22 @@ pub(super) fn end(state: &mut State, show: bool) {
     }
 }
 pub(super) fn grade(state: &mut State, grade: effects::Grade) {
+    if state.mode == Mode::Play {
+        if let Some(r) = &mut state.training.model.run
+            && r.mode == "play"
+        {
+            match grade {
+                effects::Grade::Correct => {
+                    r.song_correct += 1;
+                    r.points += 100;
+                }
+                effects::Grade::Wrong => r.errors += 1,
+                _ => return,
+            }
+            r.revision += 1;
+        }
+        return;
+    }
     if !matches!(state.mode, Mode::Notes | Mode::Chords) {
         return;
     }
@@ -83,6 +119,9 @@ pub(super) fn tick(state: &mut State, dt: f32) {
     }
     state.training.timer -= dt;
     if state.training.timer <= 0. {
+        if state.mode == Mode::Play && state.transport.playing {
+            checkpoint(state);
+        }
         state.training.timer = 3.;
         for run in state.training.pending.values().take(8) {
             platform::action("progress-save", &serde_json::to_string(run).unwrap());
@@ -157,9 +196,13 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 x,
                 156.,
                 format!(
-                    "{} / {} solved / {}% first try",
+                    "{} / {} solved / {}%",
                     r.solved(),
-                    r.trials.len(),
+                    if r.mode == "play" {
+                        r.song_total as usize
+                    } else {
+                        r.trials.len()
+                    },
                     r.accuracy().unwrap_or(0)
                 ),
                 14.,
@@ -180,7 +223,9 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             d.text(
                 x,
                 218.,
-                if r.finished {
+                if r.finished && r.mode == "play" {
+                    "Piece finished"
+                } else if r.finished {
                     "12-task session complete"
                 } else {
                     "Session ended early"
@@ -218,7 +263,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         let history = &state.training.model.history;
         let points: u32 = history.iter().map(|r| r.points).sum();
         let trials: usize = history.iter().map(|r| r.trials.len()).sum();
-        let clean: usize = history.iter().map(Run::clean).sum();
+        let clean: usize = history
+            .iter()
+            .filter(|r| r.mode != "play")
+            .map(Run::clean)
+            .sum();
         d.text(
             x,
             72.,

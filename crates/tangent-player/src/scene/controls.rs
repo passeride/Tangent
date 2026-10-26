@@ -156,6 +156,11 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             platform::action("progress-list", "");
         }
         Action::PracticeFinish => training::end(state, true),
+        Action::PracticeAgain if state.mode == Mode::Play => {
+            activate(state, Action::StartPlay, false);
+            activate(state, Action::Restart, false);
+            activate(state, Action::Play, false);
+        }
         Action::PracticeAgain => {
             let action = if state.mode == Mode::Chords {
                 Action::TrainChords
@@ -307,17 +312,28 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             if state.transport.position_us >= state.transport.duration_us {
                 state.transport.seek(0);
             }
+            if !state.transport.playing
+                && state.transport.position_us == 0
+                && state.training.model.run.is_none()
+            {
+                training::start_song(state);
+            }
+            if state.transport.playing {
+                training::checkpoint(state);
+            }
             state.transport.playing = !state.transport.playing;
             state.clock = platform::clock_us();
             state.sync();
         }
         Action::Restart => {
+            training::end(state, false);
             state.song_hits.reset();
             state.feedback.reset();
             state.transport.seek(0);
             state.sync();
         }
         Action::Back => {
+            training::end(state, false);
             state.song_hits.reset();
             state.feedback.reset();
             let pos = state.transport.position_us.saturating_sub(step);
@@ -325,6 +341,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.sync();
         }
         Action::Forward => {
+            training::end(state, false);
             state.song_hits.reset();
             state.feedback.reset();
             let pos = state.transport.position_us.saturating_add(step);
@@ -669,6 +686,7 @@ pub fn input(
         }
     }
     if state.mode == Mode::Play && !state.help && keys.just_pressed(KeyCode::End) {
+        training::end(&mut state, false);
         let end = state.transport.duration_us;
         state.transport.seek(end);
         state.sync();

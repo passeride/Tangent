@@ -21,6 +21,12 @@ pub struct Run {
     pub elapsed_ms: u64,
     pub finished: bool,
     pub trials: Vec<Trial>,
+    #[serde(default)]
+    pub song_correct: u32,
+    #[serde(default)]
+    pub song_total: u32,
+    #[serde(default)]
+    pub song_missed: u32,
 }
 impl Run {
     pub fn new(id: String, p: &Practice) -> Self {
@@ -34,22 +40,44 @@ impl Run {
             elapsed_ms: 0,
             finished: false,
             trials: vec![],
+            song_correct: 0,
+            song_total: 0,
+            song_missed: 0,
         }
     }
+    pub fn song(id: String, title: String, total: u32) -> Self {
+        let mut r = Self::new(id, &Practice::default());
+        r.mode = "play".into();
+        r.label = title.chars().take(24).collect();
+        r.song_total = total;
+        r
+    }
     pub fn solved(&self) -> usize {
+        if self.mode == "play" {
+            return self.song_correct as usize;
+        }
         self.trials.iter().filter(|t| !t.skipped).count()
     }
     pub fn clean(&self) -> usize {
+        if self.mode == "play" {
+            return self.song_correct as usize;
+        }
         self.trials
             .iter()
             .filter(|t| t.clean && !t.assisted && !t.skipped)
             .count()
     }
     pub fn accuracy(&self) -> Option<u32> {
+        if self.mode == "play" {
+            return (self.song_total > 0).then(|| self.song_correct * 100 / self.song_total);
+        }
         (!self.trials.is_empty()).then(|| self.clean() as u32 * 100 / self.trials.len() as u32)
     }
     pub fn meaningful(&self) -> bool {
-        !self.trials.is_empty() || self.errors > 0
+        !self.trials.is_empty()
+            || self.errors > 0
+            || self.song_correct > 0
+            || (self.mode == "play" && self.finished)
     }
     pub fn validate(&self) -> bool {
         self.id.len() >= 8
@@ -58,10 +86,13 @@ impl Run {
                 .id
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '-')
-            && matches!(self.mode.as_str(), "notes" | "chords")
+            && matches!(self.mode.as_str(), "notes" | "chords" | "play")
             && self.label.len() <= 100
             && self.trials.len() <= SESSION_LENGTH
-            && self.points == self.trials.iter().map(points).sum::<u32>()
+            && self.song_total <= 100000
+            && self.song_correct <= self.song_total
+            && self.song_missed <= self.song_total
+            && self.points == self.trials.iter().map(points).sum::<u32>() + self.song_correct * 100
             && self.errors <= 100000
             && self.elapsed_ms <= 604800000
             && self

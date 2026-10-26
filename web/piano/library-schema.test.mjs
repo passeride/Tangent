@@ -32,7 +32,7 @@ assert.equal(db.exec("PRAGMA integrity_check")[0].values[0][0], "ok");
 db.close();
 // Upgrade a real v2 catalog without changing any existing settings or fingerprints.
 const old = new SQL.Database(); migrate(old);
-old.run("DROP TABLE library_songs; PRAGMA user_version=2;");
+old.run("DROP TABLE practice_details; DROP TABLE library_songs; PRAGMA user_version=2;");
 old.run("INSERT INTO fingerprint_songs VALUES ('legacy','Preserved','now')");
 migrate(old);
 assert.equal(listLibrary(old).total, 0);

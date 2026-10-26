@@ -393,7 +393,12 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
         conn.execute_batch("COMMIT;")?;
     }
     if version < 5 {
-        conn.execute_batch(progress::MIGRATION)?;
+        conn.execute_batch("BEGIN;")?;
+        if let Err(e) = conn.execute_batch(progress::MIGRATION) {
+            let _ = conn.execute_batch("ROLLBACK;");
+            return Err(e);
+        }
+        conn.execute_batch("COMMIT;")?;
     }
     Ok(())
 }

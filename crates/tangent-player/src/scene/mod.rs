@@ -425,7 +425,7 @@ impl State {
         #[cfg(not(target_arch = "wasm32"))]
         self.gpu_bursts.clear();
         self.feedback.reset();
-        self.song_hits.reset();
+
         self.recognition_notes.clear();
         self.recognition_status.clear();
         self.recognition_ticket += 1;
@@ -496,6 +496,9 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
     let was = state.transport.playing;
     state.transport.advance(elapsed);
     if was && !state.transport.playing {
+        if state.mode == Mode::Play && state.training.model.run.is_some() {
+            training::end(&mut state, true);
+        }
         state.sync();
     }
     for m in messages {
@@ -661,6 +664,9 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
             platform::store_import(bytes, &serde_json::to_string(&metadata).unwrap());
             if from_library {
                 song.title = title;
+            }
+            if state.mode == Mode::Play {
+                training::end(state, false);
             }
             state.panic();
             state.transport = Transport {
