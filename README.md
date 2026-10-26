@@ -204,8 +204,9 @@ as proof of source independence.
 A project-wide license has not been selected. Do not assume that this repository
 is MIT, Apache-2.0 or licensed under the terms of another Tangent project.
 Dependencies retain their own licenses: see [THIRD_PARTY.md](THIRD_PARTY.md) and
-[license notices](THIRD_PARTY_NOTICES.txt). Fonts, music and audio assets will
-require their own records when introduced.
+[license notices](THIRD_PARTY_NOTICES.txt). Bundled fonts and music have individual license and provenance records in
+[the asset register](docs/design/assets/README.md). Noto Sans is used for
+international song titles and interface text; Bravura is for music notation.
 
 ## Player shortcuts
 
