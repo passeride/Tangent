@@ -62,6 +62,12 @@ fn bus() -> &'static Bus {
         }
     })
 }
+pub fn session_nonce() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos() as u64
+}
 pub fn clock_us() -> f64 {
     START.get_or_init(Instant::now).elapsed().as_secs_f64() * 1_000_000.0
 }
@@ -811,7 +817,7 @@ mod tests {
         let version: i64 = db
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 4);
+        assert_eq!(version, 5);
         let rows: i64 = db
             .query_row("SELECT count(*) FROM scores", [], |r| r.get(0))
             .unwrap();

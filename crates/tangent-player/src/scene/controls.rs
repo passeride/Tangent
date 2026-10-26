@@ -4,6 +4,11 @@ pub enum Action {
     #[cfg(not(target_arch = "wasm32"))]
     Exit,
     Main,
+    Progress,
+    PracticeFinish,
+    PracticeAgain,
+    PracticeSkip,
+    PracticeAdaptive,
     Library,
     LibraryOpen(usize),
     LibrarySearch,
@@ -60,6 +65,11 @@ impl Action {
     pub fn id(self) -> &'static str {
         match self {
             Self::Main => "main",
+            Self::Progress => "progress",
+            Self::PracticeFinish => "practice-finish",
+            Self::PracticeAgain => "practice-again",
+            Self::PracticeSkip => "practice-skip",
+            Self::PracticeAdaptive => "practice-adaptive",
             Self::Library => "library",
             Self::LibraryOpen(_) => "library-open",
             Self::LibrarySearch => "library-search",
@@ -133,8 +143,39 @@ fn activate(state: &mut State, action: Action, shift: bool) {
     match action {
         #[cfg(not(target_arch = "wasm32"))]
         Action::Exit => {
+            training::end(state, false);
             state.panic();
             platform::action("quit", "");
+        }
+        Action::Progress => {
+            training::end(state, false);
+            state.panic();
+            state.help = false;
+            state.settings_open = false;
+            state.screen = Screen::Progress;
+            platform::action("progress-list", "");
+        }
+        Action::PracticeFinish => training::end(state, true),
+        Action::PracticeAgain => {
+            let action = if state.mode == Mode::Chords {
+                Action::TrainChords
+            } else {
+                Action::TrainNotes
+            };
+            activate(state, action, false);
+        }
+        Action::PracticeSkip => {
+            if !state.practice.waiting_release && state.training.model.run.is_some() {
+                state.training.model.answer(&state.practice, true);
+                training::checkpoint(state);
+                state.panic();
+                state.practice.completed += 1;
+                state.practice.hint = false;
+                training::released(state);
+            }
+        }
+        Action::PracticeAdaptive => {
+            state.training.model.adaptive = !state.training.model.adaptive;
         }
         Action::LibrarySearch => state.library.focus(library::Field::Search),
         Action::LibraryClearSearch => {
@@ -180,6 +221,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.library.focus = None;
         }
         Action::Library => {
+            training::end(state, false);
             state.panic();
             state.help = false;
             state.settings_open = false;
@@ -223,6 +265,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             }
         }
         Action::Main | Action::Train => {
+            training::end(state, false);
             state.panic();
             state.help = false;
             state.settings_open = false;
@@ -233,6 +276,7 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             };
         }
         Action::StartPlay | Action::FreeForm | Action::TrainNotes | Action::TrainChords => {
+            training::end(state, false);
             state.panic();
             state.help = false;
             state.settings_open = false;
@@ -246,6 +290,9 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             let (clef, level) = (state.practice.clef, state.practice.level);
             state.practice = tangent_core::practice::Practice::new(state.mode == Mode::Chords);
             state.practice.configure(clef, level);
+            if matches!(state.mode, Mode::Notes | Mode::Chords) {
+                training::start(state);
+            }
             state.particles.clear();
             state.live_bursts.clear();
         }
@@ -377,8 +424,12 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             } else {
                 state.practice.level
             };
+            training::end(state, false);
             state.panic();
             state.practice.configure(clef, level);
+            if state.screen == Screen::Session {
+                training::start(state);
+            }
         }
         Action::EffectStrength => state.effect_strength = (state.effect_strength + 1) % 3,
         Action::ReducedMotion => {
@@ -388,7 +439,12 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.live_bursts.clear();
         }
         Action::PracticeListen => state.hear_target(),
-        Action::PracticeHint => state.practice.hint = !state.practice.hint,
+        Action::PracticeHint => {
+            state.practice.hint = !state.practice.hint;
+            if state.practice.hint && !state.practice.waiting_release {
+                state.training.model.assist();
+            }
+        }
         Action::MidiOutput => {
             state.midi_dropdown_open = !state.midi_dropdown_open;
             state.midi_dropdown_page = 0;

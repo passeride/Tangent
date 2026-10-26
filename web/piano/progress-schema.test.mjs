@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import initSqlJs from 'sql.js';
+import {migrate,schemaVersion} from './storage-schema.js';
+import {writeProgress,readProgress} from './progress-schema.js';
+const SQL=await initSqlJs();const db=new SQL.Database();migrate(db);
+assert.equal(schemaVersion,5);
+const run={id:'test-session',revision:2,mode:'notes',label:'Treble / Stepwise',points:100,errors:0,elapsed_ms:1200,finished:false,trials:[{skill:'note:0:0:60',clean:true,assisted:false,skipped:false,response_ms:1200}]};
+writeProgress(db,run);writeProgress(db,run);
+assert.equal(readProgress(db).length,1);
+writeProgress(db,{...run,revision:1,points:0,trials:[]});
+assert.equal(readProgress(db)[0].points,100);
+assert.equal(db.exec('SELECT count(*) FROM scores')[0].values[0][0],5);
+assert.throws(()=>writeProgress(db,{...run,points:200}));
+assert.equal(readProgress(db)[0].points,100);
+const reopened=new SQL.Database(db.export());migrate(reopened);assert.equal(readProgress(reopened)[0].points,100);
+assert.deepEqual(reopened.exec('PRAGMA foreign_key_check'),[]);
+const old=new SQL.Database();migrate(old);old.run('DROP TABLE practice_details;PRAGMA user_version=4;');migrate(old);assert.deepEqual(readProgress(old),[]);
+console.log('Practice SQLite: v4 migration, idempotent checkpoints, stale-write rejection, validation and export/reopen passed.');

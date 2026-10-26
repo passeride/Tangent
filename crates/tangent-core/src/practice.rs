@@ -120,18 +120,23 @@ impl Practice {
     pub fn label(&self) -> String {
         if self.chords && (self.level != Level::Stepwise || self.review_target.is_some()) {
             let keys = self.target();
-            format!(
-                "{} {}{}",
-                [
-                    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
-                ][keys[0] as usize % 12],
+            let name = [
+                "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+            ][keys[0] as usize % 12];
+            let kind = if keys.len() == 4 {
                 if keys[1] - keys[0] == 3 {
-                    "minor"
+                    "minor seventh"
                 } else {
-                    "major"
-                },
-                if keys.len() == 4 { " seventh" } else { "" }
-            )
+                    "dominant seventh"
+                }
+            } else if keys[2] - keys[0] == 6 {
+                "diminished"
+            } else if keys[1] - keys[0] == 3 {
+                "minor"
+            } else {
+                "major"
+            };
+            format!("{name} {kind}")
         } else if self.chords {
             format!(
                 "{} {}",

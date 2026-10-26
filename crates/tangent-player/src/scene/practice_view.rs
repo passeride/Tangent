@@ -33,9 +33,24 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     d.text(
         x,
         80.,
-        format!("Completed: {}", state.practice.completed),
+        state
+            .training
+            .model
+            .run
+            .as_ref()
+            .map(|r| format!("{} / 12 tasks / {} pts", r.trials.len(), r.points))
+            .unwrap_or_else(|| format!("Completed: {}", state.practice.completed)),
         12.,
         t.muted,
+    );
+    d.button(
+        state,
+        l.width - l.margin - 86.,
+        76.,
+        86.,
+        "Finish",
+        Action::PracticeFinish,
+        t,
     );
     let button_w = ((l.width - l.margin * 2. - 12.) / 3.).min(190.);
     if !chords {
@@ -72,6 +87,42 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             );
         }
     }
+    if chords {
+        d.button(
+            state,
+            l.margin,
+            104.,
+            190.,
+            format!("Chords: {}", state.practice.level.name()),
+            Action::PracticeLevel,
+            t,
+        );
+    }
+    d.button(
+        state,
+        l.margin + 160.,
+        144.,
+        (l.width - l.margin * 2. - 160.).min(180.),
+        format!(
+            "Review: {}",
+            if state.training.model.adaptive {
+                "Adaptive"
+            } else {
+                "Sequential"
+            }
+        ),
+        Action::PracticeAdaptive,
+        t,
+    );
+    d.button(
+        state,
+        l.width - l.margin - 86.,
+        l.strike - 85.,
+        86.,
+        "Skip",
+        Action::PracticeSkip,
+        t,
+    );
     staff(d, state, l, t, chords);
 }
 

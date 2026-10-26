@@ -11,6 +11,7 @@ mod score;
 mod session_hud;
 mod settings;
 mod theme;
+mod training;
 use super::{import, preferences::Preferences};
 use bevy::{prelude::*, window::WindowResolution};
 use layout::Layout;
@@ -39,6 +40,8 @@ enum Screen {
     Train,
     Library,
     Session,
+    Progress,
+    Results,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Mode {
@@ -88,6 +91,7 @@ pub struct State {
     library: library::Library,
     mode: Mode,
     practice: tangent_core::practice::Practice,
+    training: training::Sessions,
     reference_remaining: f32,
     reference_keys: Vec<u8>,
     song: Song,
@@ -159,6 +163,7 @@ impl State {
             library: library::Library::default(),
             mode: Mode::Play,
             practice: tangent_core::practice::Practice::default(),
+            training: training::Sessions::default(),
             reference_remaining: 0.,
             reference_keys: vec![],
             song,
@@ -223,6 +228,7 @@ impl State {
             effect_strength: self.effect_strength,
             practice_clef: self.practice.clef as u8,
             practice_level: self.practice.level as u8,
+            adaptive_practice: self.training.model.adaptive,
             volume: self.volume,
             instrument: self.instrument,
             hear: self.hear,
@@ -237,6 +243,7 @@ impl State {
         self.effects = p.effects;
         self.reduced_motion = p.reduced_motion;
         self.effect_strength = p.effect_strength;
+        self.training.model.adaptive = p.adaptive_practice;
         use tangent_core::practice::{Level, ReadingClef};
         self.practice.configure(
             [ReadingClef::Treble, ReadingClef::Bass, ReadingClef::Mixed][p.practice_clef as usize],
@@ -288,10 +295,15 @@ impl State {
         if self.held.remove(&id).is_some() {
             platform::action("off", &id);
             if self.held.is_empty() {
+                let answered = self.practice.waiting_release;
                 self.practice.answer(&[]);
+                if answered {
+                    training::released(self);
+                }
             } else if key.is_none() && matches!(self.mode, Mode::Notes | Mode::Chords) {
                 let held: Vec<_> = self.held.values().copied().collect();
                 if self.practice.answer(&held) {
+                    training::grade(self, effects::Grade::Correct);
                     let preset = self.feedback.register(effects::Grade::Correct);
                     self.live_bursts.push(effects::Burst {
                         key: held[0],
@@ -329,6 +341,7 @@ impl State {
                 }
             };
             if let Some(grade) = grade {
+                training::grade(self, grade);
                 let preset = self.feedback.register(grade);
                 self.live_bursts.push(effects::Burst { key, preset });
             }
@@ -388,6 +401,9 @@ impl State {
         self.stop_reference();
         if !matches!(self.mode, Mode::Notes | Mode::Chords) || self.help {
             return;
+        }
+        if !self.practice.waiting_release {
+            self.training.model.assist();
         }
         self.reference_keys = self.practice.target();
         self.reference_remaining = 0.7;
@@ -483,6 +499,9 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
         state.sync();
     }
     for m in messages {
+        if training::message(&mut state, &m) {
+            continue;
+        }
         match m["type"].as_str().unwrap_or("") {
             "midi-outputs" => {
                 state.midi_outputs = serde_json::from_value(m["ports"].clone()).unwrap_or_default();
@@ -502,6 +521,7 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
                 }
                 state.saved_preferences = Some(state.preferences());
                 state.storage_ready = true;
+                platform::action("progress-list", "");
             }
             "storage-status" => state.storage_status = m["text"].as_str().unwrap_or("").into(),
             "file" => {
@@ -613,6 +633,7 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
             state.saved_preferences = Some(p);
         }
     }
+    training::tick(&mut state, time.delta_secs().min(0.25));
     let dt = time.delta_secs().min(0.05);
     if state.reference_remaining > 0. {
         state.reference_remaining -= time.delta_secs();

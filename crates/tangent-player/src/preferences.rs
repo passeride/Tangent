@@ -14,6 +14,8 @@ pub struct Preferences {
     pub practice_clef: u8,
     #[serde(default)]
     pub practice_level: u8,
+    #[serde(default)]
+    pub adaptive_practice: bool,
     pub volume: f32,
     pub instrument: usize,
     pub hear: bool,
@@ -70,6 +72,7 @@ mod tests {
             effect_strength: 1,
             practice_clef: 0,
             practice_level: 0,
+            adaptive_practice: false,
             volume: 0.25,
             instrument: 1,
             hear: false,

@@ -37,7 +37,7 @@ old.run("INSERT INTO fingerprint_songs VALUES ('legacy','Preserved','now')");
 migrate(old);
 assert.equal(listLibrary(old).total, 0);
 assert.equal(old.exec("SELECT title FROM fingerprint_songs")[0].values[0][0], "Preserved");
-assert.equal(old.exec("PRAGMA user_version")[0].values[0][0], 4);
+assert.equal(old.exec("PRAGMA user_version")[0].values[0][0], 5);
 old.close();
 console.log("Library SQLite passed: v2 migration, deduplication, original bytes, pagination, export/reopen, delete and input bounds.");
 

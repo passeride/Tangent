@@ -93,6 +93,9 @@ impl Training {
         self.run = Some(Run::new(id, p));
         self.reset_trial();
     }
+    pub fn ready(&mut self) {
+        self.reset_trial();
+    }
     fn reset_trial(&mut self) {
         self.failed = false;
         self.assisted = false;
