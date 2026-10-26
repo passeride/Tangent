@@ -239,6 +239,12 @@ export async function installPlatform() {
             else queue.push({type:"progress-error",text:"Practice is not saved: local storage unavailable."});
             break;
           }
+          case "theme-export": {
+            const blob=new Blob([data],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='custom.tangent-theme.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);break;
+          }
+          case "theme-import": {
+            const picker=document.createElement('input');picker.type='file';picker.accept='.json';picker.onchange=async()=>{const f=picker.files[0];if(f?.size>65536){status('Theme exceeds 64 KiB');return;}if(f){try{const text=new TextDecoder('utf-8',{fatal:true}).decode(await f.arrayBuffer());queue.push({type:'theme-file',text});}catch(error){fail(error);}}};picker.click();break;
+          }
           case "save-settings":
             if (storage) {
               storageStatus("Saving settings…");

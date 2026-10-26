@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 pub struct Preferences {
     pub version: u32,
     #[serde(default)]
+    pub personalization: crate::personalization::Personalization,
+    #[serde(default)]
     pub bindings: tangent_core::input_bindings::Bindings,
     pub view: u8,
     #[serde(default = "default_hud")]
@@ -44,6 +46,9 @@ fn default_effect_strength() -> u8 {
 }
 impl Preferences {
     pub fn validate(&self) -> Result<(), &'static str> {
+        if !self.personalization.validate() {
+            return Err("Invalid personal appearance/hand data");
+        }
         if !self.bindings.validate() {
             return Err("Invalid input bindings");
         }
@@ -86,6 +91,7 @@ mod tests {
     fn settings() -> Preferences {
         Preferences {
             version: 1,
+            personalization: Default::default(),
             bindings: Default::default(),
             view: 3,
             hud: 2,
@@ -148,6 +154,7 @@ mod tests {
         legacy.as_object_mut().unwrap().remove("speed_percent");
         legacy.as_object_mut().unwrap().remove("hud");
         legacy.as_object_mut().unwrap().remove("bindings");
+        legacy.as_object_mut().unwrap().remove("personalization");
         let old: Preferences = serde_json::from_value(legacy).unwrap();
         assert_eq!(old.midi_output_name, None);
         assert!(!old.reduced_motion);

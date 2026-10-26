@@ -1,6 +1,7 @@
 //! Bevy application state, with explicit browser rendering/audio adapters.
 mod import;
 mod library;
+mod personalization;
 mod preferences;
 mod scene;
 #[cfg(not(target_arch = "wasm32"))]

@@ -248,3 +248,23 @@ the next note within two seconds. A Piano cell C4 means control then MIDI 60;
 C4 alone remains ordinary musical input. Enabled control is silent and reserved.
 Resume and supported Settings labels derive their hints from the current map.
 Escape remains a recovery alias. See [ADR-0024](adr/0024-configurable-keyboard-and-piano-bindings.md).
+
+## Hands and custom themes
+
+Open a piece in Play, then Settings → Visuals → Hands. Teach LEFT/RIGHT starts
+at the active loop beginning (or song start). Play only that hand; Stop/review
+opens matched annotations for per-note correction. Save reviewed assignment
+persists it on this device; Cancel preserves the prior accepted map. Demonstration
+notes are not a scored attempt. Matching accepts exact pitches with one candidate
+within ±200 source milliseconds. Ambiguity stays unresolved; unplayed notes do
+not become the other hand. Slower speed and short loops help with alignment.
+
+Settings → Visuals → Edit theme exposes every existing palette colour plus four
+hand colours as RGBA channels. Apply saves, Cancel discards the preview; Reset,
+Undo, Import JSON and Export JSON are available. Import never applies silently.
+Files use the versioned `.tangent-theme.json` format with named byte-array tokens.
+Native exports a timestamped file beside the database and reports its path.
+See ADR-0025 for exact limits and the broader design's follow-up work.
+
+Double-clicking library row text/background runs the same action as Open. It does
+not change the transport behavior of Open; Edit/Remove remain separate controls.

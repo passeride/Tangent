@@ -223,3 +223,13 @@ control-key request. Existing domain actions remain authoritative. Public upstre
 Leafwing/Enhanced Input compatibility/API documentation was evaluated; neither is
 added as a dependency. No excluded source, runtime asset or new package is imported.
 ADR-0024 records the architecture, event-ordering and persistence contract.
+
+## Personal appearance and demonstrated hand annotations — 2026-10-26
+
+Original typed JSON theme tokens, safe Bevy colour editor, conservative one-hand
+demonstration matching, reviewed source-specific annotations and library row
+hit-testing implement the owner's follow-up. The shared model has no Bevy or
+platform dependency; adapters only handle file bytes and existing SQLite settings.
+No excluded project source or asset was consulted or imported. No package was
+added; serde's existing rc feature supports immutable shared accepted profiles.
+ADR-0025 records scope, persistence and explicit initial alignment limitations.

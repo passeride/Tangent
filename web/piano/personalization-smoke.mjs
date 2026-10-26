@@ -1,0 +1,50 @@
+import assert from 'node:assert/strict';
+import {readFile,mkdir} from 'node:fs/promises';
+import {chromium} from 'playwright';
+import {serve,ready,click,gpuArgs} from './browser-helpers.mjs';
+const server=await serve(new URL('./',import.meta.url).pathname),browser=await chromium.launch({headless:true,args:gpuArgs});
+try {
+ const page=await browser.newPage({viewport:{width:1280,height:800}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await ready(page,server.url);await click(page,'start-play');await click(page,'help');
+ const track=Buffer.from([0,0x90,60,100,0x87,0x40,0x80,60,0,0,0xff,0x2f,0]);
+ const head=Buffer.from([77,84,104,100,0,0,0,6,0,0,0,1,1,224,77,84,114,107,0,0,0,track.length]);
+ const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO');await(await chooser).setFiles({name:'Hands.mid',mimeType:'audio/midi',buffer:Buffer.concat([head,track])});
+ await page.waitForFunction(()=>tangentDiagnostics().notes===1);
+ await click(page,'settings');await click(page,'settings-visuals');await click(page,'hands-editor');
+ await page.evaluate(()=>{const now=tangentPlatform.clock_us();tangentPlatform.clock_us=()=>now;});
+ await click(page,'hands-left');await page.keyboard.press('KeyA');
+ await page.waitForFunction(()=>tangentDiagnostics().personal_matched===1);
+ assert.equal(await page.evaluate(()=>tangentDiagnostics().practice_run),null,'Demonstration is not a scored attempt');
+ await click(page,'hands-review');await click(page,'hands-save');
+ await page.waitForFunction(()=>Object.keys(tangentDiagnostics().preferences.personalization.hands).length===1);
+ const source=await page.evaluate(()=>Object.keys(tangentDiagnostics().preferences.personalization.hands)[0]);
+ assert.equal(await page.evaluate(source=>tangentDiagnostics().preferences.personalization.hands[source].notes['0'],source),'Left');
+ await click(page,'hands-cycle');await click(page,'personal-cancel');
+ assert.equal(await page.evaluate(source=>tangentDiagnostics().preferences.personalization.hands[source].notes['0'],source),'Left','Cancelled correction preserves accepted map');
+ await click(page,'theme-editor');await click(page,'theme-plus');
+ const download=page.waitForEvent('download');await click(page,'theme-export');const file=await download;
+ const exported=JSON.parse(await readFile(await file.path(),'utf8'));assert.equal(exported.schema_version,1);assert.equal(Object.keys(exported.tokens).length,15);
+ await click(page,'theme-apply');await page.waitForFunction(()=>tangentDiagnostics().preferences.personalization.use_custom);
+ assert.deepEqual(await page.evaluate(()=>tangentDiagnostics().preferences.personalization.theme.tokens),exported.tokens);
+ const bad=page.waitForEvent('filechooser');await click(page,'theme-import');await(await bad).setFiles({name:'bad.json',mimeType:'application/json',buffer:Buffer.from('{"schema_version":99}')});
+ await page.waitForFunction(()=>tangentDiagnostics().personal_status.includes('missing field'));
+ assert.deepEqual(await page.evaluate(()=>tangentDiagnostics().preferences.personalization.theme.tokens),exported.tokens);
+ exported.tokens.hand_left=[25,125,225,255];
+ const valid=page.waitForEvent('filechooser');await click(page,'theme-import');await(await valid).setFiles({name:'roundtrip.tangent-theme.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(exported))});
+ await page.waitForFunction(()=>tangentDiagnostics().personal_status.includes('Imported preview'));
+ assert.notDeepEqual(await page.evaluate(()=>tangentDiagnostics().preferences.personalization.theme.tokens.hand_left),exported.tokens.hand_left,'Import is preview until Apply');
+ await click(page,'theme-apply');await page.waitForFunction(()=>tangentDiagnostics().preferences.personalization.theme.tokens.hand_left[0]===25);
+ await mkdir(new URL('../../dist/verification/',import.meta.url),{recursive:true});await page.screenshot({path:new URL('../../dist/verification/theme-editor.png',import.meta.url).pathname});
+ for(const vp of [{width:640,height:360},{width:390,height:844}]){
+  await page.setViewportSize(vp);await page.waitForFunction(w=>tangentDiagnostics().width===w,vp.width);
+  for(const b of await page.evaluate(()=>tangentDiagnostics().buttons))assert(b.x>=0&&b.y>=0&&b.x+b.w<=vp.width+.1&&b.y+b.h<=vp.height+.1,`Clipped ${b.id}`);
+ }
+ await page.waitForFunction(()=>tangentDiagnostics().storage.pending===0);
+ await page.reload();await page.waitForFunction(()=>window.tangentDiagnostics?.()?.storage.ready);
+ assert.equal(await page.evaluate(source=>tangentDiagnostics().preferences.personalization.hands[source].notes['0'],source),'Left');
+ assert.deepEqual(await page.evaluate(()=>tangentDiagnostics().preferences.personalization.theme.tokens),exported.tokens);
+ await page.setViewportSize({width:1280,height:800});await click(page,'library');await page.waitForFunction(()=>tangentDiagnostics().library_items.length===1);
+ await page.mouse.dblclick(80,232,{delay:90});await page.waitForFunction(()=>tangentDiagnostics().screen==='Session' && tangentDiagnostics().notes===1);
+ assert.equal(await page.evaluate(()=>tangentDiagnostics().notes),1);
+ assert.deepEqual(errors,[]);console.log('Personalization: hand demonstration/review/cancel/persistence, theme tokens/export/reject/import persistence, compact controls and library row double-click passed.');
+}finally{await browser.close();await server.close();}

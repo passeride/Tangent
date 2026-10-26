@@ -360,6 +360,10 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         content_w = (l.width - content_x - pad).max(0.);
     }
 
+    if state.personal.open != 0 {
+        super::personal::render(d, state, l, t, content_x, content_y, content_w);
+        return;
+    }
     if state.settings_tab == SettingsTab::Accessibility && state.shortcuts.open {
         super::shortcuts::render(d, state, l, t, content_x, content_y, content_w);
         return;
@@ -390,6 +394,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             "External MIDI output replaces computer audio; your piano controls its volume."
         }
         SettingsTab::Visuals => {
+            entries.push(("Edit theme / Import / Export".into(), Action::Personal(0)));
+            entries.push((
+                "Hands: teach / review / colours".into(),
+                Action::Personal(1),
+            ));
             entries.extend([
                 (format!("Notation: {}", state.view.name()), Action::View),
                 (

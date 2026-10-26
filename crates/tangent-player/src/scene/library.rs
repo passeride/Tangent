@@ -11,6 +11,8 @@ pub(super) enum Field {
 }
 pub(super) type Edit = crate::library::MetadataEdit;
 pub(super) struct Library {
+    pub row_hits: Vec<(layout::Rect, usize)>,
+    pub last_click: Option<(String, f64, Vec2)>,
     pub page_size: usize,
     pub items: Vec<crate::library::Entry>,
     pub total: usize,
@@ -30,6 +32,8 @@ pub(super) struct Library {
 impl Default for Library {
     fn default() -> Self {
         Self {
+            row_hits: vec![],
+            last_click: None,
             page_size: PAGE_SIZE,
             items: vec![],
             total: 0,
@@ -50,6 +54,7 @@ impl Default for Library {
 }
 impl Library {
     pub fn refresh(&mut self) {
+        self.last_click = None;
         self.ticket += 1;
         self.search_delay = None;
         platform::action(
@@ -262,6 +267,15 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     }
     for (index, entry) in items.iter().enumerate() {
         let y = 222. + index as f32 * row_height;
+        state.library.row_hits.push((
+            layout::Rect {
+                x,
+                y,
+                w: width,
+                h: row_height,
+            },
+            index,
+        ));
         let text_width = if narrow { width } else { width - 246. };
         d.text(x, y, clip(&entry.title, text_width, 16.), 16., t.ink);
         let seconds = entry.duration_us / 1_000_000;

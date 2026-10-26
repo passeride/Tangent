@@ -192,12 +192,13 @@ pub fn render(
         return;
     };
     let l = Layout::new(window.width(), window.height(), &state.piano);
-    let t = theme::palette(state.theme);
+    let t = super::personal::palette(&state);
     let mut d = Drawing {
         background: t.bg,
         ..Drawing::default()
     };
     state.buttons.clear();
+    state.library.row_hits.clear();
     // Let the Camera2d background show through UI, so native Hanabi particles
     // can be composited underneath note widgets instead of a solid fullscreen node.
     clear_color.0 = t.bg;
@@ -490,6 +491,17 @@ pub fn render(
             d.rect(x, y, w, h, t.colors[0], 1.);
         }
     }
+    if state.personal.teaching.is_some() {
+        d.button(
+            &mut state,
+            180.,
+            76.,
+            220.,
+            "Stop / review hand",
+            Action::Personal(4),
+            t,
+        );
+    }
     if state.screen == Screen::Session
         && !state.help
         && state.shortcuts.piano.armed(platform::clock_us() as u64)
@@ -520,6 +532,7 @@ pub fn render(
             .collect();
         let mut report = serde_json::json!({"status":state.status,"title":state.song.title,"library_total":state.library.total,"library_items":state.library.items,"library_editing":state.library.edit.is_some(),"library_focus":state.library.focus.map(|f|match f {library::Field::Search=>"search",library::Field::Title=>"title",library::Field::Composer=>"composer"}),"library_query":state.library.query,"library_sort":library::SORTS[state.library.sort],"library_format":library::FORMATS[state.library.format],"library_status":state.library.status,"screen":format!("{:?}",state.screen),"mode":format!("{:?}",state.mode),"completed":state.practice.completed,"preferences":state.preferences(),"storage_status":state.storage_status,"target":state.practice.target(),"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"settings_open":state.settings_open,"settings_tab":state.settings_tab.title(),"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_ranges":state.song.notation.as_ref().map(|s|s.playback.iter().take(200).map(|v|serde_json::json!({"start_us":v.start_us,"end_us":v.end_us,"measure":v.measure,"pass":v.pass})).collect::<Vec<_>>()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())});
         report.as_object_mut().unwrap().extend(serde_json::json!({"practice_run":state.training.model.run,"practice_result":state.training.result,"progress_history":state.training.model.history.iter().take(12).collect::<Vec<_>>(),"progress_pending":state.training.pending.len(),"bindings_page":state.shortcuts.page,"bindings_status":state.shortcuts.status,"bindings_capture":state.shortcuts.capture.is_some(),"progress_status":state.training.status,"adaptive":state.training.model.adaptive,"hud_labels":d.labels.iter().filter(|s|s.y<70.).map(|s|s.text.as_str()).collect::<Vec<_>>(),"offscreen":super::session_hud::offscreen(&state),"goal":state.goal.as_ref().map(|g|serde_json::json!({"completed":g.model.completed(),"required":g.model.required(),"reached":g.model.reached()})),"loop":state.transport.passage(),"loop_a":state.loop_a,"selected_part":state.selected_part,"focused_control":state.focused_button.and_then(|i|state.buttons.get(i)).map(|(_,a)|a.id()),"practice_played_label":d.labels.iter().find(|s|s.text.starts_with("Played ")).map(|s|s.text.as_str()),"reference_keys":state.reference_keys,"vfx_scale":effects::viewport_scale(l.width,l.height),"vfx_particles":state.particles.len(),"vfx_ripples":state.ripples.len(),"practice_waiting_release":state.practice.waiting_release,"streak":state.feedback.streak(),"best_streak":state.feedback.best(),"effects_backend":if cfg!(target_arch="wasm32") {"webgl2-fallback"} else {"hanabi+ui"},"practice_wrong":state.practice.wrong,"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output,"midi_output_preferred":state.preferred_midi_output,"midi_outputs":state.midi_outputs.iter().map(|p|serde_json::json!({"id":p.id,"name":p.name})).collect::<Vec<_>>(),"midi_dropdown_open":state.midi_dropdown_open,"midi_dropdown_page":state.midi_dropdown_page}).as_object().unwrap().clone());
+        report.as_object_mut().unwrap().extend(serde_json::json!({"personal_open":state.personal.open,"personal_token":state.personal.token,"personal_status":state.personal.status,"personal_matched":state.personal.matched,"personal_unresolved":state.personal.unresolved}).as_object().unwrap().clone());
         platform::report(&report.to_string());
     }
     apply(&mut commands, &mut pool, d, &music_font.0);
@@ -639,6 +652,22 @@ fn expected_keys(state: &State) -> BTreeSet<u8> {
 fn keyboard(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
     let expected = expected_keys(state);
     let played: BTreeSet<_> = state.held.values().copied().collect();
+    let now = state.transport.position_us;
+    let mut hand_edges: BTreeMap<u8, Vec<Color>> = BTreeMap::new();
+    for n in state
+        .song
+        .notes
+        .iter()
+        .take_while(|n| n.start_us <= now)
+        .filter(|n| n.end_us > now && passage::context(state).includes(n))
+    {
+        let c = super::personal::note_color(state, n.id, t);
+        let colours = hand_edges.entry(n.key).or_default();
+        if !colours.contains(&c) && colours.len() < 2 {
+            colours.push(c);
+        }
+    }
+
     for black in [false, true] {
         for k in state.piano.keys.iter().filter(|k| k.black == black) {
             let r = l.key(&state.piano, k.key).unwrap();
@@ -664,7 +693,11 @@ fn keyboard(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
                     let inset = 1. + i as f32 * max / 4.;
                     let w = (r.w - 2. * inset).max(1.);
                     let h = (r.h - 3. - 2. * inset).max(1.);
-                    let color = t.colors[0].with_alpha(0.8 - i as f32 * 0.17);
+                    let base = hand_edges
+                        .get(&k.key)
+                        .filter(|v| !v.is_empty())
+                        .map_or(t.colors[0], |v| v[i % v.len()]);
+                    let color = base.with_alpha(0.8 - i as f32 * 0.17);
                     let edge = (max / 4.).max(0.7);
                     d.rect(r.x + inset, r.y + inset, w, edge, color, 1.);
                     d.rect(r.x + inset, r.y + inset + h - edge, w, edge, color, 1.);
@@ -725,7 +758,7 @@ fn falling(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
         };
         let onset = l.strike - (n.start_us as f64 - now as f64) as f32 / 1e6 * pps;
         let tail = l.strike - (n.end_us as f64 - now as f64) as f32 / 1e6 * pps;
-        let color = t.colors[n.part % 4];
+        let color = super::personal::note_color(state, n.id, t);
         let y = onset.min(l.strike - 7.);
         if y < l.top + 25. {
             continue;

@@ -51,6 +51,12 @@ control-key, then hold it with a command note or tap it before the next note
 within two seconds. Piano commands default Off; binding capture rejects conflicts.
 See [input binding architecture](docs/adr/0024-configurable-keyboard-and-piano-bindings.md).
 
+Settings → Visuals now includes **Hands** (Teach Left/Right, Stop/review, per-note
+correction and explicit save) and a **Theme editor** with persistent RGBA colours,
+JSON import/export and hand colours. Demonstrations accept only unambiguous
+pitch/onset matches; unknown notes stay unassigned. Library row backgrounds also
+support double-click to Open. See [ADR-0025](docs/adr/0025-personal-themes-and-demonstrated-hands.md).
+
 ## Screenshots
 
 Actual running app, captured with Chromium at 1440 px width using Tangent's

@@ -557,7 +557,7 @@ fn import_path(path: &Path, files: &mpsc::SyncSender<SourceFile>, out: &Sender<V
 fn pick_files() -> Result<Vec<PathBuf>, String> {
     #[cfg(target_os = "windows")]
     let output=Command::new("powershell").args(["-NoProfile","-STA","-Command",
-        "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); Add-Type -AssemblyName System.Windows.Forms; $d=New-Object System.Windows.Forms.OpenFileDialog; $d.Multiselect=$true; $d.Filter='Music files|*.mid;*.midi;*.xml;*.musicxml;*.mxl|All files|*.*'; if($d.ShowDialog() -eq 'OK'){ConvertTo-Json -Compress -InputObject @($d.FileNames)}"])
+        "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); Add-Type -AssemblyName System.Windows.Forms; $d=New-Object System.Windows.Forms.OpenFileDialog; $d.Multiselect=$true; $d.Filter='Music files|*.mid;*.midi;*.xml;*.musicxml;*.mxl;*.json|All files|*.*'; if($d.ShowDialog() -eq 'OK'){ConvertTo-Json -Compress -InputObject @($d.FileNames)}"])
         .output().map_err(|e|format!("Could not open file picker: {e}"))?;
     #[cfg(target_os = "macos")]
     let output=Command::new("osascript").args(["-e", "set picked to choose file with prompt \"Open music scores\" with multiple selections allowed\nset paths to \"\"\nrepeat with f in picked\nset paths to paths & POSIX path of f & linefeed\nend repeat\nreturn paths"])
@@ -569,7 +569,7 @@ fn pick_files() -> Result<Vec<PathBuf>, String> {
             "--multiple",
             "--separator=\n",
             "--title=Open music scores",
-            "--file-filter=Music | *.mid *.midi *.xml *.musicxml *.mxl",
+            "--file-filter=Music | *.mid *.midi *.xml *.musicxml *.mxl *.json",
         ])
         .output()
         .map_err(|e| format!("Could not open file picker (install Zenity): {e}"))?;
@@ -711,6 +711,46 @@ fn backend(
                             Err(e) => json!({"type":"progress-error","text":e}),
                         };
                         let _ = out.send(message);
+                    }
+                    "theme-export" => {
+                        if let Some((_, path)) = &db {
+                            let dest = path.with_file_name(format!(
+                                "theme-{}.tangent-theme.json",
+                                wall_time_ms() as u64
+                            ));
+                            let message = match std::fs::write(&dest, value.as_bytes()) {
+                                Ok(()) => format!("Theme exported: {}", dest.display()),
+                                Err(e) => format!("Theme export failed: {e}"),
+                            };
+                            let _ = out.send(json!({"type":"status","text":message}));
+                        }
+                    }
+                    "theme-import" => {
+                        let sender = out.clone();
+                        thread::spawn(move || match pick_files() {
+                            Ok(paths) => {
+                                if let Some(path) = paths.first() {
+                                    let result = std::fs::metadata(path)
+                                        .map_err(|e| e.to_string())
+                                        .and_then(|m| {
+                                            if m.len() > 65536 {
+                                                Err("Theme exceeds 64 KiB".into())
+                                            } else {
+                                                std::fs::read_to_string(path)
+                                                    .map_err(|e| e.to_string())
+                                            }
+                                        });
+                                    let message = match result {
+                                        Ok(text) => json!({"type":"theme-file","text":text}),
+                                        Err(e) => json!({"type":"status","text":e}),
+                                    };
+                                    let _ = sender.send(message);
+                                }
+                            }
+                            Err(e) => {
+                                let _ = sender.send(json!({"type":"status","text":e}));
+                            }
+                        });
                     }
                     "save-settings" => {
                         if let Some((conn, _)) = &db

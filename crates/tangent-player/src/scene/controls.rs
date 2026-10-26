@@ -74,6 +74,7 @@ pub enum Action {
     Settings,
     SettingsBack,
     SettingsTab(SettingsTab),
+    Personal(u8),
     Keybindings,
     BindingCapture(usize, bool),
     BindingControl(u8),
@@ -167,6 +168,35 @@ impl Action {
                 SettingsTab::Accessibility => "settings-accessibility",
                 SettingsTab::Data => "settings-data",
             },
+            Self::Personal(n) => [
+                "theme-editor",
+                "hands-editor",
+                "hands-left",
+                "hands-right",
+                "hands-review",
+                "hands-save",
+                "personal-cancel",
+                "hands-prev",
+                "hands-next",
+                "hands-cycle",
+                "theme-prev",
+                "theme-next",
+                "theme-channel",
+                "theme-minus16",
+                "theme-minus",
+                "theme-plus",
+                "theme-plus16",
+                "theme-apply",
+                "theme-export",
+                "theme-import",
+                "theme-undo",
+                "theme-reset",
+                "theme-reset-token",
+                "theme-use-custom",
+                "personal-prev-page",
+                "personal-next-page",
+                "hands-clear",
+            ][n as usize],
             Self::Keybindings => "keybindings",
             Self::BindingCapture(_, false) => "binding-keyboard",
             Self::BindingCapture(_, true) => "binding-piano",
@@ -181,8 +211,24 @@ impl Action {
     }
 }
 pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
+    if matches!(
+        action,
+        Action::Back
+            | Action::Forward
+            | Action::Restart
+            | Action::Slower
+            | Action::Faster
+            | Action::NormalSpeed
+    ) {
+        state.personal.teaching = None;
+    }
+    if state.screen == Screen::Library {
+        state.library.last_click = None;
+    }
     state.focused_button = None;
     if matches!(action, Action::SettingsBack | Action::SettingsTab(_)) {
+        state.personal.open = 0;
+        state.personal.draft = None;
         state.shortcuts.capture = None;
         if state.shortcuts.open {
             state.shortcuts.open = false;
@@ -212,6 +258,7 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             state.panic();
             platform::action("quit", "");
         }
+        Action::Personal(command) => personal::action(state, command),
         Action::Keybindings => {
             state.shortcuts.open = !state.shortcuts.open;
             state.shortcuts.capture = None;
@@ -800,6 +847,40 @@ pub fn input(
         let touch = touches.iter_just_pressed().next();
         let pressed = mouse.just_pressed(MouseButton::Left) || touch.is_some();
         let pos = touch.map(|t| t.position()).or(pos);
+        if mouse.just_pressed(MouseButton::Left)
+            && state.screen == Screen::Library
+            && !state.help
+            && let Some(pos) = pos
+            && !state.buttons.iter().any(|(r, _)| r.contains(pos.x, pos.y))
+        {
+            if let Some((_, index)) = state
+                .library
+                .row_hits
+                .iter()
+                .find(|(r, _)| r.contains(pos.x, pos.y))
+                .copied()
+            {
+                let id = state.library.items[index].id.clone();
+                let now = platform::clock_us();
+                let double = state
+                    .library
+                    .last_click
+                    .as_ref()
+                    .is_some_and(|(old, at, point)| {
+                        old == &id
+                            && now >= *at
+                            && now - *at <= 400_000.
+                            && point.distance(pos) <= 8.
+                    });
+                state.library.last_click = Some((id, now, pos));
+                if double {
+                    state.library.last_click = None;
+                    activate(&mut state, Action::LibraryOpen(index), false);
+                }
+            } else {
+                state.library.last_click = None;
+            }
+        }
         if pressed
             && let Some(pos) = pos
             && let Some((_, action)) = state

@@ -296,3 +296,11 @@ Hand-colour design follow-up: [hand assignment and colour](hand-assignment-and-c
 proposes a source-specific editable profile with durable note origins, explicit
 uncertainty, theme semantics and later hand-based target filtering. No runtime
 hand recognition or colouring is implemented by this design document.
+
+Personalization iteration (ADR-0025): persistent reviewed hand demonstrations,
+per-note corrections, semantic hand colours, a complete existing-palette RGBA
+editor with JSON import/export, and library row double-click are implemented.
+Demonstration matching deliberately abstains on ambiguous onsets and does not
+infer an opposite hand from omissions. Global colour presets and accepted custom
+documents remain separate. Robust rubato sequence alignment, authored all-visits
+annotation editing, automatic separation and hand-only scoring remain future work.

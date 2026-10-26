@@ -1,7 +1,7 @@
 # Left/right hand assignment and colour
 
 - Date: 2026-10-26
-- Status: Proposed design only; no importer, evaluator, storage or renderer changes.
+- Status: Initial demonstration/edit/colour slice implemented under [ADR-0025](../adr/0025-personal-themes-and-demonstrated-hands.md); broader source mapping and inference remain proposed.
 - Goal: consistent hand colours and future one-hand practice, without claiming
   that a MIDI keyboard observes the player's physical hands.
 - Related: [product plan](product-development-plan.md), [feedback contract](gamification-and-feedback.md),
@@ -227,3 +227,36 @@ the fixture corpus and observing correction time; no accuracy figure is claimed.
 Sources describe format semantics. The assignment rules, UI, architecture and
 proposed search algorithm above are Tangent design recommendations, not claims
 that either format already supplies reliable hand labels.
+
+## One-hand demonstration and confirmation — requested extension
+
+Offer Teach left / Teach right in Hands. The player selects a bounded passage,
+listens if needed, then plays only the chosen hand against a slowed transport.
+Record incoming note attacks locally with source-song timestamps, device identity
+and the transport discontinuity generation. Pause, seek, speed changes and loop
+wraps segment the demonstration; never align across a discontinuity accidentally.
+Command-key notes and backing playback are excluded before capture.
+
+Align the demonstration to score targets using a bounded sequence alignment with
+pitch, relative onset and chord membership; permit missed/extra notes and local
+rubato. Do not label every unplayed note as the other hand: omissions are normal.
+Repeated pitches/phrases and same-key unisons may have several candidate matches;
+show them unresolved rather than applying arbitrary nearest-time matches.
+
+Preview matched notes in the selected hand colour, unmatched notes neutral, and
+extras separately. Let the player correct the preview and press Save assignment.
+Playing alone never silently overwrites a confirmed map. A second demonstration
+of the other hand can add positive evidence; contradictions require review.
+Store the accepted assignments, not an unsupported claim of observed physical
+hand identity. Raw demonstration events are temporary by default; retain them
+only through an explicit optional recording setting.
+
+Persist with a transactional hand_profiles / hand_overrides model keyed by exact
+source hash, profile ID, source-origin mapping version and profile revision.
+Demonstration provenance records selected hand, passage, alignment algorithm
+version and review status. Accepted matches reference stable source-note origins;
+ambiguous matches are not saved as confirmed. Store an immutable assignment
+snapshot/revision reference when a later practice run filters by hand. Report
+Saved only after storage acknowledgement; failed writes retain the editable
+preview with Retry. Reload restores the same map and edit provenance. Exact
+SQLite migration numbering is reserved for implementation against the live schema.

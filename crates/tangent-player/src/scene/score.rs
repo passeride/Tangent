@@ -214,11 +214,9 @@ fn authored(d: &mut Drawing, state: &State, score: &NotatedScore, l: &Layout, t:
                 .is_some_and(|s| matches!(s.clef, Clef::Bass));
             let bottom = if is_bass { bass } else { treble };
             let nx = at(n.onset.quarters());
-            let color = score
-                .staves
-                .iter()
-                .find(|s| s.id == n.staff)
-                .map_or(t.colors[0], |s| t.colors[s.part % 4]);
+            let color = n
+                .performance_note
+                .map_or(t.muted, |id| super::personal::note_color(state, id, t));
             let Some(p) = &n.pitch else {
                 d.glyph(
                     nx - 3.,
@@ -447,7 +445,7 @@ fn legacy(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
         let p = score_pitch(n, clefs.get(&n.id).copied());
         let x = left + (right - left) * (n.start_us - start) as f32 / span as f32;
         let y = py(p);
-        let color = t.colors[n.part % 4];
+        let color = super::personal::note_color(state, n.id, t);
         if y < l.top + 10. || y > l.strike - 25. {
             continue;
         }

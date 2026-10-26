@@ -6,6 +6,7 @@ mod layout;
 mod library;
 mod menu;
 mod passage;
+mod personal;
 mod platform;
 mod practice_view;
 mod score;
@@ -108,6 +109,7 @@ pub struct State {
     hud: u8,
     range_summary: Option<session_hud::RangeSummary>,
     theme: usize,
+    personal: personal::Editor,
     effects: bool,
     reduced_motion: bool,
     effect_strength: u8,
@@ -194,6 +196,7 @@ impl State {
             hud: 1,
             range_summary: None,
             theme: 0,
+            personal: Default::default(),
             effects: true,
             reduced_motion: false,
             effect_strength: 1,
@@ -240,6 +243,7 @@ impl State {
     fn preferences(&self) -> Preferences {
         Preferences {
             version: 1,
+            personalization: self.personal.saved.clone(),
             bindings: self.shortcuts.config.clone(),
             view: match self.view {
                 View::Blocks => 0,
@@ -266,6 +270,7 @@ impl State {
         }
     }
     fn restore_preferences(&mut self, p: Preferences) {
+        self.personal.saved = p.personalization;
         self.shortcuts.config = p.bindings;
         self.shortcuts.config.fill_missing();
         self.shortcuts.piano.reset();
@@ -354,6 +359,7 @@ impl State {
             }
             self.stop_reference();
             self.held.insert(id.clone(), key);
+            personal::capture(self, key);
             self.capture_for_recognition(key);
             if self.mode == Mode::Play
                 && self.transport.playing
@@ -475,6 +481,7 @@ impl State {
         }
     }
     fn panic(&mut self) {
+        self.personal.teaching = None;
         self.shortcuts.piano.reset();
         self.shortcuts.capture = None;
         self.stop_reference();
@@ -558,6 +565,7 @@ fn update(mut state: ResMut<State>, time: Res<Time>, windows: Query<&Window>) {
     let was = state.transport.playing;
     let wraps = state.transport.advance(elapsed);
     if wraps > 0 {
+        state.personal.teaching = None;
         let next = state.transport.position_us;
         if let Some(p) = state.transport.passage() {
             state.transport.position_us = p.end_us;
@@ -595,6 +603,9 @@ fn update(mut state: ResMut<State>, time: Res<Time>, windows: Query<&Window>) {
             continue;
         }
         match m["type"].as_str().unwrap_or("") {
+            "theme-file" => {
+                personal::import(&mut state, m["text"].as_str().unwrap_or("").as_bytes());
+            }
             "midi-outputs" => {
                 state.midi_outputs = serde_json::from_value(m["ports"].clone()).unwrap_or_default();
                 state.midi_output = m["selected"].as_str().unwrap_or("").into();
@@ -713,7 +724,12 @@ fn update(mut state: ResMut<State>, time: Res<Time>, windows: Query<&Window>) {
                 }
             }
             "pause" => state.panic(),
-            "status" => state.status = m["text"].as_str().unwrap_or("").into(),
+            "status" => {
+                state.status = m["text"].as_str().unwrap_or("").into();
+                if state.personal.open != 0 {
+                    state.personal.status = state.status.clone();
+                }
+            }
             _ => {}
         }
     }
@@ -756,6 +772,9 @@ fn update(mut state: ResMut<State>, time: Res<Time>, windows: Query<&Window>) {
 fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool) -> bool {
     match import::song(bytes, title.clone()) {
         Ok(mut song) => {
+            state.personal.open = 0;
+            state.personal.hand_draft = None;
+            state.personal.draft = None;
             let metadata = crate::library::ImportMetadata::from_song(&song, bytes);
             platform::store_import(bytes, &serde_json::to_string(&metadata).unwrap());
             if from_library {
