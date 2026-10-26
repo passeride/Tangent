@@ -109,3 +109,16 @@ SQLite remains schema v5: optional validated context/evidence fields live inside
 its existing versioned JSON payload. Older records stay unchanged and unknown
 context is visibly disclosed. No historical tempo is assumed. See
 [ADR-0021](adr/0021-passage-practice-and-comparable-context.md).
+
+## Readability and keyboard range
+
+Settings → Visuals offers **Focus / Standard / Arcade** HUD density, saved locally.
+Focus keeps playback/output/rate context; Arcade adds real pitch points/streaks.
+Effects intensity and reduced motion remain independent settings. This does not
+add a calibrated timing grade or change the score rules.
+
+If selected music lies outside the visible keyboard, the player shows counts of
+lower/higher notes and **Fit keys**. Fit chooses the smallest supported 49/61/88
+range covering the selected pitches and current held keys. Pitches outside the
+physical 88-key range stay flagged; no music is dropped. Short windows move
+passage setup into Settings → Practice while retaining normal pause controls.

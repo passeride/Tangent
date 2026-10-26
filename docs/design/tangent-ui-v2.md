@@ -94,14 +94,13 @@ Use one strong primary action, not five equally prominent calls to action. Show 
 
 For the initial delivery, keep unsupported features absent or explicitly disabled rather than populating them with invented data. Respect the existing difference between MusicXML written measures and approximate MIDI timing/notation.
 
-**HUD visibility presets (proposed):**
+**HUD visibility presets (implemented in ADR-0022):**
 
 | Preset | Display |
 | --- | --- |
 | Focus | Music, piano, very small progress/pause and critical state |
 | Standard (default) | Focus + title, time and device status |
-| Detailed | Standard + supported tempo, measure, view/volume controls |
-| Performance (future) | Detailed + verified accuracy, score and streak |
+| Arcade | Standard + evaluator-backed pitch score and streak where space permits; no timing-grade claim |
 
 Transport controls need a minimum reachable hit area and keyboard support; don't force users to open Settings for common actions. The playing area remains the primary focus.
 
@@ -288,3 +287,15 @@ The [product north star](product-north-star.md), [competitive UX benchmark](comp
 They **do not supersede** its one-Bevy-surface requirement, calm default reading hierarchy, solid-pressed-key/edge-glow semantics, or implemented score contracts. A future Arcade HUD and Perform mode must be explicitly opted into and rely on genuine evaluator support. Existing song score is pitch coverage, not timing precision, even when particle streak feedback is visible. Tempo is already implemented at 25–200%, but looping/hand-isolation/timing grading are proposals until separately implemented and tested.
 
 The legacy checkbox in Slice D about adding supported HUD speed/tempo is partially obsolete: ADR-0020 delivered persistent speed controls and HUD speed display on 2026-10-26. This addendum clarifies status without erasing the earlier design history.
+
+## Readability iteration — 2026-10-26
+
+Focus/Standard/Arcade are independent persistent HUD density presets (ADR-0022).
+Arcade is presentation, not a new calibrated performance evaluator. FX intensity
+and reduced motion do not change with HUD choice. Output/rate/loop state remains
+available in Focus. Standard is the default for missing legacy preferences.
+
+Selected notes outside the keyboard have explicit lower/higher counts and Fit keys.
+Fitting chooses an existing 49/61/88-key layout; it never moves the geometry
+automatically while playing and cannot hide notes beyond a physical 88-key span.
+Short pause windows retain passage setup under Settings → Practice.

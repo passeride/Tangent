@@ -54,6 +54,9 @@ pub enum Action {
     ReducedMotion,
     Instrument,
     Range,
+    FitRange,
+    Hud,
+    PassageSetup,
     Import,
     Sample,
     Midi,
@@ -126,6 +129,9 @@ impl Action {
             Self::ReducedMotion => "reduced-motion",
             Self::Instrument => "instrument",
             Self::Range => "range",
+            Self::FitRange => "fit-range",
+            Self::Hud => "hud",
+            Self::PassageSetup => "passage-setup",
             Self::Import => "import",
             Self::Sample => "sample",
             Self::Midi => "midi",
@@ -477,6 +483,34 @@ fn activate(state: &mut State, action: Action, shift: bool) {
         Action::Instrument => {
             state.instrument = (state.instrument + 1) % 2;
             state.sync();
+        }
+        Action::PassageSetup => {
+            state.panic();
+            state.help = true;
+            state.settings_open = true;
+            state.settings_tab = SettingsTab::Practice;
+        }
+        Action::Hud => {
+            state.hud = (state.hud + 1) % 3;
+        }
+        Action::FitRange => {
+            let mut keys: Vec<u8> = state.held.values().copied().collect();
+            if state.mode == Mode::Play {
+                let c = passage::context(state);
+                keys.extend(
+                    state
+                        .song
+                        .notes
+                        .iter()
+                        .filter(|n| c.includes(n) && !state.song.parts[n.part].percussion)
+                        .map(|n| n.key),
+                );
+            } else if matches!(state.mode, Mode::Notes | Mode::Chords) {
+                keys.extend(state.practice.target());
+            }
+            let (first, last) = tangent_core::piano::fit_range(keys);
+            state.piano = PianoLayout::new(first, last).unwrap();
+            state.status="Keyboard fitted to selected music and played notes. Out-of-piano pitches remain flagged.".into();
         }
         Action::Range => {
             state.piano = match state.piano.white_count {

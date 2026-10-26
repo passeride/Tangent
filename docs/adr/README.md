@@ -53,3 +53,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0020: Variable playback speed](0020-variable-playback-speed.md) — saved tempo multiplier with synchronized notation, audio and MIDI.
 
 - [ADR-0021: Passage practice and comparable context](0021-passage-practice-and-comparable-context.md) — source-time A–B ranges, explicit parts, per-repeat attempts and truthful comparison context.
+
+- [ADR-0022: Readable HUD and keyboard fit](0022-readable-hud-and-keyboard-fit.md) — independent Focus/Standard/Arcade density, explicit keyboard fitting and short-window pause.

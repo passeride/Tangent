@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 pub struct Preferences {
     pub version: u32,
     pub view: u8,
+    #[serde(default = "default_hud")]
+    pub hud: u8,
     pub theme: usize,
     pub effects: bool,
     #[serde(default)]
@@ -29,6 +31,9 @@ pub struct Preferences {
     #[serde(default)]
     pub midi_output_name: Option<String>,
 }
+fn default_hud() -> u8 {
+    1
+}
 fn default_speed() -> u16 {
     100
 }
@@ -43,7 +48,8 @@ impl Preferences {
         if tangent_core::transport::PlaybackRate::new(self.speed_percent).is_none() {
             return Err("Invalid playback speed");
         }
-        if self.view > 3
+        if self.hud > 2
+            || self.view > 3
             || self.theme > 2
             || self.instrument > 1
             || self.effect_strength > 2
@@ -76,6 +82,7 @@ mod tests {
         Preferences {
             version: 1,
             view: 3,
+            hud: 2,
             theme: 2,
             effects: false,
             reduced_motion: false,
@@ -110,16 +117,22 @@ mod tests {
         legacy.as_object_mut().unwrap().remove("adaptive_practice");
         legacy.as_object_mut().unwrap().remove("practice_hear");
         legacy.as_object_mut().unwrap().remove("speed_percent");
+        legacy.as_object_mut().unwrap().remove("hud");
         let old: Preferences = serde_json::from_value(legacy).unwrap();
         assert_eq!(old.midi_output_name, None);
         assert!(!old.reduced_motion);
         assert!(!old.practice_hear);
         assert_eq!(old.speed_percent, 100);
+        assert_eq!(old.hud, 1);
         assert_eq!(old.effect_strength, 1);
         assert_eq!(old.practice_clef, 0);
         assert_eq!(old.practice_level, 0);
         assert!(old.validate().is_ok());
         for bad in [
+            Preferences {
+                hud: 3,
+                ..settings()
+            },
             Preferences {
                 speed_percent: 0,
                 ..settings()

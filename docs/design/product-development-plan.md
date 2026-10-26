@@ -229,3 +229,21 @@ reopening from history, full R0 first-run/Continue audit, and physical P-45/nati
 GPU validation. S5–S10 remain planned. Automated evidence is recorded in
 practice-progress and the committed passage-smoke test; no participant study or
 hardware measurements are claimed.
+
+
+Second iteration: S7 now has independent saved Focus/Standard/Arcade HUD density,
+explicit Fit keys and out-of-range warnings, plus short-window pause/settings
+layouts. ADR-0022 records the decisions. This is initial UX-12/14 delivery;
+comprehensive accessibility semantics and physical 4K profiling remain open.
+
+Automated baseline for the first iteration: 91 workspace Rust tests, native/WASM
+warnings-denied Clippy, full real-Bevy browser suite including three 70% loops,
+80% segmentation, MIDI boundaries, contextual retry and drag, packaged /Tangent/
+site smoke, native release executable/self-test and native archive packaging.
+Physical P-45/native GPU and participant-study gates remain pending.
+
+Second-iteration verification: 92 Rust tests; native/WASM warnings-denied Clippy;
+real Bevy HUD persistence/range/4K/short-window test; existing player and passage
+browser regression; packaged site smoke; native release and executable self-test.
+Screenshots were inspected at 1280×800, 3840×2160 and 640×360. Software rendering
+checks establish layout, not physical 4K frame-time or display-latency guarantees.

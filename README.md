@@ -37,6 +37,10 @@ missed targets; retries open paused with the recorded range, part and speed.
 Legacy history remains readable with unknown tempo/selection and is excluded
 from new comparable-result summaries. See [passage practice](docs/practice-progress.md#passage-practice).
 
+Settings → Visuals now offers saved **Focus / Standard / Arcade** HUD density,
+independent of effects. **Fit keys** and out-of-range warnings help keep selected
+music visible on the keyboard.
+
 ## Screenshots
 
 Actual running app, captured with Chromium at 1440 px width using Tangent's

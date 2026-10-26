@@ -3,8 +3,19 @@
 use super::{controls::Action, draw::Drawing, *};
 
 pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
+    let expanded = l.height >= 570.;
     let w = (l.width - 28.).min(570.);
-    let h = (l.height - 24.).min(if state.mode == Mode::Play { 532. } else { 370. });
+    let h = (l.height - 24.).min(if state.mode == Mode::Play {
+        if expanded {
+            532.
+        } else if l.height >= 420. {
+            454.
+        } else {
+            412.
+        }
+    } else {
+        370.
+    });
     let x = (l.width - w) * 0.5;
     let y = (l.height - h) * 0.5;
     d.rect(x, y, w, h, t.panel, 14.);
@@ -79,7 +90,17 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
         );
     }
 
-    let offset = if state.mode == Mode::Play { 162. } else { 0. };
+    let offset = if state.mode == Mode::Play {
+        if expanded {
+            162.
+        } else if l.height >= 420. {
+            84.
+        } else {
+            42.
+        }
+    } else {
+        0.
+    };
     if state.mode == Mode::Play {
         let label = format!("{}% / reset", state.transport.rate().percent());
         for (i, (label, action)) in [
@@ -101,7 +122,7 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
             );
         }
     }
-    if state.mode == Mode::Play {
+    if state.mode == Mode::Play && expanded {
         for (i, (label, action)) in [
             ("Set A", Action::LoopA),
             ("Set B", Action::LoopB),
@@ -127,6 +148,17 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
             .map_or("All parts", |p| p.name.as_str());
         let label = format!("Targets: {}", part.chars().take(34).collect::<String>());
         d.button(state, inner, y + 284., usable, label, Action::Part, t);
+    }
+    if state.mode == Mode::Play && !expanded && l.height >= 420. {
+        d.button(
+            state,
+            inner,
+            y + 220.,
+            usable,
+            "Passage practice setup",
+            Action::PassageSetup,
+            t,
+        );
     }
     let half = (usable - gap) * 0.5;
     let view_label = format!("View: {}", state.view.name());
@@ -327,9 +359,37 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                     format!("Visible keys: {}", state.piano.keys.len()),
                     Action::Range,
                 ),
+                ("Fit keyboard to selected music".into(), Action::FitRange),
+                (
+                    format!(
+                        "HUD: {}",
+                        ["Focus", "Standard", "Arcade"][state.hud as usize]
+                    ),
+                    Action::Hud,
+                ),
                 ("Toggle fullscreen".into(), Action::Fullscreen),
             ]);
             "Changes are saved locally. Sheet notation is most accurate with MusicXML."
+        }
+        SettingsTab::Practice if state.screen == Screen::Session && state.mode == Mode::Play => {
+            entries.extend([
+                ("Set A here".into(), Action::LoopA),
+                ("Set B here".into(), Action::LoopB),
+                ("Clear loop".into(), Action::LoopClear),
+                ("Seek -5 seconds".into(), Action::Back),
+                ("Seek +5 seconds".into(), Action::Forward),
+                (
+                    format!(
+                        "Targets: {}",
+                        state
+                            .selected_part
+                            .and_then(|i| state.song.parts.get(i))
+                            .map_or("All parts", |p| p.name.as_str())
+                    ),
+                    Action::Part,
+                ),
+            ]);
+            "Set A, seek forward, set B. Targets filter scoring; song audio is backing."
         }
         SettingsTab::Practice => {
             entries.extend([
@@ -392,7 +452,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     let text: String = explanation.chars().take(max_text).collect();
     d.text(content_x, desc_y, text, 11., t.muted);
 
-    let cols = if content_w >= 500. { 2 } else { 1 };
+    let cols = if content_w >= 500. || l.height < 500. {
+        2
+    } else {
+        1
+    };
     let gap = 10.;
     let btn_w = (content_w - (cols - 1) as f32 * gap) / cols as f32;
     let mut start = content_y + 72.;

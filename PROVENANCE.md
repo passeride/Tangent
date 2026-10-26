@@ -200,3 +200,10 @@ contextual pitch-coverage evidence and retry. Requirements are the strategy's
 UX-02/03/04/05/07/11 and ADR-0021. New synthetic MIDI sequences exercise boundaries;
 no competitor/fork code or assets were used. No dependency versions were added.
 Prior exposure and the limits of the clean room claim above remain unchanged.
+
+## Readability iteration — 2026-10-26
+
+Original UI/core changes implement UX-12/14 and ADR-0022: HUD density, explicit
+keyboard fitting and short-window passage controls. New screenshots use the
+original bundled study or synthetic generated MIDI, never competitor assets.
+No dependency or asset source was added.

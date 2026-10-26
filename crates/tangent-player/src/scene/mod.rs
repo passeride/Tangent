@@ -103,6 +103,8 @@ pub struct State {
     selected_part: Option<usize>,
     piano: PianoLayout,
     view: View,
+    hud: u8,
+    range_summary: Option<session_hud::RangeSummary>,
     theme: usize,
     effects: bool,
     reduced_motion: bool,
@@ -185,6 +187,8 @@ impl State {
             selected_part: None,
             piano: PianoLayout::new(21, 108).unwrap(),
             view: View::Blocks,
+            hud: 1,
+            range_summary: None,
             theme: 0,
             effects: true,
             reduced_motion: false,
@@ -236,6 +240,7 @@ impl State {
                 View::Notes => 2,
                 View::Score => 3,
             },
+            hud: self.hud,
             theme: self.theme,
             effects: self.effects,
             reduced_motion: self.reduced_motion,
@@ -255,6 +260,7 @@ impl State {
     }
     fn restore_preferences(&mut self, p: Preferences) {
         self.view = [View::Blocks, View::Staff, View::Notes, View::Score][p.view as usize];
+        self.hud = p.hud;
         self.theme = p.theme;
         self.effects = p.effects;
         self.reduced_motion = p.reduced_motion;
