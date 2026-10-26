@@ -9,6 +9,8 @@ pub(super) struct Sessions {
     pub status: String,
     timer: f32,
     serial: u64,
+    pub page: usize,
+    millis: f64,
 }
 pub(super) fn start(state: &mut State) {
     state.training.serial += 1;
@@ -108,7 +110,10 @@ pub(super) fn released(state: &mut State) {
 }
 pub(super) fn tick(state: &mut State, dt: f32) {
     if state.screen == Screen::Session && !state.help && !state.practice.waiting_release {
-        state.training.model.tick((dt * 1000.) as u64);
+        state.training.millis += f64::from(dt) * 1000.;
+        let ms = state.training.millis as u64;
+        state.training.millis -= ms as f64;
+        state.training.model.tick(ms);
     }
     state.training.timer -= dt;
     if state.training.timer <= 0. {
@@ -303,8 +308,41 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 t.ink,
             );
         }
-        let rows = ((l.height - 245.) / 60.).clamp(0., 10.) as usize;
-        for (i, r) in history.iter().take(rows).enumerate() {
+        let focus = state
+            .training
+            .model
+            .review_focus()
+            .iter()
+            .filter_map(|s| {
+                let key = s
+                    .rsplit(':')
+                    .next()?
+                    .split('-')
+                    .next()?
+                    .parse::<u8>()
+                    .ok()?;
+                if key > 127 {
+                    return None;
+                }
+                Some(format!(
+                    "{}{}{}",
+                    [
+                        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+                    ][key as usize % 12],
+                    i16::from(key) / 12 - 1,
+                    if s.starts_with("chord") { " chord" } else { "" }
+                ))
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        if !focus.is_empty() {
+            d.text(x, 154., format!("Review focus: {focus}"), 11., t.colors[0]);
+        }
+        let rows = ((l.height - 275.) / 60.).clamp(1., 10.) as usize;
+        let last = history.len().saturating_sub(1) / rows;
+        state.training.page = state.training.page.min(last);
+        let page = state.training.page;
+        for (i, r) in history.iter().skip(page * rows).take(rows).enumerate() {
             let y = 175. + i as f32 * 60.;
             d.rect(x, y, w, 50., t.panel, 7.);
             let label = format!("{} / {}", r.mode, r.label);

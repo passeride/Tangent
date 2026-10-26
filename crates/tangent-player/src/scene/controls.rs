@@ -5,6 +5,8 @@ pub enum Action {
     Exit,
     Main,
     Progress,
+    ProgressPrevious,
+    ProgressNext,
     PracticeFinish,
     PracticeAgain,
     PracticeSkip,
@@ -66,6 +68,8 @@ impl Action {
         match self {
             Self::Main => "main",
             Self::Progress => "progress",
+            Self::ProgressPrevious => "progress-previous",
+            Self::ProgressNext => "progress-next",
             Self::PracticeFinish => "practice-finish",
             Self::PracticeAgain => "practice-again",
             Self::PracticeSkip => "practice-skip",
@@ -147,7 +151,10 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.panic();
             platform::action("quit", "");
         }
+        Action::ProgressPrevious => state.training.page = state.training.page.saturating_sub(1),
+        Action::ProgressNext => state.training.page += 1,
         Action::Progress => {
+            state.training.page = 0;
             training::end(state, false);
             state.panic();
             state.help = false;

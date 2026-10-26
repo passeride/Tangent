@@ -203,6 +203,24 @@ impl Training {
             r.revision += 1;
         }
     }
+    pub fn review_focus(&self) -> Vec<String> {
+        let mut stats = std::collections::BTreeMap::<String, (u32, u32)>::new();
+        for t in self.history.iter().flat_map(|r| r.trials.iter()) {
+            let entry = stats.entry(t.skill.clone()).or_default();
+            entry.0 += 1;
+            if t.clean && !t.assisted && !t.skipped {
+                entry.1 += 1;
+            }
+        }
+        let mut rows: Vec<_> = stats.into_iter().collect();
+        rows.sort_by(|a, b| {
+            let weight = |v: &(u32, u32)| (v.1 as f64 + 1.) / (v.0 as f64 + 2.);
+            weight(&a.1)
+                .total_cmp(&weight(&b.1))
+                .then_with(|| b.1.0.cmp(&a.1.0))
+        });
+        rows.into_iter().take(3).map(|(s, _)| s).collect()
+    }
     pub fn choose(&self, p: &mut Practice) {
         p.review_target = None;
         if !self.adaptive {

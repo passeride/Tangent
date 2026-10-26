@@ -70,7 +70,7 @@ assert.throws(()=>editLibraryMetadata(searchable,"a".repeat(64),"", "Bach"));
 assert.throws(()=>editLibraryMetadata(searchable,"a".repeat(64),"x".repeat(161), "Bach"));
 searchable.close();
 // Schema-v3 libraries acquire Unicode search keys without losing source bytes.
-const v3=new SQL.Database();migrate(v3);v3.run("DROP TABLE library_songs;");v3.run(libraryMigration);
+const v3=new SQL.Database();migrate(v3);v3.run("DROP TABLE practice_details; DROP TABLE library_songs;");v3.run(libraryMigration);
 v3.run("INSERT INTO library_songs VALUES(?,?,?,?,?,?,?,?)",["c".repeat(64),"ØVING","MusicXML",1,2,source,"now","now"]);
 migrate(v3);
 assert.equal(listLibrary(v3,0,6,"øving").total,1);
