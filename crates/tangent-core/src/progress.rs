@@ -132,6 +132,12 @@ impl Run {
             && self.song_total <= 1000000
             && self.song_correct <= self.song_total
             && self.song_missed <= self.song_total
+            && (!self.finished
+                || if self.mode == "play" {
+                    self.song_correct + self.song_missed == self.song_total
+                } else {
+                    self.trials.len() == SESSION_LENGTH
+                })
             && self.points == self.trials.iter().map(points).sum::<u32>() + self.song_correct * 100
             && self.errors <= 100000
             && self.elapsed_ms <= 604800000
@@ -206,12 +212,6 @@ impl Training {
             r.revision += 1;
         }
         self.reset_trial();
-    }
-    pub fn finish(&mut self) {
-        if let Some(r) = &mut self.run {
-            r.finished = true;
-            r.revision += 1;
-        }
     }
     pub fn review_focus(&self) -> Vec<String> {
         let mut stats = std::collections::BTreeMap::<String, (u32, u32)>::new();

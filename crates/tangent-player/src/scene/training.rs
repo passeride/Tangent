@@ -137,6 +137,22 @@ pub(super) fn released(state: &mut State) {
     }
 }
 pub(super) fn tick(state: &mut State, dt: f32) {
+    if state.screen == Screen::Session
+        && !state.help
+        && matches!(state.mode, Mode::Notes | Mode::Chords)
+        && !state.practice.waiting_release
+        && state.held.is_empty()
+        && state
+            .training
+            .model
+            .run
+            .as_ref()
+            .is_some_and(|r| r.trials.len() >= SESSION_LENGTH)
+    {
+        end(state, true);
+        return;
+    }
+
     if state.screen == Screen::Session && !state.help && !state.practice.waiting_release {
         state.training.millis += f64::from(dt) * 1000.;
         let ms = state.training.millis as u64;
@@ -323,7 +339,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             104.,
             format!(
                 "{}% first try across {} tasks",
-                if trials > 0 { clean * 100 / trials } else { 0 },
+                (clean * 100).checked_div(trials).unwrap_or(0),
                 trials
             ),
             13.,

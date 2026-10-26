@@ -14,6 +14,7 @@ function valid(r) {
  && Array.isArray(r.trials)&&r.trials.length<=12 && r.trials.every(t=>typeof t.skill==='string'&&t.skill.length<=100
  && ['clean','assisted','skipped'].every(k=>typeof t[k]==='boolean')&&int(t.response_ms,604800000))
  && int(r.song_total??0,1000000)&&int(r.song_correct??0,r.song_total??0)&&int(r.song_missed??0,r.song_total??0)
+ && (!r.finished||(r.mode==='play'?(r.song_correct??0)+(r.song_missed??0)===(r.song_total??0):r.trials.length===12))
  && r.points===(r.song_correct??0)*100+r.trials.reduce((n,t)=>n+(t.skipped||t.assisted?0:t.clean?100:40),0);
 }
 export function writeProgress(db,r) {
