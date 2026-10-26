@@ -63,3 +63,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0025: Personal themes and demonstrated hands](0025-personal-themes-and-demonstrated-hands.md) — persistent JSON themes, reviewed hand demonstrations and library-row double-click.
 
 - [ADR-0026: Procedural 3D piano](0026-procedural-3d-piano.md) — PBR keyboard, one-surface texture composition and projected input geometry.
+
+- [ADR-0027: Keyboard Explorer](0027-keyboard-explorer.md) — N02 octave transfers, explicit exercise kind and saved source/target evidence.

@@ -65,8 +65,15 @@ impl Run {
             version: 1,
             id,
             revision: 0,
-            mode: if p.chords { "chords" } else { "notes" }.into(),
-            label: if p.chords {
+            mode: match p.exercise {
+                crate::practice::Exercise::Notes => "notes",
+                crate::practice::Exercise::Chords => "chords",
+                crate::practice::Exercise::KeyboardExplorer => "keyboard-explorer",
+            }
+            .into(),
+            label: if p.explorer_task().is_some() {
+                format!("Keyboard Explorer / {}", p.curriculum_name())
+            } else if p.is_chord() {
                 p.curriculum_name().into()
             } else {
                 format!("{} / {}", p.clef.name(), p.curriculum_name())
@@ -282,7 +289,10 @@ impl Run {
                 .id
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '-')
-            && matches!(self.mode.as_str(), "notes" | "chords" | "play")
+            && matches!(
+                self.mode.as_str(),
+                "notes" | "chords" | "play" | "keyboard-explorer"
+            )
             && self
                 .piece_id
                 .as_ref()
@@ -306,6 +316,11 @@ impl Run {
                     self.trials.len() == SESSION_LENGTH
                 })
             && self.points == self.trials.iter().map(points).sum::<u32>() + self.song_correct * 100
+            && (self.mode != "keyboard-explorer"
+                || self
+                    .trials
+                    .iter()
+                    .all(|t| crate::explorer::ExplorerTask::from_skill(&t.skill).is_some()))
             && self.errors <= 100000
             && self.elapsed_ms <= 604800000
             && self
@@ -400,11 +415,11 @@ impl Training {
     }
     pub fn choose(&self, p: &mut Practice) {
         p.review_target = None;
-        if !self.adaptive {
+        if !self.adaptive || p.explorer_task().is_some() {
             return;
         }
         let original = p.completed;
-        let count = if p.chords {
+        let count = if p.is_chord() {
             if p.level == Level::Stepwise { 7 } else { 24 }
         } else if p.level == Level::Chromatic {
             13
@@ -413,7 +428,7 @@ impl Training {
         };
         let mut candidates = vec![];
         for i in 0..count {
-            p.completed = if p.clef == crate::practice::ReadingClef::Mixed && !p.chords {
+            p.completed = if p.clef == crate::practice::ReadingClef::Mixed && !p.is_chord() {
                 i * 2 + original % 2
             } else {
                 i
@@ -455,9 +470,12 @@ impl Training {
     }
 }
 pub fn skill(p: &Practice) -> String {
+    if let Some(task) = p.explorer_task() {
+        return task.skill();
+    }
     format!(
         "{}:{}:{}:{}",
-        if p.chords { "chord" } else { "note" },
+        if p.is_chord() { "chord" } else { "note" },
         p.clef as u8,
         p.level as u8,
         p.target()
@@ -469,6 +487,14 @@ pub fn skill(p: &Practice) -> String {
 }
 /// Human-readable skill identity without exposing a target in the exercise HUD.
 pub fn skill_label(tag: &str) -> Option<String> {
+    if tag.starts_with("explorer:") {
+        let task = crate::explorer::ExplorerTask::from_skill(tag)?;
+        return Some(format!(
+            "{} -> {}",
+            crate::explorer::note_name(task.source),
+            crate::explorer::note_name(task.target)
+        ));
+    }
     let fields: Vec<_> = tag.split(':').collect();
     if fields.len() != 4 {
         return None;
@@ -486,7 +512,11 @@ pub fn skill_label(tag: &str) -> Option<String> {
         return None;
     }
     let p = Practice {
-        chords,
+        exercise: if chords {
+            crate::practice::Exercise::Chords
+        } else {
+            crate::practice::Exercise::Notes
+        },
         review_target: Some(keys),
         ..Default::default()
     };

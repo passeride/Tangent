@@ -1,6 +1,6 @@
 # Tangent — øvelseskatalog for piano og musikkteori
 
-> **Status:** Produkt-/undervisningsspesifikasjon (**forslag**, ikke implementasjon). Opprettet 2026-10-26.
+> **Status:** Produkt-/undervisningsspesifikasjon (**forslag**, med eksplisitte leveranser nedenfor). Opprettet 2026-10-26.
 > **Omfang:** 83 unike øvelser i 10 kategorier. Primærtekst på norsk; engelske produktnavn er foreslåtte UI-labels.
 > **Formål:** Gi designere, pedagoger og utviklere et konkret grunnlag for å bygge spillbare Train-øvelser over tid.
 
@@ -9,6 +9,14 @@
 Tangent har i dag Train → Read notes / Play chords, referanselyd, adaptive repetisjoner, SQLite-lagrede forsøk og passage practice i Play. Disse er **eksisterende basisfunksjoner**, ikke ferdig implementerte versjoner av øvelsene nedenfor. Se [scores/practice](practice-progress.md), [piano player](piano-player.md), [UI/UX v2](design/tangent-ui-v2.md) og [TODO](TODO.md). En ny øvelsestype merkes først «levert» når faktisk kode, tester, UI og lagring finnes.
 
 Katalogen skal støtte pianister fra første notelesing til avansert improvisasjon, uten å kreve kjøp av lisensiert læremateriale eller kopiering fra andre produkter. **«Rule of fifths» betyr her kvintsirkelen / circle of fifths.**
+
+## Implementasjonsstatus
+
+| ID | Status | Levert avgrensning |
+|---|---|---|
+| N02 | Implementert, simulert MIDI testet | Keyboard Explorer: nøyaktig oktavflytting, tre nivåer, REF-markør, hint/lyd og lagrede forsøk. [ADR-0027](adr/0027-keyboard-explorer.md). Navnequiz og fysisk P-45-validering gjenstår. |
+
+De øvrige oppføringene er forslag. Eksisterende Read notes / Play chords er fortsatt basisfunksjoner, ikke en påstand om at hele N01/N03/H03-spesifikasjonen er levert.
 
 ## Ordliste og presisjonsregler
 
@@ -829,7 +837,7 @@ Gjenbruk gjeldende prinsipp om *solid fill = fysisk spilt tone* og *edge glow = 
 | C – rytme og gehør | R02–R08, E02, E05–E08, P05–P07 | Kalibrert klokke, sekvensavspilling, MIDI note-off/velocity/CC64, ærlig feilhåndtering. |
 | D – kreativitet og viderekommen | S07–S09, H08–H09, K08, C01–C09, P04/P08 | Backing, nye noter, fleksible voicinger, ikke-normativ feedback og repertoar-kobling. |
 
-Rull ut én representativ øvelse per domenemotor før mange variasjoner. Merk hver øvelse separat som `proposed`, `in-progress`, `implemented`, `validated-with-MIDI` i produktdata; statusene i denne katalogen er **forslag**. For MIDI-validering: test på ekte Yamaha P-45 og simulerte input-events, ulike oktaver og utsatte note-off/release; for web og native må begge veier valideres.
+Rull ut én representativ øvelse per domenemotor før mange variasjoner. Merk hver øvelse separat som `proposed`, `in-progress`, `implemented`, `validated-with-MIDI` i produktdata; statusene er **forslag** med unntak av eksplisitte leveranser nedenfor. For MIDI-validering: test på ekte Yamaha P-45 og simulerte input-events, ulike oktaver og utsatte note-off/release; for web og native må begge veier valideres.
 
 ### Daily Practice — eksempel på 20-minutters session (ikke levert)
 

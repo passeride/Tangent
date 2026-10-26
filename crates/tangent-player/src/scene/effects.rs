@@ -150,7 +150,7 @@ impl Feedback {
 /// Exact octave in note mode; any inversion of a chord is valid.
 pub(super) fn belongs_to_target(practice: &tangent_core::practice::Practice, key: u8) -> bool {
     practice.target().iter().any(|&target| {
-        if practice.chords {
+        if practice.is_chord() {
             target % 12 == key % 12
         } else {
             target == key

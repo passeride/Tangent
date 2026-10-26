@@ -15,7 +15,7 @@ function validContext(c) {
 }
 function valid(r) {
  const int=(n,max)=>Number.isSafeInteger(n)&&n>=0&&n<=max;
- return r && (r.version??1)===1 && /^[a-zA-Z0-9-]{8,100}$/.test(r.id) && ['notes','chords','play'].includes(r.mode)
+ return r && (r.version??1)===1 && /^[a-zA-Z0-9-]{8,100}$/.test(r.id) && ['notes','chords','play','keyboard-explorer'].includes(r.mode)
  && (r.piece_id==null||typeof r.piece_id==='string'&&/^[a-fA-F0-9]{64}$/.test(r.piece_id))
  && (r.context==null || r.mode==='play' && validContext(r.context))
  && (r.matched_targets==null || r.mode==='play' && r.context && Array.isArray(r.matched_targets)
@@ -30,6 +30,10 @@ function valid(r) {
  && ['clean','assisted','skipped'].every(k=>typeof t[k]==='boolean')&&int(t.response_ms,604800000))
  && int(r.song_total??0,1000000)&&int(r.song_correct??0,r.song_total??0)&&int(r.song_missed??0,r.song_total??0)
  && (!r.finished||(r.mode==='play'?(r.song_correct??0)+(r.song_missed??0)===(r.song_total??0):r.trials.length===12))
+ && (r.mode!=='keyboard-explorer'||r.trials.every(t=>{
+   const m=/^explorer:1:(\d+):(\d+)$/.exec(t.skill);
+   return m && Number(m[1])<128 && Number(m[2])<128 && Math.abs(Number(m[1])-Number(m[2]))===12;
+ }))
  && r.points===(r.song_correct??0)*100+r.trials.reduce((n,t)=>n+(t.skipped||t.assisted?0:t.clean?100:40),0);
 }
 export function writeProgress(db,r) {

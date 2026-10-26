@@ -1,6 +1,10 @@
 //! Practice notation and live pitch pointers; no musical evaluation rules.
 use super::{controls::Action, draw::Drawing, *};
 pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
+    if state.mode == Mode::Explorer {
+        super::explorer_view::render(d, state, l, t);
+        return;
+    }
     let x = l.margin + 8.;
     let chords = state.mode == Mode::Chords;
     d.text(

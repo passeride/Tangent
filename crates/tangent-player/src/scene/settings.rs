@@ -473,6 +473,9 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                     Action::PracticeHint,
                 ),
             ]);
+            if state.mode == Mode::Explorer {
+                entries.retain(|(_, action)| !matches!(action, Action::PracticeClef));
+            }
             if state.screen == Screen::Session && state.mode == Mode::Play {
                 entries.push((
                     "Back to song passage setup".into(),

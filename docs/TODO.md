@@ -83,3 +83,16 @@ For user-facing sequencing, see the **proposed** [UX roadmap](design/ux-roadmap.
 - Add persistent goals and richer compatible passage trends without inventing legacy tempo.
 - Validate P-45 loop boundaries, output switching, sustained notes and native GPU layouts.
 - Implement validated backup restore before promising portable recovery.
+
+## Next new Train exercises
+
+The catalogue is a specification, not a blanket completion list. Existing Read
+notes / Play chords remain the foundations; new exercise deliveries are explicit.
+
+- [x] N02 Keyboard Explorer: marked reference key, exact ±octave transfers,
+  three levels, hints/Hear, scored evidence and persisted retry (ADR-0027).
+  Simulated MIDI/browser validated; physical P-45 validation remains open.
+- [ ] T01 Five Finger Flow: introduce a reusable ordered sequence runner with
+  pitch/release evaluation before adding calibrated rhythm scoring.
+
+See [the 83-exercise catalogue](piano-exercise-catalog.md) for later candidates.

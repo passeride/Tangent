@@ -58,3 +58,5 @@ mockup as an implemented screenshot or claim device/browser support from an imag
 Create original layouts; reference material needs a source and rights record.
 
 - [3D piano stage](3d-piano-stage.md) — procedural lit keyboard, key motion and essential expected-note glow; see ADR-0026.
+
+- [Keyboard Explorer](keyboard-explorer.md) — N02 keyboard orientation through exact octave transfers, levels and saved progress.

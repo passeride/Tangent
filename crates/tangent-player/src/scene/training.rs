@@ -149,7 +149,7 @@ pub(super) fn grade(state: &mut State, grade: effects::Grade) {
         }
         return;
     }
-    if !matches!(state.mode, Mode::Notes | Mode::Chords) {
+    if !matches!(state.mode, Mode::Notes | Mode::Chords | Mode::Explorer) {
         return;
     }
     match grade {
@@ -181,7 +181,7 @@ pub(super) fn tick(state: &mut State, dt: f32, focused: bool) {
     passage::goal_tick(state);
     if state.screen == Screen::Session
         && !state.help
-        && matches!(state.mode, Mode::Notes | Mode::Chords)
+        && matches!(state.mode, Mode::Notes | Mode::Chords | Mode::Explorer)
         && !state.practice.waiting_release
         && state.held.is_empty()
         && state
@@ -199,7 +199,7 @@ pub(super) fn tick(state: &mut State, dt: f32, focused: bool) {
         && state.practice_hear
         && state.screen == Screen::Session
         && !state.help
-        && matches!(state.mode, Mode::Notes | Mode::Chords)
+        && matches!(state.mode, Mode::Notes | Mode::Chords | Mode::Explorer)
         && !state.practice.waiting_release
         && state.held.is_empty()
         && let Some(run) = &state.training.model.run

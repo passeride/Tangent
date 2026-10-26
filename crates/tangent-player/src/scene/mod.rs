@@ -2,6 +2,7 @@
 mod controls;
 mod draw;
 mod effects;
+mod explorer_view;
 mod layout;
 mod library;
 mod menu;
@@ -53,6 +54,7 @@ enum Mode {
     FreeForm,
     Notes,
     Chords,
+    Explorer,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SettingsTab {
@@ -345,7 +347,9 @@ impl State {
                 if answered {
                     training::released(self);
                 }
-            } else if key.is_none() && matches!(self.mode, Mode::Notes | Mode::Chords) {
+            } else if key.is_none()
+                && matches!(self.mode, Mode::Notes | Mode::Chords | Mode::Explorer)
+            {
                 let held: Vec<_> = self.held.values().copied().collect();
                 if self.practice.answer(&held) {
                     training::grade(self, effects::Grade::Correct);
@@ -397,7 +401,7 @@ impl State {
                     Some(&selection),
                 )),
                 Mode::Play | Mode::FreeForm => Some(effects::Grade::Neutral),
-                Mode::Notes | Mode::Chords => {
+                Mode::Notes | Mode::Chords | Mode::Explorer => {
                     let target_member = effects::belongs_to_target(&self.practice, key);
                     let held: Vec<_> = self.held.values().copied().collect();
                     if self.practice.answer(&held) {
@@ -468,7 +472,7 @@ impl State {
     }
     fn hear_target(&mut self) {
         self.stop_reference();
-        if !matches!(self.mode, Mode::Notes | Mode::Chords) || self.help {
+        if !matches!(self.mode, Mode::Notes | Mode::Chords | Mode::Explorer) || self.help {
             return;
         }
         if !self.practice.waiting_release {
