@@ -95,6 +95,7 @@ pub struct State {
     reference_remaining: f32,
     reference_keys: Vec<u8>,
     song: Song,
+    piece_id: String,
     transport: Transport,
     piano: PianoLayout,
     view: View,
@@ -167,6 +168,11 @@ impl State {
             reference_remaining: 0.,
             reference_keys: vec![],
             song,
+            piece_id: blake3::hash(include_bytes!(
+                "../../../../web/piano/samples/first-light.musicxml"
+            ))
+            .to_hex()
+            .to_string(),
             transport: Transport {
                 duration_us,
                 ..default()
@@ -679,6 +685,7 @@ fn load_song(state: &mut State, bytes: &[u8], title: String, from_library: bool)
                 song.notes.len(),
                 song.warnings.join(" ")
             );
+            state.piece_id = blake3::hash(bytes).to_hex().to_string();
             state.song = song;
             platform::action("song", &serde_json::to_string(&state.song).unwrap());
             state.previous.clear();

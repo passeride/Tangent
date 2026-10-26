@@ -58,7 +58,7 @@ try {
  await page.setViewportSize({width:1280,height:800});
  await click(page,'main');await click(page,'start-play');
  const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO');
- const track=Buffer.from([0,0x90,60,100,0x96,0x40,0x80,60,0,0,0xff,0x2f,0]);
+ const track=Buffer.from([0,0x90,60,100,0xda,0x00,0x80,60,0,0,0xff,0x2f,0]);
  const header=Buffer.from([77,84,104,100,0,0,0,6,0,0,0,1,1,224,77,84,114,107,0,0,0,track.length]);
  await (await chooser).setFiles({name:'One note.mid',mimeType:'audio/midi',buffer:Buffer.concat([header,track])});
  await page.waitForFunction(()=>tangentDiagnostics().notes===1);
@@ -70,7 +70,7 @@ try {
  await down(61);await page.mouse.up();
  await page.waitForFunction(()=>tangentDiagnostics().screen==='Results'&&tangentDiagnostics().practice_result.mode==='play');
  const song=await page.evaluate(()=>tangentDiagnostics().practice_result);
- assert.equal(song.points,100);assert.equal(song.song_correct,1);assert.equal(song.song_total,1);assert.equal(song.song_missed,0);assert.equal(song.errors,1);
+ assert.equal(song.piece_id.length,64);assert.equal(song.points,100);assert.equal(song.song_correct,1);assert.equal(song.song_total,1);assert.equal(song.song_missed,0);assert.equal(song.errors,1);
  await page.waitForFunction(()=>tangentDiagnostics().progress_pending===0);
  assert.deepEqual(errors,[]);
  console.log('Scored practice browser: 12 tasks, assistance, correction, skip, exact points, results, durable unique history, adaptive review and mobile passed.');

@@ -60,6 +60,7 @@ pub(super) fn start_song(state: &mut State) {
     state.training.model.run = Some(Run::song(id, state.song.title.clone(), count));
     if let Some(r) = &mut state.training.model.run {
         r.started_unix_ms = platform::wall_time_ms() as u64;
+        r.piece_id = Some(state.piece_id.clone());
     }
     state.song_hits.reset();
 }
@@ -239,14 +240,19 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 x,
                 156.,
                 format!(
-                    "{} / {} solved / {}%",
+                    "{} / {} solved / {}% {}",
                     r.solved(),
                     if r.mode == "play" {
                         r.song_total as usize
                     } else {
                         r.trials.len()
                     },
-                    r.accuracy().unwrap_or(0)
+                    r.accuracy().unwrap_or(0),
+                    if r.mode == "play" {
+                        "coverage"
+                    } else {
+                        "first try"
+                    }
                 ),
                 14.,
                 t.ink,
@@ -261,7 +267,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                     )
                 } else {
                     format!(
-                        "{} errors / {} assisted / {} skipped",
+                        "Errors: {} / assisted: {} / skipped: {}",
                         r.errors,
                         r.trials.iter().filter(|t| t.assisted).count(),
                         r.trials.iter().filter(|t| t.skipped).count()
@@ -290,11 +296,32 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             if state.mode == Mode::Play {
                 "100 per target / percentage is pitch coverage"
             } else {
-                "100 first try / 40 corrected / 0 helped or skipped"
+                "100 first try / 40 corrected / 0 assisted or skipped"
             },
             if l.width < 600. { 10. } else { 12. },
             t.muted,
         );
+        if let Some(r) = &state.training.result
+            && r.mode == "play"
+        {
+            let best = state
+                .training
+                .model
+                .history
+                .iter()
+                .filter(|h| h.mode == "play" && h.piece_id.is_some() && h.piece_id == r.piece_id)
+                .map(|h| h.points)
+                .chain(std::iter::once(r.points))
+                .max()
+                .unwrap_or(0);
+            d.text(
+                x,
+                310.,
+                format!("Best recent score for this file: {best}"),
+                12.,
+                t.colors[0],
+            );
+        }
         d.button(
             state,
             x,
@@ -330,7 +357,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         d.text(
             x,
             72.,
-            format!("{} recent sessions / {} points", history.len(), points),
+            format!("Recent sessions: {} / {} points", history.len(), points),
             16.,
             t.ink,
         );

@@ -34,6 +34,11 @@ existing generous pitch window. Result coverage is hits/total targets, not a
 claim of calibrated rhythm accuracy. Wrong attacks and missed targets remain
 visible. Pause preserves target identity. Seek/restart closes a partial run;
 scoring a fresh piece starts from its beginning. Natural completion shows results.
+BLAKE3 of the exact source bytes identifies a piece for recent personal-best
+comparison across restarts and targets. Metadata/title edits do not change that
+identity. Different source files/arrangements remain distinct; this does not
+replace the separate melodic fingerprint matcher. The existing pinned BLAKE3
+dependency is now shared with WASM, with no new dependency version.
 
 ## Persistence and lifecycle
 

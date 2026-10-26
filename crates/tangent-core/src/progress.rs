@@ -34,6 +34,8 @@ pub struct Run {
     pub song_total: u32,
     #[serde(default)]
     pub song_missed: u32,
+    #[serde(default)]
+    pub piece_id: Option<String>,
 }
 impl Run {
     pub fn new(id: String, p: &Practice) -> Self {
@@ -56,6 +58,7 @@ impl Run {
             song_correct: 0,
             song_total: 0,
             song_missed: 0,
+            piece_id: None,
         }
     }
     pub fn song(id: String, title: String, total: u32) -> Self {
@@ -122,6 +125,10 @@ impl Run {
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '-')
             && matches!(self.mode.as_str(), "notes" | "chords" | "play")
+            && self
+                .piece_id
+                .as_ref()
+                .is_none_or(|id| id.len() == 64 && id.bytes().all(|b| b.is_ascii_hexdigit()))
             && self.label.len() <= 100
             && self.trials.len() <= SESSION_LENGTH
             && ((self.mode == "play" && self.trials.is_empty())
