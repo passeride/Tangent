@@ -268,13 +268,15 @@ pub(super) fn action(state: &mut State, command: u8) {
         }
         9 => {
             if let Some(n) = state.song.notes.get(state.personal.note) {
+                let suggested = state.suggested_hands.get(&n.id).copied();
                 let p = state.personal.hand_draft.as_mut().unwrap();
-                let hand = p
-                    .notes
-                    .get(&n.id)
-                    .copied()
-                    .unwrap_or(Hand::Unassigned)
-                    .next();
+                // The first click should change the suggested hand, rather
+                // than silently committing the same colour.
+                let hand = match p.notes.get(&n.id).copied() {
+                    Some(previous) => previous.next(),
+                    None if suggested == Some(Hand::Left) => Hand::Right,
+                    None => Hand::Left,
+                };
                 p.notes.insert(n.id, hand);
             }
         }
@@ -459,22 +461,25 @@ pub(super) fn render(
             ("Clear draft assignments".into(), 26),
         ]);
         if let Some(n) = state.song.notes.get(state.personal.note) {
-            let h = state
+            let manual = state
                 .personal
                 .hand_draft
                 .as_ref()
                 .and_then(|p| p.notes.get(&n.id))
-                .copied()
+                .copied();
+            let h = manual
+                .or_else(|| state.suggested_hands.get(&n.id).copied())
                 .unwrap_or(Hand::Unassigned);
             d.text(
                 x,
                 y + 53.,
                 format!(
-                    "Note {} / {} / {} / {}",
+                    "Note {} / {} / {} / {} ({})",
                     state.personal.note + 1,
                     super::draw::time(n.start_us),
                     tangent_core::input_bindings::pitch(n.key),
-                    h.label()
+                    h.label(),
+                    if manual.is_some() { "manual" } else { "auto" }
                 ),
                 12.,
                 note_color(state, n.id, t),
