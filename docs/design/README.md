@@ -26,6 +26,7 @@ These documents are **research/proposals**, not shipped features or accepted arc
 | [Personas and jobs](personas-and-jobs.md) | Four provisional personas and their conflicting needs |
 | [User journeys and stories](user-stories-and-journeys.md) | Four end-to-end journeys and 24 prioritized acceptance-testable stories |
 | [Gamification and feedback](gamification-and-feedback.md) | Feedback hierarchy, truthful score vocabulary, effects and game mechanics |
+| [Product development execution plan](product-development-plan.md) | Concrete delivery slices, estimates, module ownership, acceptance gates and complete UX-01–24 traceability |
 | [UX roadmap](ux-roadmap.md) | Milestones R0–R6, dependencies, gates and suggested next slice |
 | [UX research plan](ux-research-plan.md) | Small user study, usability tasks, evidence collection and validation matrix |
 
