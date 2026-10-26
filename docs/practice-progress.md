@@ -32,7 +32,9 @@ without counting a checkpoint twice. It does not silently promote difficulty.
   seventh chords. Inversions and octave doublings are accepted.
 
 **Progress** on Main/Train shows recent sessions, points, first-try rate and review
-focus. Previous/Next pages through the latest 200 sessions. This is recent learning
+focus. Select a row to inspect its task outcomes; Practice again uses its recorded
+clef and difficulty. A song result offers replay only when the exact file is loaded,
+otherwise Choose music opens the library. Previous/Next pages through the latest 200 sessions. This is recent learning
 feedback, not a validated mastery rating or an all-time leaderboard.
 
 ## Song scores
@@ -68,3 +70,5 @@ The implementation is covered by pure domain tests, native/browser SQLite tests
 and real Bevy browser integration, including simulated save failure/recovery.
 Physical P-45 sound/latency and native GPU behavior still need hardware checks.
 See [ADR-0018](adr/0018-scored-sessions-and-adaptive-review.md).
+
+Reproduce scored-session screenshots with `TANGENT_CAPTURE_PROGRESS=1 node web/piano/capture.mjs` after building WASM.

@@ -47,3 +47,12 @@ try {
   await browser?.close();
   await server.close();
 }
+
+// Optional reproducible scored-session/history screenshots from real Bevy input.
+if (process.env.TANGENT_CAPTURE_PROGRESS === '1') {
+  await import('./progress-smoke.mjs');
+  const {copyFile}=await import('node:fs/promises');
+  for(const name of ['practice-results','practice-progress']) {
+    await copyFile(new URL(`../../dist/verification/${name}.png`,import.meta.url),new URL(`../../docs/screenshots/${name}.png`,import.meta.url));
+  }
+}

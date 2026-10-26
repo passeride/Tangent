@@ -53,7 +53,9 @@ are sent after answers and periodically during songs. Empty abandoned sessions
 are not history. Results never promise durability before acknowledgement.
 
 The database retains history; the UI/review loads the latest 200 sessions to bound
-payload size. This is labelled recent progress rather than all-time mastery.
+payload size. This is labelled recent progress rather than all-time mastery. Rows open full result/task details;
+practice replay restores its recorded clef/level, while song replay requires the
+exact piece to be loaded to avoid playing a different file under an old result.
 Unexpected tab/process termination can lose the latest unacknowledged checkpoint;
 there is no browser-unload durability guarantee. Full-image browser SQLite writes
 remain an existing scaling limitation. No new dependency or third-party asset.
