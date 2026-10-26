@@ -659,7 +659,7 @@ Checksums: Cargo.lock. License texts: [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTI
 
 Bevy default_font embeds FiraMono-subset.ttf: digitized data copyright © 2012–2015 The Mozilla Foundation and Telefonica S.A.; SIL OFL 1.1. The complete [font license](licenses/FiraMono-OFL.txt) is included in all distributions and notices. Source: https://github.com/bevyengine/bevy/tree/v0.20.0/assets/fonts.
 
-Bravura: unmodified font by Steinberg Media Technologies GmbH, SIL OFL 1.1; [full license](licenses/Bravura-OFL.txt). Source and pinned commit: [asset register](docs/design/assets/README.md). First light: original MusicXML piano study, CC0 1.0; [provenance](web/piano/samples/ATTRIBUTION.md). No SoundFont or sampled piano is bundled.
+Bravura: unmodified music font by Steinberg Media Technologies GmbH, SIL OFL 1.1; [full license](licenses/Bravura-OFL.txt). Noto Sans Regular: unmodified UI font by The Noto Project Authors, SIL OFL 1.1; [full license](licenses/NotoSans-OFL.txt). Exact sources and hashes: [asset register](docs/design/assets/README.md). First light: original MusicXML piano study, CC0 1.0; [provenance](web/piano/samples/ATTRIBUTION.md). No SoundFont or sampled piano is bundled.
 
 ## Test tooling
 
