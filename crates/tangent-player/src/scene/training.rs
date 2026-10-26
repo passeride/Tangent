@@ -21,6 +21,9 @@ pub(super) fn start(state: &mut State) {
         session_nonce()
     );
     state.training.model.start(id, &state.practice);
+    if let Some(r) = &mut state.training.model.run {
+        r.started_unix_ms = platform::wall_time_ms() as u64;
+    }
     state.training.model.choose(&mut state.practice);
 }
 pub(super) fn start_song(state: &mut State) {
@@ -33,6 +36,9 @@ pub(super) fn start_song(state: &mut State) {
         .filter(|n| state.song.parts.get(n.part).is_some_and(|p| !p.percussion))
         .count() as u32;
     state.training.model.run = Some(Run::song(id, state.song.title.clone(), count));
+    if let Some(r) = &mut state.training.model.run {
+        r.started_unix_ms = platform::wall_time_ms() as u64;
+    }
     state.song_hits.reset();
 }
 fn session_nonce() -> u64 {
@@ -209,12 +215,19 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             d.text(
                 x,
                 188.,
-                format!(
-                    "{} errors / {} assisted / {} skipped",
-                    r.errors,
-                    r.trials.iter().filter(|t| t.assisted).count(),
-                    r.trials.iter().filter(|t| t.skipped).count()
-                ),
+                if r.mode == "play" {
+                    format!(
+                        "{} wrong attacks / {} targets not hit",
+                        r.errors, r.song_missed
+                    )
+                } else {
+                    format!(
+                        "{} errors / {} assisted / {} skipped",
+                        r.errors,
+                        r.trials.iter().filter(|t| t.assisted).count(),
+                        r.trials.iter().filter(|t| t.skipped).count()
+                    )
+                },
                 12.,
                 t.muted,
             );
@@ -267,7 +280,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         );
     } else {
         let history = &state.training.model.history;
-        let points: u32 = history.iter().map(|r| r.points).sum();
+        let points: u64 = history.iter().map(|r| u64::from(r.points)).sum();
         let trials: usize = history.iter().map(|r| r.trials.len()).sum();
         let clean: usize = history
             .iter()
@@ -345,7 +358,20 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         for (i, r) in history.iter().skip(page * rows).take(rows).enumerate() {
             let y = 175. + i as f32 * 60.;
             d.rect(x, y, w, 50., t.panel, 7.);
-            let label = format!("{} / {}", r.mode, r.label);
+            let seconds =
+                (platform::wall_time_ms() as u64).saturating_sub(r.started_unix_ms) / 1000;
+            let ago = if r.started_unix_ms == 0 {
+                String::new()
+            } else if seconds < 60 {
+                "just now".into()
+            } else if seconds < 3600 {
+                format!("{} min ago", seconds / 60)
+            } else if seconds < 86400 {
+                format!("{} h ago", seconds / 3600)
+            } else {
+                format!("{} d ago", seconds / 86400)
+            };
+            let label = format!("{} / {} / {}", r.mode, r.label, ago);
             d.text(
                 x + 10.,
                 y + 6.,

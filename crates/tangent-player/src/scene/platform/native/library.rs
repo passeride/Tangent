@@ -262,7 +262,8 @@ mod migration_tests {
     fn v3_source_metadata_survives_search_migration() {
         let conn = Connection::open_in_memory().unwrap();
         super::super::migrate(&conn).unwrap();
-        conn.execute_batch("DROP TABLE library_songs;").unwrap();
+        conn.execute_batch("DROP TABLE practice_details; DROP TABLE library_songs;")
+            .unwrap();
         conn.execute_batch(MIGRATION).unwrap();
         conn.execute(
             "INSERT INTO library_songs VALUES('legacy','ØVING','MIDI',1,1,?1,'now','now')",

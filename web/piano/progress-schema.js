@@ -8,12 +8,12 @@ CREATE INDEX practice_recent ON practice_details(updated_at DESC);
 PRAGMA user_version = 5;`;
 function valid(r) {
  const int=(n,max)=>Number.isSafeInteger(n)&&n>=0&&n<=max;
- return r && /^[a-zA-Z0-9-]{8,100}$/.test(r.id) && ['notes','chords','play'].includes(r.mode)
+ return r && (r.version??1)===1 && /^[a-zA-Z0-9-]{8,100}$/.test(r.id) && ['notes','chords','play'].includes(r.mode)
  && typeof r.label==='string'&&r.label.length<=100&&typeof r.finished==='boolean'
  && int(r.revision,4294967295)&&int(r.errors,100000)&&int(r.elapsed_ms,604800000)
  && Array.isArray(r.trials)&&r.trials.length<=12 && r.trials.every(t=>typeof t.skill==='string'&&t.skill.length<=100
  && ['clean','assisted','skipped'].every(k=>typeof t[k]==='boolean')&&int(t.response_ms,604800000))
- && int(r.song_total??0,100000)&&int(r.song_correct??0,r.song_total??0)&&int(r.song_missed??0,r.song_total??0)
+ && int(r.song_total??0,1000000)&&int(r.song_correct??0,r.song_total??0)&&int(r.song_missed??0,r.song_total??0)
  && r.points===(r.song_correct??0)*100+r.trials.reduce((n,t)=>n+(t.skipped||t.assisted?0:t.clean?100:40),0);
 }
 export function writeProgress(db,r) {

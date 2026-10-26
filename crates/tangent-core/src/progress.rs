@@ -10,8 +10,13 @@ pub struct Trial {
     pub skipped: bool,
     pub response_ms: u64,
 }
+fn run_version() -> u32 {
+    1
+}
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Run {
+    #[serde(default = "run_version")]
+    pub version: u32,
     pub id: String,
     pub revision: u32,
     pub mode: String,
@@ -19,6 +24,8 @@ pub struct Run {
     pub points: u32,
     pub errors: u32,
     pub elapsed_ms: u64,
+    #[serde(default)]
+    pub started_unix_ms: u64,
     pub finished: bool,
     pub trials: Vec<Trial>,
     #[serde(default)]
@@ -31,6 +38,7 @@ pub struct Run {
 impl Run {
     pub fn new(id: String, p: &Practice) -> Self {
         Self {
+            version: 1,
             id,
             revision: 0,
             mode: if p.chords { "chords" } else { "notes" }.into(),
@@ -42,6 +50,7 @@ impl Run {
             points: 0,
             errors: 0,
             elapsed_ms: 0,
+            started_unix_ms: 0,
             finished: false,
             trials: vec![],
             song_correct: 0,
@@ -105,7 +114,8 @@ impl Run {
             || (self.mode == "play" && self.finished)
     }
     pub fn validate(&self) -> bool {
-        self.id.len() >= 8
+        self.version == 1
+            && self.id.len() >= 8
             && self.id.len() <= 100
             && self
                 .id
@@ -119,7 +129,7 @@ impl Run {
                     && self.song_total == 0
                     && self.song_correct == 0
                     && self.song_missed == 0))
-            && self.song_total <= 100000
+            && self.song_total <= 1000000
             && self.song_correct <= self.song_total
             && self.song_missed <= self.song_total
             && self.points == self.trials.iter().map(points).sum::<u32>() + self.song_correct * 100

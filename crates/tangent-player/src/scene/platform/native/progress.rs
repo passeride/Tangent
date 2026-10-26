@@ -42,7 +42,7 @@ pub fn save(conn: &Connection, run: &Run) -> Result<(), String> {
                     format!("{}:{metric}", run.id),
                     run.id,
                     metric,
-                    value,
+                    value as i64,
                     at.to_string()
                 ],
             )?;

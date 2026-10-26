@@ -14,6 +14,8 @@ mod web {
         #[wasm_bindgen(js_namespace = tangentPlatform)]
         pub fn session_nonce() -> u64;
         #[wasm_bindgen(js_namespace = tangentPlatform)]
+        pub fn wall_time_ms() -> f64;
+        #[wasm_bindgen(js_namespace = tangentPlatform)]
         pub fn store_import(bytes: &[u8], metadata: &str);
         #[wasm_bindgen(js_namespace = tangentPlatform)]
         pub fn pull() -> String;

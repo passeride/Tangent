@@ -62,6 +62,13 @@ fn bus() -> &'static Bus {
         }
     })
 }
+pub fn wall_time_ms() -> f64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs_f64()
+        * 1000.
+}
 pub fn session_nonce() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)

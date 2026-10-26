@@ -215,6 +215,7 @@ export async function installPlatform() {
       }
     },
     clock_us: () => audio.now * 1e6,
+    wall_time_ms: () => Date.now(),
     session_nonce: () => {const a=crypto.getRandomValues(new Uint32Array(2));return (BigInt(a[0])<<32n)|BigInt(a[1]);},
     pull: () => {
       schedule();
