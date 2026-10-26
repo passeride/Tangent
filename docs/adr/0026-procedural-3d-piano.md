@@ -15,7 +15,7 @@ edge-expected distinction must remain useful for practice on desktop and WebGL2.
 ## Decision
 
 `scene/piano3d.rs` owns procedural chamfered key meshes, case geometry, PBR
-materials, two directional lights, key depression and an orthographic Camera3d.
+materials, one directional light with ambient fill, key depression and an orthographic Camera3d.
 The additional camera renders only layer 1 into a bounded, dynamically resized
 sRGB texture. `scene/draw.rs` composites that texture as a pooled Bevy ImageNode
 at the keyboard's existing position. Camera2d is explicitly the default UI camera.
@@ -46,7 +46,7 @@ this fixed practice view.
 Enable only Bevy's existing pinned `bevy_pbr` and `bevy_light` features. Meshes
 are original code, shared across keys; materials/entities are reused and per-key
 assets are released on range changes. Target density is capped at 2x and width
-at 4096 pixels. The 3D camera is disabled outside sessions. Shadow maps, HDR,
+at 4096 pixels. The 3D camera is disabled outside sessions. Reinhard luminance tonemapping needs no LUT assets. Shadow maps, HDR,
 bloom postprocessing and imported model dependencies are deliberately absent;
 soft glow uses portable UI layers plus real emissive mesh edges. This increases
 GPU work and WASM size; physical-device performance still needs measurement.

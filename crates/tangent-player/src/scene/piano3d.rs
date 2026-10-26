@@ -4,6 +4,7 @@ use super::*;
 use bevy::{
     asset::RenderAssetUsages,
     camera::{RenderTarget, ScalingMode, visibility::RenderLayers},
+    core_pipeline::tonemapping::Tonemapping,
     mesh::PrimitiveTopology,
     render::render_resource::{Extent3d, TextureFormat},
 };
@@ -76,28 +77,28 @@ fn setup(
         },
         RenderTarget::Image(image.clone().into()),
         Msaa::Off,
+        Tonemapping::ReinhardLuminance,
+        AmbientLight {
+            brightness: 180.,
+            ..default()
+        },
         Projection::Orthographic(OrthographicProjection {
             far: 4000.,
             ..OrthographicProjection::default_3d()
         }),
         RenderLayers::layer(1),
     ));
-    // Two broad lights give ivory highlights and dark key sidewalls without
-    // shadow maps, HDR targets or postprocessing requirements on WebGL2.
-    for (position, illuminance) in [
-        (Vec3::new(-1., 3., 4.), 8500.),
-        (Vec3::new(2., 2., -3.), 3200.),
-    ] {
-        commands.spawn((
-            DirectionalLight {
-                illuminance,
-                shadow_maps_enabled: false,
-                ..default()
-            },
-            Transform::from_translation(position).looking_at(Vec3::ZERO, Vec3::Y),
-            RenderLayers::layer(1),
-        ));
-    }
+    // One key light plus ambient fill keeps native/WebGL2 lighting identical:
+    // WebGL2's PBR uniform budget supports only one directional light.
+    commands.spawn((
+        DirectionalLight {
+            illuminance: 8500.,
+            shadow_maps_enabled: false,
+            ..default()
+        },
+        Transform::from_xyz(-1., 3., 4.).looking_at(Vec3::ZERO, Vec3::Y),
+        RenderLayers::layer(1),
+    ));
     commands.insert_resource(PianoScene {
         image,
         size: UVec2::ZERO,
@@ -188,13 +189,18 @@ fn sync(
     let target = Vec3::new(r.w * 0.5, 0., (r.h * 0.5 - BACK) / DEPTH_PROJECTION);
     *camera_transform =
         Transform::from_translation(target + Vec3::new(0., 800., 600.)).looking_at(target, Vec3::Y);
-    if let Some(mut m) = materials.get_mut(&scene.case_material) {
-        m.base_color = t.panel;
-    }
-    if let Some(mut m) = materials.get_mut(&scene.rail_material) {
-        m.base_color = t.colors[0];
-        m.emissive = LinearRgba::from(t.colors[0]) * 0.3;
-    }
+    update_material(
+        &mut materials,
+        &scene.case_material,
+        t.panel,
+        LinearRgba::BLACK,
+    );
+    update_material(
+        &mut materials,
+        &scene.rail_material,
+        t.colors[0],
+        LinearRgba::from(t.colors[0]) * 0.3,
+    );
     let range = (
         state.piano.keys.first().unwrap().key,
         state.piano.keys.last().unwrap().key,
@@ -277,24 +283,24 @@ fn sync(
         }
         scene.range = range;
     }
-    let depth = (l.key_h - 5.4) / DEPTH_PROJECTION;
+    let depth = (l.key_h - 9.6) / DEPTH_PROJECTION;
     for (case, mut transform) in &mut cases {
         let (center, size) = match case.0 {
             0 => (
-                Vec3::new(l.width * 0.5, -9., -3.),
-                Vec3::new(l.width - l.margin, 20., 22.),
+                Vec3::new(l.width * 0.5, -14., -3.),
+                Vec3::new(l.width - l.margin, 30., 22.),
             ),
             1 => (
-                Vec3::new(l.width * 0.5, -12., depth * 0.5),
+                Vec3::new(l.width * 0.5, -19., depth * 0.5),
                 Vec3::new(l.width - 2. * l.margin + 12., 7., depth + 3.),
             ),
             2 => (
-                Vec3::new(l.margin - 4., -5., depth * 0.5),
-                Vec3::new(7., 14., depth + 10.),
+                Vec3::new(l.margin - 4., -8., depth * 0.5),
+                Vec3::new(7., 22., depth + 10.),
             ),
             _ => (
-                Vec3::new(l.width - l.margin + 4., -5., depth * 0.5),
-                Vec3::new(7., 14., depth + 10.),
+                Vec3::new(l.width - l.margin + 4., -8., depth * 0.5),
+                Vec3::new(7., 22., depth + 10.),
             ),
         };
         *transform = Transform::from_translation(center).with_scale(size);
@@ -321,44 +327,61 @@ fn sync(
         } else {
             key.depression + (goal - key.depression) * ease
         };
-        let height = if key.black { 12. } else { 9. };
-        let elevation = if key.black { 10. } else { 0. };
+        let height = if key.black { 22. } else { 16. };
+        let elevation = if key.black {
+            layout::BLACK_RISE / 0.6
+        } else {
+            0.
+        };
         let length = (r.h + r.y - l.strike - 0.6 * height + 0.6 * elevation) / DEPTH_PROJECTION;
-        *transform = Transform::from_xyz(r.x + r.w * 0.5, elevation, 0.)
-            .with_rotation(Quat::from_rotation_x(key.depression * 3. / length))
+        let next = Transform::from_xyz(r.x + r.w * 0.5, elevation, 0.)
+            .with_rotation(Quat::from_rotation_x(key.depression * 7. / length))
             .with_scale(Vec3::new(
                 (r.w - (l.unit * 0.06).max(0.7)).max(1.),
                 height,
                 length,
             ));
+        if *transform != next {
+            *transform = next;
+        }
         let glow = cues.get(&key.note).copied().unwrap_or(t.colors[0]);
-        if let Some(mut m) = materials.get_mut(&key.surface) {
-            m.base_color = if down {
-                t.colors[0]
-            } else if key.black {
-                t.black
-            } else {
-                t.white
-            };
-            m.emissive = if down {
-                LinearRgba::from(t.colors[0]) * 0.28
-            } else {
-                LinearRgba::BLACK
-            };
-        }
-        if let Some(mut m) = materials.get_mut(&key.edge) {
-            m.base_color = glow.with_alpha(if expected.contains(&key.note) {
-                0.95
-            } else {
-                0.
-            });
-            m.emissive = LinearRgba::from(glow)
-                * if expected.contains(&key.note) {
-                    1.5
-                } else {
-                    0.
-                };
-        }
+        let base = if down {
+            t.colors[0]
+        } else if key.black {
+            t.black
+        } else {
+            t.white
+        };
+        let emission = if down {
+            LinearRgba::from(t.colors[0]) * 0.28
+        } else {
+            LinearRgba::BLACK
+        };
+        update_material(&mut materials, &key.surface, base, emission);
+        let active = expected.contains(&key.note);
+        update_material(
+            &mut materials,
+            &key.edge,
+            glow.with_alpha(if active { 0.95 } else { 0. }),
+            LinearRgba::from(glow) * if active { 1.5 } else { 0. },
+        );
+    }
+}
+
+// Avoid uploading every key's material uniforms on every idle frame.
+fn update_material(
+    materials: &mut Assets<StandardMaterial>,
+    handle: &Handle<StandardMaterial>,
+    base: Color,
+    emission: LinearRgba,
+) {
+    if materials
+        .get(handle)
+        .is_some_and(|m| m.base_color != base || m.emissive != emission)
+        && let Some(mut material) = materials.get_mut(handle)
+    {
+        material.base_color = base;
+        material.emissive = emission;
     }
 }
 

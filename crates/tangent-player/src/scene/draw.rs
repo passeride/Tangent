@@ -718,7 +718,7 @@ fn keyboard(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme, image: 
                 r.y + r.h - 20.,
                 format!("C{}", k.key as i16 / 12 - 1),
                 9.,
-                if down { t.bg } else { t.muted },
+                if down { t.bg } else { t.black.with_alpha(0.65) },
             );
         }
     }

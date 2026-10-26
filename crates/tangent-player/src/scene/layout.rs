@@ -1,4 +1,5 @@
 use tangent_core::piano::PianoLayout;
+pub const BLACK_RISE: f32 = 12.;
 #[derive(Clone, Copy)]
 pub struct Rect {
     pub x: f32,
@@ -51,9 +52,9 @@ impl Layout {
     pub fn key(&self, piano: &PianoLayout, key: u8) -> Option<Rect> {
         piano.keys.iter().find(|k| k.key == key).map(|k| Rect {
             x: self.margin + k.x * self.unit,
-            y: self.strike - if k.black { 6. } else { 0. },
+            y: self.strike - if k.black { BLACK_RISE } else { 0. },
             w: k.width * self.unit,
-            h: self.key_h * if k.black { 0.62 } else { 1. } + if k.black { 6. } else { 0. },
+            h: self.key_h * if k.black { 0.62 } else { 1. } + if k.black { BLACK_RISE } else { 0. },
         })
     }
     pub fn center(&self, piano: &PianoLayout, key: u8) -> Option<f32> {
@@ -90,7 +91,7 @@ mod tests {
                     let r = l.key(&piano, key.key).unwrap();
                     assert!((l.center(&piano, key.key).unwrap() - (r.x + r.w * 0.5)).abs() < 0.001);
                     let y = if key.black {
-                        l.strike - 3.
+                        r.y + 2.
                     } else {
                         l.strike + l.key_h * 0.9
                     };
