@@ -121,10 +121,12 @@ try {
   await click(page,'practice-level');await click(page,'practice-level');
   await page.waitForFunction(()=>tangentDiagnostics().practice_level==='Chromatic');
   await page.setViewportSize({width:390,height:844});
+  await page.waitForFunction(()=>tangentDiagnostics().width===390 && tangentDiagnostics().height===844);
   await page.screenshot({path:new URL('../../dist/verification/train-mobile.png',import.meta.url).pathname});
   const small=await page.evaluate(()=>tangentDiagnostics());
   for(const b of small.buttons)assert.ok(b.x>=0&&b.x+b.w<=391,`Control ${b.id} fits`);
   await page.setViewportSize({width:1280,height:800});
+  await page.waitForFunction(()=>tangentDiagnostics().width===1280 && tangentDiagnostics().height===800);
   await page.keyboard.press('Escape');await click(page,'main');await click(page,'start-play');
   await page.keyboard.press('Space');
   await page.waitForFunction(()=>tangentDiagnostics().expected_glow.length>0);
