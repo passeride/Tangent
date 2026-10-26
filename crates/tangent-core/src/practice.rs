@@ -386,3 +386,34 @@ mod hit_tests {
         assert_eq!(hits.judge(&song, 1_200_000, 60), Grade::Wrong);
     }
 }
+
+#[cfg(test)]
+mod curriculum_tests {
+    use super::*;
+    #[test]
+    fn expanded_chord_pools_cover_every_root_and_quality() {
+        for level in [Level::Mixed, Level::Chromatic] {
+            let mut p = Practice::new(true);
+            p.level = level;
+            let mut seen = std::collections::BTreeSet::new();
+            for i in 0..24 {
+                p.completed = i;
+                let target = p.target();
+                assert_eq!(target.len(), if level == Level::Mixed { 3 } else { 4 });
+                seen.insert(target);
+            }
+            assert_eq!(seen.len(), 24);
+        }
+    }
+    #[test]
+    fn seventh_inversions_match_and_review_labels_keep_quality() {
+        let mut p = Practice::new(true);
+        p.level = Level::Chromatic;
+        assert_eq!(p.label(), "C dominant seventh");
+        assert!(p.answer(&[52, 55, 58, 60]));
+        p.answer(&[]);
+        p.level = Level::Stepwise;
+        p.review_target = Some(vec![71, 74, 77]);
+        assert_eq!(p.label(), "B diminished");
+    }
+}

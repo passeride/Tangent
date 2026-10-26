@@ -21,7 +21,8 @@ this file tracks the remaining work, not an authorization gate.
 - [x] Add a local SQLite symbolic fingerprint index and FreeForm MIDI identification (ADR-0011).
 - [x] Persist original music sources and add a paged Bevy Library view (ADR-0013).
 - [x] Library title/composer search, metadata editing, sorting/filtering, batch import and source/fingerprint cleanup (ADR-0014).
-- Add library folders/tags, backup restore and meaningful score/session recording.
+- [x] Meaningful score/session recording, results, recent history and adaptive review (ADR-0018).
+- Add library folders/tags and backup restore.
 - Move source parsing and slow storage work off rendering/audio scheduling paths after profiling.
 - [x] Add a true native renderer, audio mixer, MIDI inputs and SQLite adapter
   without browser or localhost server (ADR-0012). Validate release binaries on
@@ -51,8 +52,9 @@ this file tracks the remaining work, not an authorization gate.
 
 - Main/Train menus, FreeForm and basic note/chord matching are delivered in
   ADR-0008. [x] Extend the fixed C-major exercises with bass-clef targets, curriculum
-  options and feedback (delivered in ADR-0015). Timed scoring, progress persistence and adaptive exercise
-  selection remain future work in the domain layer.
+  options and feedback (delivered in ADR-0015). Scored sessions, progress persistence and adaptive exercise
+  selection are delivered in ADR-0018. Calibrated rhythmic scoring and broader
+  curriculum goals remain future work.
 - [x] Persistent reduced-motion preference and effect intensity (ADR-0017).
 - [x] Optional practice reference audio and exact live pitch pointers (ADR-0017).
 - Add contrast checks and accessible Bevy UI semantics for

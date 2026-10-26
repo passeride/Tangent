@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import initSqlJs from 'sql.js';
+import {readFileSync} from 'node:fs';
 import {migrate,schemaVersion} from './storage-schema.js';
 import {writeProgress,readProgress} from './progress-schema.js';
 const SQL=await initSqlJs();const db=new SQL.Database();migrate(db);
@@ -16,3 +17,10 @@ const reopened=new SQL.Database(db.export());migrate(reopened);assert.equal(read
 assert.deepEqual(reopened.exec('PRAGMA foreign_key_check'),[]);
 const old=new SQL.Database();migrate(old);old.run('DROP TABLE practice_details;PRAGMA user_version=4;');migrate(old);assert.deepEqual(readProgress(old),[]);
 console.log('Practice SQLite: v4 migration, idempotent checkpoints, stale-write rejection, validation and export/reopen passed.');
+
+// Compare the actual native migration with the browser schema, not a test copy.
+const nativeSource=readFileSync(new URL('../../crates/tangent-player/src/scene/platform/native/progress.rs',import.meta.url),'utf8');
+const nativeMigration=nativeSource.match(/pub const MIGRATION: &str = "([\s\S]*?)";/)[1];
+const native=new SQL.Database();native.run('PRAGMA foreign_keys=ON; CREATE TABLE practice_sessions(id TEXT PRIMARY KEY);');native.run(nativeMigration);
+for(const pragma of ['table_info(practice_details)','foreign_key_list(practice_details)','index_list(practice_details)'])assert.deepEqual(native.exec('PRAGMA '+pragma),db.exec('PRAGMA '+pragma));
+console.log('Native/web progress schema parity passed.');

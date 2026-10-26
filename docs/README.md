@@ -24,3 +24,5 @@ GitHub without a documentation server. No docs framework is required yet.
 - [Distribution](distribution.md): web hosting, platform downloads and local launchers.
 
 - [MusicXML import subset](musicxml-import.md)
+
+- [Scores, progress and adaptive practice](practice-progress.md) — usage, score meanings and persistence limits.

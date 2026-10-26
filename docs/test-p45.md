@@ -32,3 +32,12 @@ korte testresultater når du lukker det. Rapporten lagres ved siden av programme
 - Hear target, then play/pause/leave immediately: no hanging note or hardware echo.
 - Effects → Punchy should feel stronger. Reduced motion disables bursts; played
   notes and expected-key glow remain. Restart and check both settings persist.
+
+## Scores and progress
+
+- Train → Notes: solve, correct a wrong note, use Hear target, and Skip. Finish:
+  verify 100 / 40 / 0 / 0 points respectively and the matching task counts.
+- Open Progress, restart Tangent and confirm the session remains once.
+- Enable Adaptive review; verify it revisits weak tasks. Try all chord levels.
+- Play a piece: pause/resume and reattack a held target without extra points.
+  Finish session shows pitch coverage; Restart creates a fresh scored run.

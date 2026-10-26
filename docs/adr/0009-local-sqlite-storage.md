@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Decision date: 2026-10-25
-- Delivery: Settings persistence, SQLite export and future score schema implemented
+- Delivery: Settings persistence, SQLite export and score schema implemented; session recording is now delivered by [ADR-0018](0018-scored-sessions-and-adaptive-review.md)
 - Related: [ADR-0005](0005-one-bevy-gpu-surface.md), [ADR-0008](0008-navigation-and-practice.md)
 - Supersedes: ADR-0004's random launcher port only
 
