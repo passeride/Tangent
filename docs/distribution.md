@@ -12,7 +12,7 @@ change it. A workflow file alone does not prove the site is live.
 
 Download the artifact for your platform from the latest successful **Build and
 publish Tangent** run in https://github.com/passeride/Tangent/actions.
-Extract the artifact ZIP, then extract the platform archive inside it.
+Extract the GitHub artifact ZIP **once**. Windows contains only `Tangent.exe`, Linux only `tangent`, and macOS the required `Tangent.app` bundle. No nested ZIP, test scripts, developer documents or generated archives are included.
 
 | System | Artifact | Start |
 | --- | --- | --- |
@@ -36,7 +36,7 @@ Windows uses a PowerShell file picker and macOS the system Open panel via AppleS
 MIDI input ports are enumerated on launch; Ctrl+M rescans. Actual hardware
 latency and device hot-plugging still need physical testing. Desktop binaries are
 unsigned and macOS is not notarized; OS launch checks may require owner approval.
-SHA-256 checksum files accompany every archive.
+GitHub Actions provides an artifact SHA-256 digest on the workflow run; desktop builds are not code-signed. Third-party notices are embedded and readable with `Tangent.exe --licenses` (or `./tangent --licenses`), and the source notices remain in this repository. On Windows the executable contains the original Tangent icon for Explorer/taskbar display.
 
 ## Included music
 

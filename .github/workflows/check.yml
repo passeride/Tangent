@@ -96,16 +96,20 @@ jobs:
         run: cargo build -p tangent-desktop --release --target ${{ matrix.target }} --locked
       - name: Test the real platform executable
         run: python scripts/smoke_desktop.py target/${{ matrix.target }}/release/${{ matrix.binary }}
-      - name: Package platform download
+      - name: Embed and verify Windows executable icon
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python scripts/create_icon.py --output "$env:RUNNER_TEMP\Tangent.ico"
+          ./scripts/embed_windows_icon.ps1 -Exe "target/${{ matrix.target }}/release/${{ matrix.binary }}" -Icon "$env:RUNNER_TEMP\Tangent.ico"
+      - name: Stage minimal platform download
         run: python scripts/package_desktop.py --target ${{ matrix.target }} --binary target/${{ matrix.target }}/release/${{ matrix.binary }}
       - uses: actions/upload-artifact@v4
         with:
           name: Tangent-${{ matrix.target }}
-          path: |
-            dist/Tangent-${{ matrix.target }}.zip
-            dist/Tangent-${{ matrix.target }}.tar.gz
-            dist/Tangent-${{ matrix.target }}.*.sha256
+          path: dist/Tangent-${{ matrix.target }}/
           if-no-files-found: error
+          compression-level: 6
   deploy:
     name: Publish GitHub Pages
     needs: [web, native]

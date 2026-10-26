@@ -74,3 +74,7 @@ the accepted architecture and showing its actual limits.
 - https://creativecommons.org/licenses/by-sa/3.0/
 
 No legacy code or asset is used. See [PROVENANCE](../../PROVENANCE.md).
+
+## Packaging refinement — 2026-10-26
+
+The earlier nested platform archive + GitHub artifact ZIP was removed for native builds. The GitHub artifact ZIP itself now contains just the runnable Windows executable or Linux binary; macOS retains the minimal `.app` bundle. A manual tester script and user documentation are no longer packaged. Native CI smoke tests are retained. Windows embeds an original Tangent icon in the executable using the Windows resource API (no new Rust dependency), and a `--licenses` entrypoint exposes embedded third-party notices even for single-file distribution. GitHub supplies the artifact checksum. This is a distribution-only refinement; it does not alter the native Bevy runtime or the Pages build.

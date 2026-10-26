@@ -1,9 +1,8 @@
 # Tangent – kveldtest med Yamaha P-45 (ca. 10 minutter)
 
 Last ned **Windows x64** fra siste vellykkede bygg av `main` i
-[GitHub Actions](https://github.com/passeride/Tangent/actions). Pakk ut begge ZIP-lagene.
+[GitHub Actions](https://github.com/passeride/Tangent/actions). Pakk ut GitHub-artifacten én gang og start `Tangent.exe` direkte.
 Koble P-45 til USB, slå det på og lukk andre musikkprogrammer.
-Kjør gjerne `Test-Tangent.ps1` med PowerShell, eller start `Tangent.exe` direkte.
 
 1. **Oppstart:** Eget Tangent-vindu åpner, og Play/Library/Train/FreeForm/Settings virker.
 2. **Bibliotek:** Velg Library → Import files, marker to MIDI/MusicXML/MXL-filer med Ctrl og importer. Begge skal vises. Importer én på nytt: antallet skal være uendret.
@@ -21,8 +20,7 @@ Noter **OK/FEIL**, hvilket steg, og hva du så/hørte. Ved forsinkelse: si gjern
 du brukte PC-høyttalere, kabel eller Bluetooth. Sustainpedal vurderes ikke i denne
 testen; støtte for pedal fra fysisk MIDI er fortsatt et eget arbeidspunkt.
 
-PowerShell-starteren kjører først en enkel programtest, åpner Tangent og ber om
-korte testresultater når du lukker det. Rapporten lagres ved siden av programmet.
+Den automatiske programtesten kjøres i GitHub Actions og følger ikke med den nedlastbare appen. Kjør eventuelt `Tangent.exe --self-test` fra PowerShell for en rask lokal sjekk, og noter resultatene fra punktene over separat.
 
 ## Practice reference and visual distance
 

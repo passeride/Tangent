@@ -70,3 +70,9 @@ Bravura SHA-256: `cdf0f893ee1fdb64b7f6713d71ee0dcfc349c0ac01429a8e451b01a9e79f5f
 - SIL Open Font License 1.1 (unmodified font): `licenses/NotoSans-OFL.txt`.
 - Embedded directly in Bevy for native and WASM. Interface text uses Noto Sans while notation glyphs continue to use Bravura.
 - Covers Latin accented text (e.g. `Für Elise`, `Lettre à Élise`, Norwegian `æøå`), Greek and Cyrillic. Not intended as complete Unicode/CJK/emoji coverage.
+
+## Windows application icon — 2026-10-26
+
+- Source: `scripts/create_icon.py`, original generated artwork derived from Tangent's existing Bevy menu circle/tangent identity and default dark/sea-glass palette. No third-party imagery.
+- Generates 16, 32, 48 and 256-pixel PNG-backed ICO images with no external Python packages; `scripts/embed_windows_icon.ps1` embeds them into the native Windows PE using Win32 resources.
+- Runtime-ready for Windows CI builds; not a promise of code signing or installer support.
