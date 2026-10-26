@@ -1,3 +1,4 @@
+import { writeProgress, readProgress } from "./progress-schema.js";
 import { saveLibrarySong, listLibrary, readLibrarySource, removeLibrarySong, editLibraryMetadata } from "./library-schema.js";
 // Genuine SQLite bytes persisted atomically in IndexedDB. No UI or scoring rules.
 import { migrate, readSettings, writeSettings, writeFingerprintedSong, findFingerprintCandidates, schemaVersion } from "./storage-schema.js";
@@ -51,6 +52,13 @@ export async function openStorage() {
   }
   return {
     settings, diagnostics, saveSettings,
+    async readProgress() { await tail; return transaction(readProgress,false); },
+    saveProgress(run) {
+      diagnostics.pending++;
+      const result=tail.then(()=>transaction(db=>writeProgress(db,run)));
+      tail=result.catch(()=>{});
+      return result.finally(()=>{diagnostics.pending--;});
+    },
     saveLibrarySong(id, source, metadata) {
       diagnostics.pending++;
       const result = tail.then(() => transaction(db => {

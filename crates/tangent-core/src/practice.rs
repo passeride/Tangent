@@ -54,6 +54,7 @@ pub struct Practice {
     pub hint: bool,
     pub waiting_release: bool,
     pub wrong: bool,
+    pub review_target: Option<Vec<u8>>,
 }
 impl Practice {
     pub fn new(chords: bool) -> Self {
@@ -63,6 +64,18 @@ impl Practice {
         }
     }
     pub fn target(&self) -> Vec<u8> {
+        if let Some(keys) = &self.review_target {
+            return keys.clone();
+        }
+        if self.chords && self.level != Level::Stepwise {
+            let root = 60 + (self.completed % 12) as u8;
+            let minor = (self.completed / 12) % 2 == 1;
+            return if self.level == Level::Chromatic {
+                vec![root, root + if minor { 3 } else { 4 }, root + 7, root + 10]
+            } else {
+                vec![root, root + if minor { 3 } else { 4 }, root + 7]
+            };
+        }
         let root = if self.chords {
             [60, 62, 64, 65, 67, 69, 71][self.completed % 7]
         } else {
@@ -105,7 +118,21 @@ impl Practice {
         }
     }
     pub fn label(&self) -> String {
-        if self.chords {
+        if self.chords && (self.level != Level::Stepwise || self.review_target.is_some()) {
+            let keys = self.target();
+            format!(
+                "{} {}{}",
+                [
+                    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+                ][keys[0] as usize % 12],
+                if keys[1] - keys[0] == 3 {
+                    "minor"
+                } else {
+                    "major"
+                },
+                if keys.len() == 4 { " seventh" } else { "" }
+            )
+        } else if self.chords {
             format!(
                 "{} {}",
                 ["C", "D", "E", "F", "G", "A", "B"][self.completed % 7],
@@ -120,7 +147,7 @@ impl Practice {
                 ][self.completed % 7]
             )
         } else {
-            let key = self.note_target();
+            let key = self.target()[0];
             format!(
                 "{}{}",
                 [
@@ -143,6 +170,7 @@ impl Practice {
             if self.waiting_release {
                 self.completed += 1;
                 self.hint = false;
+                self.review_target = None;
             }
             self.waiting_release = false;
             self.wrong = false;

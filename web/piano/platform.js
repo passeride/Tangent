@@ -224,6 +224,15 @@ export async function installPlatform() {
     action: (name, data) => {
       try {
         switch (name) {
+          case "progress-list":
+            if(storage)storage.readProgress().then(runs=>queue.push({type:"progress",runs})).catch(e=>queue.push({type:"progress-error",text:String(e.message??e)}));
+            break;
+          case "progress-save": {
+            const run=JSON.parse(data);
+            if(storage)storage.saveProgress(run).then(()=>queue.push({type:"progress-saved",id:run.id,revision:run.revision})).catch(e=>queue.push({type:"progress-error",text:String(e.message??e)}));
+            else queue.push({type:"progress-error",text:"Practice is not saved: local storage unavailable."});
+            break;
+          }
           case "save-settings":
             if (storage) {
               storageStatus("Saving settings…");

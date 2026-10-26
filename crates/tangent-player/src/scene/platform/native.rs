@@ -6,6 +6,8 @@ mod fingerprints;
 mod library;
 #[path = "native/midi_output.rs"]
 mod midi_output;
+#[path = "native/progress.rs"]
+mod progress;
 use crate::library::SourceFile;
 use midir::{Ignore, MidiInput, MidiInputConnection};
 use rodio::{DeviceSinkBuilder, MixerDeviceSink, Player, Source, source::SineWave};
@@ -329,7 +331,7 @@ fn data_dir() -> Result<PathBuf, String> {
 fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch("PRAGMA foreign_keys = ON;")?;
     let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-    if version > 4 {
+    if version > 5 {
         return Err(rusqlite::Error::InvalidQuery);
     }
     if version == 0 {
@@ -383,6 +385,9 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
         conn.execute_batch("BEGIN;")?;
         library::migrate_v4(conn)?;
         conn.execute_batch("COMMIT;")?;
+    }
+    if version < 5 {
+        conn.execute_batch(progress::MIGRATION)?;
     }
     Ok(())
 }
@@ -605,6 +610,36 @@ fn backend(
                         midi.clear();
                         SHUTDOWN_DONE.store(true, Ordering::Release);
                         break;
+                    }
+                    "progress-list" => {
+                        if let Some((conn, _)) = &db {
+                            match progress::read(conn) {
+                                Ok(runs) => {
+                                    let _ = out.send(json!({"type":"progress","runs":runs}));
+                                }
+                                Err(e) => {
+                                    let _ = out.send(json!({"type":"progress-error","text":e}));
+                                }
+                            }
+                        }
+                    }
+                    "progress-save" => {
+                        let result = serde_json::from_str::<tangent_core::progress::Run>(&value)
+                            .map_err(|e| e.to_string())
+                            .and_then(|run| {
+                                let (conn, _) = db
+                                    .as_ref()
+                                    .ok_or("Practice is not saved: local storage unavailable.")?;
+                                progress::save(conn, &run)?;
+                                Ok(run)
+                            });
+                        let message = match result {
+                            Ok(run) => {
+                                json!({"type":"progress-saved","id":run.id,"revision":run.revision})
+                            }
+                            Err(e) => json!({"type":"progress-error","text":e}),
+                        };
+                        let _ = out.send(message);
                     }
                     "save-settings" => {
                         if let Some((conn, _)) = &db
