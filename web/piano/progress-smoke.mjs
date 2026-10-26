@@ -7,6 +7,14 @@ const browser=await chromium.launch({headless:true,args:gpuArgs});
 try {
  const page=await browser.newPage({viewport:{width:1280,height:800}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await ready(page,server.url);await click(page,'train');await click(page,'train-notes');
+ await page.setViewportSize({width:390,height:844});
+ await page.waitForFunction(()=>tangentDiagnostics().width===390);
+ const controls=await page.evaluate(()=>tangentDiagnostics().buttons);
+ for(let i=0;i<controls.length;i++)for(let j=i+1;j<controls.length;j++) {
+   const a=controls[i],b=controls[j];
+   assert(!(Math.min(a.x+a.w,b.x+b.w)>Math.max(a.x,b.x)&&Math.min(a.y+a.h,b.y+b.h)>Math.max(a.y,b.y)),`Touch controls overlap: ${a.id} / ${b.id}`);
+ }
+ await page.setViewportSize({width:1280,height:800});await page.waitForFunction(()=>tangentDiagnostics().width===1280);
  async function down(key) {
   const r=await page.evaluate(key=>tangentDiagnostics().key_rects.find(r=>r.key===key),key);
   await page.mouse.move(r.x+r.w/2,r.y+r.h*.85);await page.mouse.down();
@@ -66,15 +74,35 @@ try {
  await (await chooser).setFiles({name:'One note.mid',mimeType:'audio/midi',buffer:Buffer.concat([header,track])});
  await page.waitForFunction(()=>tangentDiagnostics().notes===2);
  await click(page,'play');await page.waitForFunction(()=>tangentDiagnostics().playing);
+ const firstRun=await page.evaluate(()=>tangentDiagnostics().practice_run.id);
+ await page.keyboard.press('Home');
+ await page.waitForFunction(id=>tangentDiagnostics().playing&&tangentDiagnostics().practice_run?.id!==id,firstRun);
  await down(60);await page.waitForFunction(()=>tangentDiagnostics().practice_run?.song_correct===1);await page.mouse.up();
  await page.waitForFunction(()=>tangentDiagnostics().solid_keys.length===0);
- await click(page,'help');await click(page,'play');
+ await click(page,'help');
+ const pausedRun=await page.evaluate(()=>tangentDiagnostics().practice_run.id);
+ await click(page,'settings');await click(page,'settings-practice');await click(page,'practice-clef');
+ assert.equal((await page.evaluate(()=>tangentDiagnostics().practice_run)).id,pausedRun,'Practice defaults preserve the paused song score');
+ await click(page,'settings-back');await click(page,'play');
  await down(60);await page.mouse.up();
  await down(61);await page.mouse.up();
  await page.waitForFunction(()=>tangentDiagnostics().screen==='Results'&&tangentDiagnostics().practice_result.mode==='play');
  const song=await page.evaluate(()=>tangentDiagnostics().practice_result);
  assert.equal(song.piece_id.length,64);assert.equal(song.points,100);assert.equal(song.song_correct,1);assert.equal(song.song_total,1);assert.equal(song.song_missed,0);assert.equal(song.errors,1);
  await page.waitForFunction(()=>tangentDiagnostics().progress_pending===0);
+ await click(page,'main');await click(page,'train');await click(page,'train-notes');
+ for(let i=0;i<3&&(await page.evaluate(()=>tangentDiagnostics().practice_clef))!=='Bass';i++)await click(page,'practice-clef');
+ for(let i=0;i<3&&(await page.evaluate(()=>tangentDiagnostics().practice_level))!=='Chromatic';i++)await click(page,'practice-level');
+ await answer();await click(page,'practice-finish');
+ await page.waitForFunction(()=>tangentDiagnostics().progress_pending===0);
+ await click(page,'main');await click(page,'settings');await click(page,'settings-practice');
+ for(let i=0;i<3&&(await page.evaluate(()=>tangentDiagnostics().practice_clef))!=='Treble';i++)await click(page,'practice-clef');
+ for(let i=0;i<3&&(await page.evaluate(()=>tangentDiagnostics().practice_level))!=='Stepwise';i++)await click(page,'practice-level');
+ await click(page,'settings-back');await click(page,'progress');await click(page,'progress-open');
+ assert.equal((await page.evaluate(()=>tangentDiagnostics().practice_result)).clef,1);
+ assert.equal((await page.evaluate(()=>tangentDiagnostics().practice_result)).level,2);
+ await click(page,'practice-again');
+ await page.waitForFunction(()=>tangentDiagnostics().practice_clef==='Bass'&&tangentDiagnostics().practice_level==='Chromatic');
  assert.deepEqual(errors,[]);
  console.log('Scored practice browser: 12 tasks, assistance, correction, skip, exact points, results, durable unique history, adaptive review and mobile passed.');
 }finally{await browser.close();await server.close();}

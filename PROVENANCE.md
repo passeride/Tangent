@@ -1,6 +1,6 @@
 # Provenance and implementation boundaries
 
-Updated: 2026-10-24.
+Updated: 2026-10-26.
 
 ## Current record
 
@@ -174,3 +174,13 @@ by native compilation; WebGL2 uses independently authored bounded UI particles.
 No upstream example art, legacy Neothesia material or external music was copied.
 Practice pointer/reference behavior and UI refinements are newly authored for
 Tangent. Earlier source exposure remains as recorded above.
+
+## Scored sessions and review — 2026-10-26
+
+Newly authored core score/review logic, Bevy history/results, native/browser SQLite
+adapters and synthetic MIDI tests implement the owner's requested scores,
+progress and further practice (ADR-0018). No legacy/fork code or external music,
+art or samples were imported. Existing pinned BLAKE3 is now shared with WASM for
+exact source-file score identity; its original notices remain included. The
+bundled original CC0 study and Bravura/Fira font notices are preserved. Earlier
+source exposure remains disclosed above.

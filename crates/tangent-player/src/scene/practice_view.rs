@@ -46,7 +46,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     d.button(
         state,
         l.width - l.margin - 86.,
-        76.,
+        70.,
         86.,
         "Finish",
         Action::PracticeFinish,

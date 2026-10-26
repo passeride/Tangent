@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Decision date: 2026-10-26
-- Delivery: Implementation and verification in progress
+- Delivery: Implemented; local automated validation passed, physical MIDI/GPU checks remain separate
 - Related: ADR-0009, ADR-0015, ADR-0017 and the UI v2 design brief
 
 ## Context and decision

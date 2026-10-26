@@ -36,6 +36,10 @@ original demonstration study. These are app screenshots, not design mockups.
 
 ![Note practice](docs/screenshots/train-notes.png)
 
+| Scored session | Recent progress |
+| --- | --- |
+| ![Session results](docs/screenshots/practice-results.png) | ![Progress history](docs/screenshots/practice-progress.png) |
+
 ![Piano with falling blocks](docs/screenshots/piano-blocks.png)
 
 | Staff lanes with ledger lines | Falling noteheads |
