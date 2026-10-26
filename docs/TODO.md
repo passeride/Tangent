@@ -92,7 +92,11 @@ notes / Play chords remain the foundations; new exercise deliveries are explicit
 - [x] N02 Keyboard Explorer: marked reference key, exact ±octave transfers,
   three levels, hints/Hear, scored evidence and persisted retry (ADR-0027).
   Simulated MIDI/browser validated; physical P-45 validation remains open.
-- [ ] T01 Five Finger Flow: introduce a reusable ordered sequence runner with
-  pitch/release evaluation before adding calibrated rhythm scoring.
+- [x] T01 Five Finger Flow: reusable ordered sequence runner, three positions/
+  register levels, advisory fingers, release-gated input, whole-pattern scores,
+  hint/Hear assistance and durable evidence/retry (ADR-0028).
+  Legato, both hands together and calibrated timing remain future work.
+- [ ] S03 Major Scale Run: reuse the sequence runner for one-octave major scales
+  with explicit key spelling, advisory fingers and exact ordered pitch input.
 
 See [the 83-exercise catalogue](piano-exercise-catalog.md) for later candidates.

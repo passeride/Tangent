@@ -250,3 +250,7 @@ The chamfered key mesh, case, lighting and light-spill geometry in `scene/piano3
 ## Keyboard Explorer — 2026-10-26
 
 N02 octave-transfer generation, evidence, UI and tests are original project code based on the owner-requested internal exercise catalogue. No external exercise files, music, graphical assets or implementation sources were imported.
+
+## Five Finger Flow — 2026-10-26
+
+The release-gated sequence runner, original major pentascale patterns, fingering guidance and T01 UI/tests are project-authored from the internal catalogue. No exercise files, recordings, external model assets or implementation sources were imported.

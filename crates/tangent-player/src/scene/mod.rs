@@ -3,6 +3,7 @@ mod controls;
 mod draw;
 mod effects;
 mod explorer_view;
+mod flow_view;
 mod layout;
 mod library;
 mod menu;
@@ -55,6 +56,7 @@ enum Mode {
     Notes,
     Chords,
     Explorer,
+    FiveFinger,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SettingsTab {
@@ -342,13 +344,16 @@ impl State {
         if self.held.remove(&id).is_some() {
             platform::action("off", &id);
             if self.held.is_empty() {
-                let answered = self.practice.waiting_release;
+                let answered = self.practice.waiting_release();
                 self.practice.answer(&[]);
                 if answered {
                     training::released(self);
                 }
             } else if key.is_none()
-                && matches!(self.mode, Mode::Notes | Mode::Chords | Mode::Explorer)
+                && matches!(
+                    self.mode,
+                    Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+                )
             {
                 let held: Vec<_> = self.held.values().copied().collect();
                 if self.practice.answer(&held) {
@@ -401,12 +406,12 @@ impl State {
                     Some(&selection),
                 )),
                 Mode::Play | Mode::FreeForm => Some(effects::Grade::Neutral),
-                Mode::Notes | Mode::Chords | Mode::Explorer => {
+                Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger => {
                     let target_member = effects::belongs_to_target(&self.practice, key);
                     let held: Vec<_> = self.held.values().copied().collect();
                     if self.practice.answer(&held) {
                         Some(effects::Grade::Correct)
-                    } else if !self.practice.waiting_release && !target_member {
+                    } else if !self.practice.waiting_release() && !target_member {
                         Some(effects::Grade::Wrong)
                     } else {
                         None
@@ -472,10 +477,14 @@ impl State {
     }
     fn hear_target(&mut self) {
         self.stop_reference();
-        if !matches!(self.mode, Mode::Notes | Mode::Chords | Mode::Explorer) || self.help {
+        if !matches!(
+            self.mode,
+            Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+        ) || self.help
+        {
             return;
         }
-        if !self.practice.waiting_release {
+        if !self.practice.waiting_release() {
             self.training.model.assist();
         }
         self.reference_keys = self.practice.target();

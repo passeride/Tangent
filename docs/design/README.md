@@ -60,3 +60,5 @@ Create original layouts; reference material needs a source and rights record.
 - [3D piano stage](3d-piano-stage.md) — procedural lit keyboard, key motion and essential expected-note glow; see ADR-0026.
 
 - [Keyboard Explorer](keyboard-explorer.md) — N02 keyboard orientation through exact octave transfers, levels and saved progress.
+
+- [Five Finger Flow](five-finger-flow.md) — T01 five-note positions, suggested fingers and whole-pattern progress.

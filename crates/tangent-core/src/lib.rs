@@ -12,3 +12,6 @@ pub mod progress;
 pub mod input_bindings;
 
 pub mod explorer;
+
+pub mod five_finger;
+pub mod sequence;

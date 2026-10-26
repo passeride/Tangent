@@ -44,3 +44,11 @@ assert.equal(readProgress(explorerDb).find(r=>r.id===explorer.id).trials[0].skil
 assert.throws(()=>writeProgress(db,{...explorer,trials:[{...explorer.trials[0],skill:'explorer:1:48:72'}]}));
 assert.throws(()=>writeProgress(db,{...explorer,trials:[{...explorer.trials[0],skill:'note:0:0:60'}]}));
 console.log('Keyboard Explorer checkpoint: exact octave evidence, export/reopen and invalid task rejection passed.');
+
+const flow={...run,id:'five-finger-session',mode:'five-finger-flow',label:'Five Finger Flow / Right C',trials:[{...run.trials[0],skill:'flow:1:R:60-62-64-65-67-65-64-62-60'}]};
+writeProgress(db,flow);
+const flowDb=new SQL.Database(db.export());migrate(flowDb);
+assert.equal(readProgress(flowDb).find(r=>r.id===flow.id).trials[0].skill,flow.trials[0].skill);
+for(const skill of ['flow:1:R:60-62','flow:2:R:60-62-64-65-67-65-64-62-60','flow:1:R:60-62-64-65-67-65-64-62-61','flow:1:R:125-127-129-130-132-130-129-127-125'])
+ assert.throws(()=>writeProgress(db,{...flow,trials:[{...flow.trials[0],skill}]}));
+console.log('Five Finger Flow checkpoint: whole-pattern evidence, export/reopen and invalid sequence rejection passed.');

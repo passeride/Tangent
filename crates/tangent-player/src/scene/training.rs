@@ -149,7 +149,16 @@ pub(super) fn grade(state: &mut State, grade: effects::Grade) {
         }
         return;
     }
-    if !matches!(state.mode, Mode::Notes | Mode::Chords | Mode::Explorer) {
+    if !matches!(
+        state.mode,
+        Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+    ) {
+        return;
+    }
+    if state.mode == Mode::FiveFinger
+        && grade == effects::Grade::Correct
+        && !state.practice.sequence_accepted()
+    {
         return;
     }
     match grade {
@@ -164,6 +173,10 @@ pub(super) fn grade(state: &mut State, grade: effects::Grade) {
     }
 }
 pub(super) fn released(state: &mut State) {
+    // Mistakes/assistance/response time belong to the entire pattern.
+    if state.mode == Mode::FiveFinger && state.practice.sequence_step() > 0 {
+        return;
+    }
     if state
         .training
         .model
@@ -181,8 +194,11 @@ pub(super) fn tick(state: &mut State, dt: f32, focused: bool) {
     passage::goal_tick(state);
     if state.screen == Screen::Session
         && !state.help
-        && matches!(state.mode, Mode::Notes | Mode::Chords | Mode::Explorer)
-        && !state.practice.waiting_release
+        && matches!(
+            state.mode,
+            Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+        )
+        && !state.practice.waiting_release()
         && state.held.is_empty()
         && state
             .training
@@ -199,8 +215,11 @@ pub(super) fn tick(state: &mut State, dt: f32, focused: bool) {
         && state.practice_hear
         && state.screen == Screen::Session
         && !state.help
-        && matches!(state.mode, Mode::Notes | Mode::Chords | Mode::Explorer)
-        && !state.practice.waiting_release
+        && matches!(
+            state.mode,
+            Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+        )
+        && !state.practice.waiting_release()
         && state.held.is_empty()
         && let Some(run) = &state.training.model.run
     {
@@ -213,7 +232,7 @@ pub(super) fn tick(state: &mut State, dt: f32, focused: bool) {
     if focused
         && state.screen == Screen::Session
         && !state.help
-        && !state.practice.waiting_release
+        && !state.practice.waiting_release()
         && (state.mode != Mode::Play || state.transport.playing)
     {
         state.training.millis += f64::from(dt) * 1000.;

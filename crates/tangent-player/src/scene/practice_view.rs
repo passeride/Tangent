@@ -1,6 +1,10 @@
 //! Practice notation and live pitch pointers; no musical evaluation rules.
 use super::{controls::Action, draw::Drawing, *};
 pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
+    if state.mode == Mode::FiveFinger {
+        super::flow_view::render(d, state, l, t);
+        return;
+    }
     if state.mode == Mode::Explorer {
         super::explorer_view::render(d, state, l, t);
         return;
@@ -18,9 +22,9 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         20.,
         t.ink,
     );
-    let message = if state.practice.waiting_release {
+    let message = if state.practice.waiting_release() {
         "Correct! Release all keys to continue".to_string()
-    } else if state.practice.wrong {
+    } else if state.practice.wrong() {
         "Try again - check the clef and octave".to_string()
     } else if chords || state.practice.hint {
         format!("Play {}", state.practice.label())

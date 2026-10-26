@@ -276,3 +276,7 @@ The session keyboard now uses procedural chamfered 3D keys, case/cheeks, broad P
 ## Keyboard Explorer (N02)
 
 Train → Keyboard Explorer marks a reference key and asks for the same note exactly one octave higher/lower. Three levels progress from C/D/E to white keys and chromatic transfers in both directions. Twelve-task scores and exact source/target evidence save to existing progress; hints and target audio are assisted. See [ADR-0027](adr/0027-keyboard-explorer.md) and the [brief](design/keyboard-explorer.md).
+
+## Five Finger Flow (T01)
+
+Train → Five Finger Flow teaches a five-note major position up and down in nine steps. Three levels cover Right C, Left C and moving C/G/F positions. Full release advances each step; twelve whole patterns form a session. Mistakes/hints/Hear affect the whole pattern. Finger numbers are advice, not measured input; there is no timing or legato score. See [ADR-0028](adr/0028-five-finger-sequences.md).

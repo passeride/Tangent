@@ -69,9 +69,12 @@ impl Run {
                 crate::practice::Exercise::Notes => "notes",
                 crate::practice::Exercise::Chords => "chords",
                 crate::practice::Exercise::KeyboardExplorer => "keyboard-explorer",
+                crate::practice::Exercise::FiveFinger => "five-finger-flow",
             }
             .into(),
-            label: if p.explorer_task().is_some() {
+            label: if p.flow_task().is_some() {
+                format!("Five Finger Flow / {}", p.curriculum_name())
+            } else if p.explorer_task().is_some() {
                 format!("Keyboard Explorer / {}", p.curriculum_name())
             } else if p.is_chord() {
                 p.curriculum_name().into()
@@ -291,7 +294,7 @@ impl Run {
                 .all(|c| c.is_ascii_alphanumeric() || c == '-')
             && matches!(
                 self.mode.as_str(),
-                "notes" | "chords" | "play" | "keyboard-explorer"
+                "notes" | "chords" | "play" | "keyboard-explorer" | "five-finger-flow"
             )
             && self
                 .piece_id
@@ -321,6 +324,11 @@ impl Run {
                     .trials
                     .iter()
                     .all(|t| crate::explorer::ExplorerTask::from_skill(&t.skill).is_some()))
+            && (self.mode != "five-finger-flow"
+                || self
+                    .trials
+                    .iter()
+                    .all(|t| crate::five_finger::FiveFingerTask::from_skill(&t.skill).is_some()))
             && self.errors <= 100000
             && self.elapsed_ms <= 604800000
             && self
@@ -377,6 +385,10 @@ impl Training {
         self.assisted = true;
     }
     pub fn answer(&mut self, p: &Practice, skipped: bool) {
+        // Intermediate correct steps are feedback, never completed tasks.
+        if p.flow_task().is_some() && !skipped && !p.sequence_accepted() {
+            return;
+        }
         let skill = skill(p);
         if let Some(r) = &mut self.run {
             if r.trials.len() >= SESSION_LENGTH {
@@ -415,7 +427,7 @@ impl Training {
     }
     pub fn choose(&self, p: &mut Practice) {
         p.review_target = None;
-        if !self.adaptive || p.explorer_task().is_some() {
+        if !self.adaptive || p.explorer_task().is_some() || p.flow_task().is_some() {
             return;
         }
         let original = p.completed;
@@ -470,6 +482,9 @@ impl Training {
     }
 }
 pub fn skill(p: &Practice) -> String {
+    if let Some(task) = p.flow_task() {
+        return task.skill();
+    }
     if let Some(task) = p.explorer_task() {
         return task.skill();
     }
@@ -487,6 +502,14 @@ pub fn skill(p: &Practice) -> String {
 }
 /// Human-readable skill identity without exposing a target in the exercise HUD.
 pub fn skill_label(tag: &str) -> Option<String> {
+    if tag.starts_with("flow:") {
+        let task = crate::five_finger::FiveFingerTask::from_skill(tag)?;
+        return Some(format!(
+            "{} {} five-finger",
+            if task.left { "Left" } else { "Right" },
+            crate::explorer::note_name(task.notes[0])
+        ));
+    }
     if tag.starts_with("explorer:") {
         let task = crate::explorer::ExplorerTask::from_skill(tag)?;
         return Some(format!(
@@ -511,15 +534,8 @@ pub fn skill_label(tag: &str) -> Option<String> {
     if (!chords && keys.len() != 1) || (chords && !(3..=4).contains(&keys.len())) {
         return None;
     }
-    let p = Practice {
-        exercise: if chords {
-            crate::practice::Exercise::Chords
-        } else {
-            crate::practice::Exercise::Notes
-        },
-        review_target: Some(keys),
-        ..Default::default()
-    };
+    let mut p = Practice::new(chords);
+    p.review_target = Some(keys);
     Some(p.label())
 }
 

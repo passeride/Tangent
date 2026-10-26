@@ -473,7 +473,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                     Action::PracticeHint,
                 ),
             ]);
-            if state.mode == Mode::Explorer {
+            if matches!(state.mode, Mode::Explorer | Mode::FiveFinger) {
                 entries.retain(|(_, action)| !matches!(action, Action::PracticeClef));
             }
             if state.screen == Screen::Session && state.mode == Mode::Play {

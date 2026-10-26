@@ -227,7 +227,10 @@ fn execute(state: &mut State, command: &str, piano: bool) {
         return;
     }
     if matches!(command, "hint" | "listen" | "skip")
-        && !matches!(state.mode, Mode::Notes | Mode::Chords | Mode::Explorer)
+        && !matches!(
+            state.mode,
+            Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+        )
     {
         return;
     }

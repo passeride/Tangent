@@ -1,3 +1,7 @@
+if (process.env.TANGENT_CAPTURE_FLOW === '1') {
+  await import('./flow-smoke.mjs');
+  process.exit(0);
+}
 if (process.env.TANGENT_CAPTURE_EXPLORER === '1') {
   await import('./explorer-smoke.mjs');
   process.exit(0);

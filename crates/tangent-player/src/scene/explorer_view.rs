@@ -110,7 +110,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         120.
     };
     d.rect(card_x, card_y, card_w, card_h, t.panel, 12.);
-    let destination = if state.practice.hint || state.practice.waiting_release {
+    let destination = if state.practice.hint || state.practice.waiting_release() {
         note_name(task.target)
     } else {
         "?".into()
@@ -154,9 +154,9 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             t.colors[0],
         );
     }
-    let feedback: String = if state.practice.waiting_release {
+    let feedback: String = if state.practice.waiting_release() {
         "Correct! Release all keys to continue".into()
-    } else if state.practice.wrong {
+    } else if state.practice.wrong() {
         "Try again: same note name, exactly one octave away".into()
     } else if state.practice.hint {
         "Hint shown: this task is assisted".into()
@@ -170,7 +170,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         l.strike - 72.,
         feedback,
         if compact { 10. } else { 13. },
-        if state.practice.wrong {
+        if state.practice.wrong() {
             t.colors[2]
         } else {
             t.ink

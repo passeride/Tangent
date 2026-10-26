@@ -46,7 +46,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         d.text(x, title_y + 114., "Choose what to learn", 14., t.muted);
         let top = title_y + if short { 137. } else { 156. };
         let height = if short {
-            ((l.height - top - 48.) / 4. - 8.).clamp(30., 48.)
+            ((l.height - top - 48.) / 5. - 8.).clamp(30., 48.)
         } else {
             62.
         };
@@ -65,6 +65,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 "Keyboard Explorer",
                 "Find the same note in another octave",
                 Action::TrainExplorer,
+            ),
+            (
+                "Five Finger Flow",
+                "Play a five-note pattern up and down",
+                Action::TrainFiveFinger,
             ),
             ("Back to main menu", "", Action::Main),
         ]
