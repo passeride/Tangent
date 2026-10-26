@@ -41,6 +41,15 @@ try {
  const next=await page.evaluate(()=>tangentDiagnostics().target[0]);assert.notEqual(next,first);
  await click(page,'practice-finish');await page.waitForFunction(()=>tangentDiagnostics().screen==='Results');
  assert.equal((await page.evaluate(()=>tangentDiagnostics().practice_result)).finished,false);
+ await click(page,'practice-again');
+ await page.evaluate(()=>{window.savedPut=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(value,key){if(key==='tangent.sqlite')throw new DOMException('test full disk','QuotaExceededError');return window.savedPut.call(this,value,key);};});
+ await answer();
+ await page.waitForFunction(()=>tangentDiagnostics().progress_status.startsWith('Not saved'));
+ assert((await page.evaluate(()=>tangentDiagnostics())).progress_pending>0);
+ await page.evaluate(()=>{IDBObjectStore.prototype.put=window.savedPut;});
+ await page.waitForFunction(()=>tangentDiagnostics().progress_pending===0);
+ await click(page,'practice-finish');
+ await page.waitForFunction(()=>tangentDiagnostics().screen==='Results');
  await page.setViewportSize({width:390,height:844});
  await page.waitForFunction(()=>tangentDiagnostics().width===390);
  const small=await page.evaluate(()=>tangentDiagnostics());

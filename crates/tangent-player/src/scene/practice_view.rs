@@ -93,7 +93,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             l.margin,
             104.,
             190.,
-            format!("{}", state.practice.curriculum_name()),
+            state.practice.curriculum_name(),
             Action::PracticeLevel,
             t,
         );

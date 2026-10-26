@@ -12,6 +12,27 @@ pub(super) struct Sessions {
     pub page: usize,
     millis: f64,
 }
+fn merge_pending(state: &mut State) {
+    for run in state.training.pending.values() {
+        if let Some(old) = state
+            .training
+            .model
+            .history
+            .iter_mut()
+            .find(|r| r.id == run.id)
+        {
+            *old = run.clone();
+        } else {
+            state.training.model.history.insert(0, run.clone());
+        }
+    }
+    state.training.model.history.sort_by(|a, b| {
+        b.started_unix_ms
+            .cmp(&a.started_unix_ms)
+            .then_with(|| b.id.cmp(&a.id))
+    });
+    state.training.model.history.truncate(200);
+}
 pub(super) fn start(state: &mut State) {
     state.training.serial += 1;
     let id = format!(
@@ -20,6 +41,7 @@ pub(super) fn start(state: &mut State) {
         state.training.serial,
         session_nonce()
     );
+    merge_pending(state);
     state.training.model.start(id, &state.practice);
     if let Some(r) = &mut state.training.model.run {
         r.started_unix_ms = platform::wall_time_ms() as u64;
@@ -138,6 +160,7 @@ pub(super) fn message(state: &mut State, m: &serde_json::Value) -> bool {
             if let Ok(runs) = serde_json::from_value::<Vec<Run>>(m["runs"].clone()) {
                 state.training.model.history =
                     runs.into_iter().filter(Run::validate).take(200).collect();
+                merge_pending(state);
             }
         }
         "progress-saved" => {
@@ -279,6 +302,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             t,
         );
     } else {
+        merge_pending(state);
         let history = &state.training.model.history;
         let points: u64 = history.iter().map(|r| u64::from(r.points)).sum();
         let trials: usize = history.iter().map(|r| r.trials.len()).sum();
@@ -392,12 +416,45 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                     } else {
                         "first try"
                     },
-                    if r.finished { "complete" } else { "partial" }
+                    if state.training.pending.contains_key(&r.id) {
+                        "unsaved"
+                    } else if r.finished {
+                        "complete"
+                    } else {
+                        "partial"
+                    }
                 ),
                 11.,
                 t.muted,
             );
         }
+    }
+    if !result {
+        d.button(
+            state,
+            x,
+            l.height - 80.,
+            100.,
+            "Previous",
+            Action::ProgressPrevious,
+            t,
+        );
+        d.button(
+            state,
+            x + 110.,
+            l.height - 80.,
+            100.,
+            "Next",
+            Action::ProgressNext,
+            t,
+        );
+        d.text(
+            x + 230.,
+            l.height - 73.,
+            format!("Page {}", state.training.page + 1),
+            11.,
+            t.muted,
+        );
     }
     let status =
         if !state.training.pending.is_empty() && !state.training.status.starts_with("Not saved") {
