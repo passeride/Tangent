@@ -183,10 +183,9 @@ pub fn suggested_hands(song: &tangent_core::music::Song) -> BTreeMap<usize, Hand
             }
             if let (Some(id), Some(&hand)) =
                 (written.performance_note, staff_hands.get(&written.staff))
+                && authored.insert(id, hand).is_some_and(|old| old != hand)
             {
-                if authored.insert(id, hand).is_some_and(|old| old != hand) {
-                    conflicts.insert(id);
-                }
+                conflicts.insert(id);
             }
         }
     }
