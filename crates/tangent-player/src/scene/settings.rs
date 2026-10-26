@@ -82,7 +82,19 @@ pub(super) fn pause(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Th
     let half = (usable - gap) * 0.5;
     let view_label = format!("View: {}", state.view.name());
     let sound_label = format!("Song audio: {}", if state.hear { "On" } else { "Off" });
-    d.button(state, inner, y + 178., half, view_label, Action::View, t);
+    if state.training.model.run.is_some() {
+        d.button(
+            state,
+            inner,
+            y + 178.,
+            half,
+            "Finish session",
+            Action::PracticeFinish,
+            t,
+        );
+    } else {
+        d.button(state, inner, y + 178., half, view_label, Action::View, t);
+    }
     d.button(
         state,
         inner + half + gap,

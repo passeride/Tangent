@@ -55,6 +55,23 @@ try {
  const small=await page.evaluate(()=>tangentDiagnostics());
  assert(small.buttons.every(b=>b.x>=0&&b.x+b.w<=390&&b.y>=0&&b.y+b.h<=844));
  await page.screenshot({path:new URL('../../dist/verification/practice-results-mobile.png',import.meta.url).pathname});
+ await page.setViewportSize({width:1280,height:800});
+ await click(page,'main');await click(page,'start-play');
+ const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO');
+ const track=Buffer.from([0,0x90,60,100,0x96,0x40,0x80,60,0,0,0xff,0x2f,0]);
+ const header=Buffer.from([77,84,104,100,0,0,0,6,0,0,0,1,1,224,77,84,114,107,0,0,0,track.length]);
+ await (await chooser).setFiles({name:'One note.mid',mimeType:'audio/midi',buffer:Buffer.concat([header,track])});
+ await page.waitForFunction(()=>tangentDiagnostics().notes===1);
+ await click(page,'play');await page.waitForFunction(()=>tangentDiagnostics().playing);
+ await down(60);await page.waitForFunction(()=>tangentDiagnostics().practice_run?.song_correct===1);await page.mouse.up();
+ await page.waitForFunction(()=>tangentDiagnostics().solid_keys.length===0);
+ await click(page,'help');await click(page,'play');
+ await down(60);await page.mouse.up();
+ await down(61);await page.mouse.up();
+ await page.waitForFunction(()=>tangentDiagnostics().screen==='Results'&&tangentDiagnostics().practice_result.mode==='play');
+ const song=await page.evaluate(()=>tangentDiagnostics().practice_result);
+ assert.equal(song.points,100);assert.equal(song.song_correct,1);assert.equal(song.song_total,1);assert.equal(song.song_missed,0);assert.equal(song.errors,1);
+ await page.waitForFunction(()=>tangentDiagnostics().progress_pending===0);
  assert.deepEqual(errors,[]);
  console.log('Scored practice browser: 12 tasks, assistance, correction, skip, exact points, results, durable unique history, adaptive review and mobile passed.');
 }finally{await browser.close();await server.close();}
