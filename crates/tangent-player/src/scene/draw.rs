@@ -539,9 +539,15 @@ pub fn render(
         report.as_object_mut().unwrap().extend(serde_json::json!({"personal_open":state.personal.open,"personal_token":state.personal.token,"personal_status":state.personal.status,"personal_matched":state.personal.matched,"personal_unresolved":state.personal.unresolved}).as_object().unwrap().clone());
         platform::report(&report.to_string());
     }
-    apply(&mut commands, &mut pool, d, &music_font.0);
+    apply(&mut commands, &mut pool, d, &music_font.0, &ui_font.0);
 }
-fn apply(commands: &mut Commands, pool: &mut Pool, d: Drawing, music_font: &Handle<Font>) {
+fn apply(
+    commands: &mut Commands,
+    pool: &mut Pool,
+    d: Drawing,
+    music_font: &Handle<Font>,
+    ui_font: &Handle<Font>,
+) {
     while pool.shapes.len() < d.shapes.len() {
         pool.shapes.push(commands.spawn_empty().id());
     }
@@ -581,7 +587,7 @@ fn apply(commands: &mut Commands, pool: &mut Pool, d: Drawing, music_font: &Hand
                 if s.music {
                     TextFont::from_font_size(s.size).with_font(music_font.clone())
                 } else {
-                    TextFont::from_font_size(s.size).with_font(ui_font.0.clone())
+                    TextFont::from_font_size(s.size).with_font(ui_font.clone())
                 },
                 if s.music {
                     LineHeight::Px(s.size)
