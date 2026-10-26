@@ -49,3 +49,4 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0016: Persistent MIDI output selection](0016-persistent-midi-output-selection.md) — accepted; Bevy dropdown, SQLite preference and safe name-based reconnection.
 - [ADR-0017: Practice reference and motion](0017-practice-reference-and-motion.md) — accepted; exact live pitch pointers, optional reference audio and persistent effect/motion choices.
 - [ADR-0018: Scores, history and adaptive review](0018-scored-sessions-and-adaptive-review.md) — scored training/song sessions, SQLite checkpoints and recent-history review.
+- [ADR-0019: Automatic practice reference](0019-automatic-practice-reference.md) — persistent Hear toggle and one audition per new task.

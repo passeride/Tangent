@@ -11,6 +11,8 @@ pub(super) struct Sessions {
     serial: u64,
     pub page: usize,
     millis: f64,
+    // Run + trial identity also distinguishes consecutive equal pitches.
+    pub heard_target: Option<(String, usize, Vec<u8>)>,
 }
 fn merge_pending(state: &mut State) {
     for run in state.training.pending.values() {
@@ -149,6 +151,21 @@ pub(super) fn tick(state: &mut State, dt: f32, focused: bool) {
         return;
     }
 
+    if focused
+        && state.practice_hear
+        && state.screen == Screen::Session
+        && !state.help
+        && matches!(state.mode, Mode::Notes | Mode::Chords)
+        && !state.practice.waiting_release
+        && state.held.is_empty()
+        && let Some(run) = &state.training.model.run
+    {
+        let target = (run.id.clone(), run.trials.len(), state.practice.target());
+        if state.training.heard_target.as_ref() != Some(&target) {
+            state.training.heard_target = Some(target);
+            state.hear_target();
+        }
+    }
     if focused
         && state.screen == Screen::Session
         && !state.help

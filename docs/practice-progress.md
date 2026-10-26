@@ -3,7 +3,9 @@
 Choose **Train → Read notes / Play chords** for a 12-task session. Finish ends a
 session early; Skip records an unsolved task. Correct answers remain on the staff
 until all keys are released. The coloured live pointer and reference audio remain
-available. Practice works with MIDI, computer keys and the on-screen piano.
+available. **Hear: On** plays each new target automatically through the selected
+output. It is saved between sessions; **Hear: Off** stops reference audio.
+Heard tasks count as assisted (zero reading-score points). Practice works with MIDI, computer keys and the on-screen piano.
 
 ## Score meaning
 
@@ -11,7 +13,7 @@ available. Practice works with MIDI, computer keys and the on-screen piano.
 | --- | ---: | --- |
 | Correct without wrong input or help | 100 | Yes |
 | Correct after a wrong attack | 40 | No |
-| Correct after Show hint or Hear target | 0 | No |
+| Correct after Show hint or Hear: On | 0 | No |
 | Skipped | 0 | No |
 
 Hiding a hint does not undo help already used. Partial correct chord shapes are

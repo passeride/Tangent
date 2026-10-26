@@ -5,6 +5,8 @@
 - Delivery: Implemented; physical P-45 and high-resolution GPU verification pending
 - Related: [ADR-0015](0015-midi-output-and-reading-practice.md), [ADR-0016](0016-persistent-midi-output-selection.md), [UI v2](../design/tangent-ui-v2.md)
 
+Reference interaction superseded by [ADR-0019](0019-automatic-practice-reference.md).
+
 ## Context and alternatives
 
 Reading practice needs an optional audible reference and the location of the

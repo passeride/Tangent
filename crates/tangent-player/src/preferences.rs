@@ -19,6 +19,8 @@ pub struct Preferences {
     pub volume: f32,
     pub instrument: usize,
     pub hear: bool,
+    #[serde(default)]
+    pub practice_hear: bool,
     pub first_key: u8,
     pub last_key: u8,
     /// Stable device name rather than a transient OS port index; optional for v1 data.
@@ -76,6 +78,7 @@ mod tests {
             volume: 0.25,
             instrument: 1,
             hear: false,
+            practice_hear: true,
             first_key: 36,
             last_key: 84,
             midi_output_name: Some("Yamaha P-45".into()),
@@ -96,9 +99,11 @@ mod tests {
         legacy.as_object_mut().unwrap().remove("practice_clef");
         legacy.as_object_mut().unwrap().remove("practice_level");
         legacy.as_object_mut().unwrap().remove("adaptive_practice");
+        legacy.as_object_mut().unwrap().remove("practice_hear");
         let old: Preferences = serde_json::from_value(legacy).unwrap();
         assert_eq!(old.midi_output_name, None);
         assert!(!old.reduced_motion);
+        assert!(!old.practice_hear);
         assert_eq!(old.effect_strength, 1);
         assert_eq!(old.practice_clef, 0);
         assert_eq!(old.practice_level, 0);

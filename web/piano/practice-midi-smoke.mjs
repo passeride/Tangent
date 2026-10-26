@@ -103,8 +103,18 @@ try {
   assert.deepEqual((await page.evaluate(()=>tangentDiagnostics())).target,[60]);
   await page.keyboard.up('KeyA');await page.waitForFunction(()=>tangentDiagnostics().completed===1);
   assert.deepEqual((await page.evaluate(()=>tangentDiagnostics())).target,[62]);
+  await page.waitForFunction(()=>midiSent.some(b=>b[0]===0x9f&&b[1]===62));
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).preferences.practice_hear,true);
+  // Automatic references are single auditions, never input or repeated per frame.
+  await page.waitForFunction(()=>tangentDiagnostics().reference_keys.length===0);
+  assert.equal(await page.evaluate(()=>midiSent.filter(b=>b[0]===0x9f&&b[1]===62).length),1);
+  await click(page,'practice-listen');
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).preferences.practice_hear,false);
+  await page.evaluate(()=>window.midiSent=[]);
+
   await click(page,'practice-clef');await page.waitForFunction(()=>tangentDiagnostics().practice_clef==='Bass');
   assert.deepEqual((await page.evaluate(()=>tangentDiagnostics())).target,[48]);
+  assert.equal(await page.evaluate(()=>midiSent.filter(b=>b[0]===0x9f).length),0,'Hear off suppresses new target audio');
   await click(page,'practice-hint');await page.waitForFunction(()=>tangentDiagnostics().expected_glow.includes(48));
   await mkdir(new URL('../../dist/verification/',import.meta.url),{recursive:true});
   await page.screenshot({path:new URL('../../dist/verification/train-bass.png',import.meta.url).pathname});
@@ -148,6 +158,16 @@ try {
   assert.equal(saved.practice_clef,1); assert.equal(saved.practice_level,2);
   await click(page,'train'); await click(page,'train-notes');
   await page.waitForFunction(()=>tangentDiagnostics().practice_clef==='Bass' && tangentDiagnostics().practice_level==='Chromatic');
+  await click(page,'practice-listen');
+  await page.waitForFunction(()=>tangentDiagnostics().preferences.practice_hear && tangentDiagnostics().reference_keys.length>0);
+  await page.waitForFunction(()=>tangentDiagnostics().storage.pending===0);
+  await page.reload(); await ready(page,server.url);
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).preferences.practice_hear,true);
+  await click(page,'train'); await click(page,'train-notes');
+  await page.waitForFunction(()=>tangentDiagnostics().reference_keys.length>0);
+  assert.equal((await page.evaluate(()=>tangentDiagnostics())).completed,0);
+  await click(page,'practice-listen');
+  await page.waitForFunction(()=>tangentDiagnostics().reference_keys.length===0);
   assert.deepEqual(errors,[]);
   console.log('Real Bevy practice, MIDI output/no echo, glow/solid, pause/disconnect and 390px layout passed.');
 } finally {await browser.close();await server.close();}

@@ -492,7 +492,13 @@ fn activate(state: &mut State, action: Action, shift: bool) {
             state.ripples.clear();
             state.live_bursts.clear();
         }
-        Action::PracticeListen => state.hear_target(),
+        Action::PracticeListen => {
+            state.practice_hear = !state.practice_hear;
+            state.training.heard_target = None;
+            if !state.practice_hear {
+                state.stop_reference();
+            }
+        }
         Action::PracticeHint => {
             state.practice.hint = !state.practice.hint;
             if state.practice.hint && !state.practice.waiting_release {

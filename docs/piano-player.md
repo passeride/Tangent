@@ -176,7 +176,8 @@ The approved UI v2 main/pause/settings structure is implemented. Play has compac
 Play/Pause, title, time and output context; Tab/Shift+Tab and Enter navigate menu
 controls with a visible focus border. Native Main has Exit through Bevy shutdown.
 
-Train → Hear target auditions without answering. Your actual held pitch appears
+Train → Hear: On automatically auditions each new target without answering;
+Hear: Off stops it. The choice is saved (ADR-0019). Your actual held pitch appears
 in the pressed-key colour beside the target, on a continuous grand staff; a
 single-note response includes semitone distance. Releasing a wrong finger
 rechecks any remaining held answer. Clef/difficulty persist between sessions.

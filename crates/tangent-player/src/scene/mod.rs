@@ -106,6 +106,7 @@ pub struct State {
     volume: f32,
     instrument: usize,
     hear: bool,
+    practice_hear: bool,
     help: bool,
     settings_open: bool,
     settings_tab: SettingsTab,
@@ -187,6 +188,7 @@ impl State {
             volume: 0.45,
             instrument: 0,
             hear: true,
+            practice_hear: false,
             help: false,
             settings_open: false,
             settings_tab: SettingsTab::AudioMidi,
@@ -240,6 +242,7 @@ impl State {
             volume: self.volume,
             instrument: self.instrument,
             hear: self.hear,
+            practice_hear: self.practice_hear,
             first_key: self.piano.keys.first().unwrap().key,
             last_key: self.piano.keys.last().unwrap().key,
             midi_output_name: self.preferred_midi_output.clone(),
@@ -260,6 +263,7 @@ impl State {
         self.volume = p.volume;
         self.instrument = p.instrument;
         self.hear = p.hear;
+        self.practice_hear = p.practice_hear;
         self.preferred_midi_output = p.midi_output_name;
         self.midi_restore_pending = self.preferred_midi_output.is_some();
         self.piano = PianoLayout::new(p.first_key, p.last_key).unwrap();

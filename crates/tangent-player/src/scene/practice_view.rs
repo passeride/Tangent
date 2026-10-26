@@ -141,7 +141,11 @@ fn staff(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme, chords
         l.margin,
         144.,
         150.,
-        "Hear target",
+        if state.practice_hear {
+            "Hear: On"
+        } else {
+            "Hear: Off"
+        },
         Action::PracticeListen,
         t,
     );
