@@ -1,6 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 use super::{controls::Action, layout::Rect, *};
-use bevy::text::{FontSize, LineHeight};
+use bevy::text::LineHeight;
 #[derive(Resource)]
 pub struct MusicFont(pub Handle<Font>);
 /// Unicode-capable text font, separate from the SMuFL music font.
