@@ -490,7 +490,7 @@ pub fn run() {
     #[cfg(not(target_arch = "wasm32"))]
     platform::shutdown();
 }
-fn update(mut state: ResMut<State>, time: Res<Time>) {
+fn update(mut state: ResMut<State>, time: Res<Time>, windows: Query<&Window>) {
     let now = platform::clock_us();
     let elapsed = (now - state.clock).max(0.) as u64;
     state.clock = now;
@@ -643,7 +643,11 @@ fn update(mut state: ResMut<State>, time: Res<Time>) {
             state.saved_preferences = Some(p);
         }
     }
-    training::tick(&mut state, time.delta_secs().min(0.25));
+    training::tick(
+        &mut state,
+        time.delta_secs().min(0.25),
+        windows.single().is_ok_and(|w| w.focused),
+    );
     let dt = time.delta_secs().min(0.05);
     if state.reference_remaining > 0. {
         state.reference_remaining -= time.delta_secs();

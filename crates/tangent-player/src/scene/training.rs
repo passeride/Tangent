@@ -137,7 +137,7 @@ pub(super) fn released(state: &mut State) {
         state.training.model.choose(&mut state.practice);
     }
 }
-pub(super) fn tick(state: &mut State, dt: f32) {
+pub(super) fn tick(state: &mut State, dt: f32, focused: bool) {
     if state.screen == Screen::Session
         && !state.help
         && matches!(state.mode, Mode::Notes | Mode::Chords)
@@ -154,7 +154,12 @@ pub(super) fn tick(state: &mut State, dt: f32) {
         return;
     }
 
-    if state.screen == Screen::Session && !state.help && !state.practice.waiting_release {
+    if focused
+        && state.screen == Screen::Session
+        && !state.help
+        && !state.practice.waiting_release
+        && (state.mode != Mode::Play || state.transport.playing)
+    {
         state.training.millis += f64::from(dt) * 1000.;
         let ms = state.training.millis as u64;
         state.training.millis -= ms as f64;

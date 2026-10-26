@@ -315,6 +315,32 @@ pub fn skill(p: &Practice) -> String {
             .join("-")
     )
 }
+/// Human-readable skill identity without exposing a target in the exercise HUD.
+pub fn skill_label(tag: &str) -> Option<String> {
+    let fields: Vec<_> = tag.split(':').collect();
+    if fields.len() != 4 {
+        return None;
+    }
+    let keys: Vec<u8> = fields[3]
+        .split('-')
+        .map(str::parse)
+        .collect::<Result<_, _>>()
+        .ok()?;
+    if keys.iter().any(|&k| k > 127) || !keys.windows(2).all(|p| p[0] < p[1]) {
+        return None;
+    }
+    let chords = fields[0] == "chord";
+    if (!chords && keys.len() != 1) || (chords && !(3..=4).contains(&keys.len())) {
+        return None;
+    }
+    let p = Practice {
+        chords,
+        review_target: Some(keys),
+        ..Default::default()
+    };
+    Some(p.label())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -381,30 +407,4 @@ mod tests {
         r.points = 100;
         assert!(!r.validate());
     }
-}
-
-/// Human-readable skill identity without exposing a target in the exercise HUD.
-pub fn skill_label(tag: &str) -> Option<String> {
-    let fields: Vec<_> = tag.split(':').collect();
-    if fields.len() != 4 {
-        return None;
-    }
-    let keys: Vec<u8> = fields[3]
-        .split('-')
-        .map(str::parse)
-        .collect::<Result<_, _>>()
-        .ok()?;
-    if keys.iter().any(|&k| k > 127) || !keys.windows(2).all(|p| p[0] < p[1]) {
-        return None;
-    }
-    let chords = fields[0] == "chord";
-    if (!chords && keys.len() != 1) || (chords && !(3..=4).contains(&keys.len())) {
-        return None;
-    }
-    let p = Practice {
-        chords,
-        review_target: Some(keys),
-        ..Default::default()
-    };
-    Some(p.label())
 }
