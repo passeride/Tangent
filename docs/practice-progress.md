@@ -16,7 +16,8 @@ available. Practice works with MIDI, computer keys and the on-screen piano.
 
 Hiding a hint does not undo help already used. Partial correct chord shapes are
 not errors; unrelated notes are. First-try percentage divides clean unassisted
-answers by attempted tasks, including skips. The results screen separates points,
+answers by recorded tasks: completed answers and explicit skips. Unfinished
+wrong attacks remain in the separate error count of a partial session. The results screen separates points,
 solved tasks, wrong attacks, assistance and skips. Early finishes remain partial
 sessions; no empty abandoned session is invented as practice history.
 
@@ -40,7 +41,7 @@ feedback, not a validated mastery rating or an all-time leaderboard.
 ## Song scores
 
 Start Play at the beginning to create a scored run. Each unique non-percussion
-target hit earns 100 points. The generous existing matching window measures pitch
+target hit earns 100 points. Same-pitch/same-onset unisons across parts count once. The generous existing matching window measures pitch
 coverage, not calibrated rhythmic precision. Wrong attacks and targets not hit
 remain visible. Automatic song audio cannot earn points. Pause/resume retains hit
 identity; repeatedly pressing one held target does not increase the score.

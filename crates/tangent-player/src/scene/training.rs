@@ -51,12 +51,7 @@ pub(super) fn start(state: &mut State) {
 pub(super) fn start_song(state: &mut State) {
     state.training.serial += 1;
     let id = format!("song-{}-{}", session_nonce(), state.training.serial);
-    let count = state
-        .song
-        .notes
-        .iter()
-        .filter(|n| state.song.parts.get(n.part).is_some_and(|p| !p.percussion))
-        .count() as u32;
+    let count = tangent_core::progress::song_target_count(&state.song);
     state.training.model.run = Some(Run::song(id, state.song.title.clone(), count));
     if let Some(r) = &mut state.training.model.run {
         r.started_unix_ms = platform::wall_time_ms() as u64;
@@ -319,7 +314,12 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 .model
                 .history
                 .iter()
-                .filter(|h| h.mode == "play" && h.piece_id.is_some() && h.piece_id == r.piece_id)
+                .filter(|h| {
+                    h.mode == "play"
+                        && h.piece_id.is_some()
+                        && h.piece_id == r.piece_id
+                        && h.song_total == r.song_total
+                })
                 .map(|h| h.points)
                 .chain(std::iter::once(r.points))
                 .max()

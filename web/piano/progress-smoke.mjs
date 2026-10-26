@@ -61,10 +61,10 @@ try {
  await page.setViewportSize({width:1280,height:800});
  await click(page,'main');await click(page,'start-play');
  const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO');
- const track=Buffer.from([0,0x90,60,100,0xda,0x00,0x80,60,0,0,0xff,0x2f,0]);
+ const track=Buffer.from([0,0x90,60,100,0,0x91,60,100,0xda,0x00,0x80,60,0,0,0x81,60,0,0,0xff,0x2f,0]);
  const header=Buffer.from([77,84,104,100,0,0,0,6,0,0,0,1,1,224,77,84,114,107,0,0,0,track.length]);
  await (await chooser).setFiles({name:'One note.mid',mimeType:'audio/midi',buffer:Buffer.concat([header,track])});
- await page.waitForFunction(()=>tangentDiagnostics().notes===1);
+ await page.waitForFunction(()=>tangentDiagnostics().notes===2);
  await click(page,'play');await page.waitForFunction(()=>tangentDiagnostics().playing);
  await down(60);await page.waitForFunction(()=>tangentDiagnostics().practice_run?.song_correct===1);await page.mouse.up();
  await page.waitForFunction(()=>tangentDiagnostics().solid_keys.length===0);

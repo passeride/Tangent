@@ -315,7 +315,7 @@ pub enum Grade {
     Neutral,
 }
 #[derive(Default)]
-pub struct SongHits(std::collections::BTreeSet<usize>);
+pub struct SongHits(std::collections::BTreeSet<(u64, u8)>);
 impl SongHits {
     pub fn reset(&mut self) {
         self.0.clear();
@@ -335,10 +335,10 @@ impl SongHits {
             .collect();
         if let Some(note) = candidates
             .iter()
-            .filter(|n| !self.0.contains(&n.id))
+            .filter(|n| !self.0.contains(&(n.start_us, n.key)))
             .min_by_key(|n| n.start_us.abs_diff(position_us))
         {
-            self.0.insert(note.id);
+            self.0.insert((note.start_us, note.key));
             Grade::Correct
         } else if candidates.is_empty() {
             Grade::Wrong
@@ -351,6 +351,37 @@ impl SongHits {
 mod hit_tests {
     use super::*;
     use crate::music::{Part, PerformanceNote, Song};
+    #[test]
+    fn simultaneous_unison_parts_are_one_physical_target() {
+        let mut song = Song {
+            title: String::new(),
+            composer: None,
+            duration_us: 2000000,
+            parts: vec![Part {
+                name: String::new(),
+                percussion: false,
+            }],
+            notes: vec![],
+            notation: None,
+            warnings: vec![],
+            events: vec![],
+        };
+        for id in 0..2 {
+            song.notes.push(PerformanceNote {
+                id,
+                part: 0,
+                key: 60,
+                velocity: 90,
+                start_us: 0,
+                end_us: 1000000,
+                written: None,
+            });
+        }
+        let mut hits = SongHits::default();
+        assert_eq!(hits.judge(&song, 0, 60), Grade::Correct);
+        assert_eq!(hits.judge(&song, 10000, 60), Grade::Neutral);
+        assert_eq!(crate::progress::song_target_count(&song), 1);
+    }
     #[test]
     fn repeated_input_cannot_award_same_target_twice_and_seek_can_reset() {
         let mut song = Song {

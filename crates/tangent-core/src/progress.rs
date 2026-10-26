@@ -2,6 +2,15 @@
 use crate::practice::{Level, Practice};
 use serde::{Deserialize, Serialize};
 pub const SESSION_LENGTH: usize = 12;
+/// Layered unisons require one physical key attack, regardless of source part.
+pub fn song_target_count(song: &crate::music::Song) -> u32 {
+    song.notes
+        .iter()
+        .filter(|n| song.parts.get(n.part).is_some_and(|p| !p.percussion))
+        .map(|n| (n.start_us, n.key))
+        .collect::<std::collections::BTreeSet<_>>()
+        .len() as u32
+}
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Trial {
     pub skill: String,

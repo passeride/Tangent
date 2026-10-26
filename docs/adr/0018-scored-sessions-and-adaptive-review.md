@@ -15,7 +15,8 @@ surface. There is no server, account, public leaderboard or invented performance
 Reading/chord sessions have 12 tasks, plus explicit Skip and Finish. A clean
 unassisted answer earns 100 points, a corrected answer 40, and a skipped or
 hint/reference-assisted answer 0. First-try percentage counts clean unassisted
-answers over all attempted tasks (including skips). All-key release gates task
+answers over recorded tasks (completed answers and explicit skips). Unfinished
+wrong attacks remain in the separate error count of a partial session. All-key release gates task
 advancement. Wrong attacks are counted separately; partial correct chords are
 not mistakes. A skipped task is not solved. Assistance is task-local and cannot
 be undone by hiding a hint. Pause/configuration/reference playback never answer
@@ -29,7 +30,7 @@ an adaptive-learning certification. Natural/chromatic notes and diatonic,
 major/minor and dominant/minor-seventh chord pools are supported. Clef, level and
 review preference persist; answers and transport are never auto-restored.
 
-Song playback earns 100 points per unique non-percussion target hit using the
+Song playback earns 100 points per unique non-percussion target hit (same-pitch/same-onset unisons across parts count once) using the
 existing generous pitch window. Result coverage is hits/total targets, not a
 claim of calibrated rhythm accuracy. Wrong attacks and missed targets remain
 visible. Pause preserves target identity. Seek/restart closes a partial run;

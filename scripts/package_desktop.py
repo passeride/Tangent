@@ -32,6 +32,7 @@ shutil.copy2(args.binary, executable)
 executable.chmod(0o755)
 shutil.copy2(root / 'docs/distribution.md', output / 'README.md')
 shutil.copy2(root / 'docs/test-p45.md', output / 'TEST-P45.md')
+shutil.copy2(root / 'docs/practice-progress.md', output / 'PRACTICE-PROGRESS.md')
 if 'windows' in args.target:
     shutil.copy2(root / 'scripts/Test-Tangent.ps1', output / 'Test-Tangent.ps1')
 shutil.copytree(root / 'web/piano/samples', output / 'samples')
