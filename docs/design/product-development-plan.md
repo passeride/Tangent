@@ -291,3 +291,8 @@ regression (including wrong-mode command isolation and reconnect), packaged
 /Tangent/ smoke and native debug executable self-test pass. Matrix screenshot was
 inspected at 1280×800; bounds/overlap checks cover 640×360 and 390×844. Physical
 P-45 usability/latency remains a manual check. No new dependency was added.
+
+Hand-colour design follow-up: [hand assignment and colour](hand-assignment-and-colour.md)
+proposes a source-specific editable profile with durable note origins, explicit
+uncertainty, theme semantics and later hand-based target filtering. No runtime
+hand recognition or colouring is implemented by this design document.

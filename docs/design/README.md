@@ -13,6 +13,7 @@ wireframes in [sketches](sketches/README.md), asset records in
 | Brief | Status | Sketches | Outcome |
 | --- | --- | --- | --- |
 | [MIDI input and piano shortcuts](midi-input-and-piano-shortcuts.md) | Bindings implemented; input dropdown proposed | Device dropdown, calibrated command mode and shortcut labels | Input selection feasibility and implementation acceptance |
+| [Hand assignment and colour](hand-assignment-and-colour.md) | Proposed design only | Editable source-based hand map, uncertainty and semantic colours | Foundation for hand colours and later one-hand practice |
 | [Piano player](piano-player.md) | Initial implementation | Owner-supplied sketch; not bundled | Four views, piano, sound and themes |
 | [Tangent UI/UX v2](tangent-ui-v2.md) | Menus/pause/settings implemented; HUD and practice iterating | Interactive concept reviewed 2026-10-25; not bundled | Menus, navigation flow, player HUD, settings categories and design principles |
 
