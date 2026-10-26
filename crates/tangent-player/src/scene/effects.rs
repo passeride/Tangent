@@ -81,6 +81,24 @@ impl Preset {
         }
     }
 }
+/// Presentation-only randomness: seeded once per app, never reset by a song or
+/// repeated key. SplitMix64 also permits reproducible visual regression tests.
+pub(super) struct Variation(u64);
+impl Variation {
+    pub fn new(seed: u64) -> Self {
+        Self(seed)
+    }
+    pub fn seed(&mut self) -> u32 {
+        self.0 = self.0.wrapping_add(0x9e3779b97f4a7c15);
+        let mut z = self.0;
+        z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94d049bb133111eb);
+        ((z ^ (z >> 31)) as u32).max(1)
+    }
+    pub fn range(&mut self, min: f32, max: f32) -> f32 {
+        min + (max - min) * ((self.seed() >> 8) as f32 / 16777216.)
+    }
+}
 #[derive(Clone, Copy)]
 pub(super) struct Burst {
     pub key: u8,
@@ -92,6 +110,7 @@ pub(super) struct ScreenBurst {
     pub x: f32,
     pub y: f32,
     pub preset: Preset,
+    pub seed: u32,
 }
 #[derive(Default)]
 pub(super) struct Feedback {
@@ -141,6 +160,24 @@ pub(super) fn belongs_to_target(practice: &tangent_core::practice::Practice, key
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn repeated_bursts_vary_and_samples_stay_bounded() {
+        let mut a = Variation::new(42);
+        let mut b = Variation::new(42);
+        let seeds: std::collections::BTreeSet<_> = (0..128)
+            .map(|_| {
+                let seed = a.seed();
+                assert_eq!(seed, b.seed());
+                seed
+            })
+            .collect();
+        assert_eq!(seeds.len(), 128);
+        let mut other = Variation::new(43);
+        assert_ne!(a.seed(), other.seed());
+        for _ in 0..1000 {
+            assert!((0.72..1.0).contains(&a.range(0.72, 1.0)));
+        }
+    }
     #[test]
     fn responsive_scale_matches_logical_viewport_size() {
         assert_eq!(viewport_scale(1280.0, 800.0), 1.0);
@@ -209,8 +246,10 @@ pub(super) mod gpu {
         let zoom = writer.add_property("vfx_scale", 1.0_f32.into());
         let zoom_value = writer.prop(zoom);
         let init_age = SetAttributeModifier::new(Attribute::AGE, writer.lit(0.).expr());
-        let init_lifetime =
-            SetAttributeModifier::new(Attribute::LIFETIME, writer.lit(lifetime).expr());
+        let init_lifetime = SetAttributeModifier::new(
+            Attribute::LIFETIME,
+            (writer.lit(lifetime * 0.72).uniform(writer.lit(lifetime))).expr(),
+        );
         let init_pos = SetPositionSphereModifier {
             center: writer.lit(Vec3::ZERO).expr(),
             radius: writer.lit(5.0).expr(),
@@ -218,7 +257,11 @@ pub(super) mod gpu {
         };
         let init_vel = SetVelocitySphereModifier {
             center: writer.lit(Vec3::ZERO).expr(),
-            speed: (writer.lit(preset.burst_radius() * 1.8) * zoom_value.clone()).expr(),
+            speed: (writer
+                .lit(preset.burst_radius() * 1.1)
+                .uniform(writer.lit(preset.burst_radius() * 2.0))
+                * zoom_value.clone())
+            .expr(),
         };
         let gravity =
             AccelModifier::new((writer.lit(Vec3::new(0., -135., 0.)) * zoom_value.clone()).expr());
@@ -226,7 +269,11 @@ pub(super) mod gpu {
         // scaling. SetSizeModifier overrides particle size with a fixed value.
         let init_size = SetAttributeModifier::new(
             Attribute::SIZE,
-            (writer.lit(if preset == Preset::Streak25 { 11. } else { 8. }) * zoom_value).expr(),
+            (writer
+                .lit(if preset == Preset::Streak25 { 7. } else { 5. })
+                .uniform(writer.lit(if preset == Preset::Streak25 { 13. } else { 10. }))
+                * zoom_value)
+                .expr(),
         );
         let [r, g, b] = preset.rgb();
         let mut gradient = bevy_hanabi::Gradient::new();
@@ -278,8 +325,10 @@ pub(super) mod gpu {
                 "vfx_scale",
                 (viewport_scale(window.width(), window.height()) * state.effect_scale()).into(),
             );
+            let mut effect = ParticleEffect::new(catalog.0[event.preset as usize].clone());
+            effect.prng_seed = Some(event.seed);
             commands.spawn((
-                ParticleEffect::new(catalog.0[event.preset as usize].clone()),
+                effect,
                 properties,
                 Transform::from_xyz(x, y, 1.),
                 TimedEffect(event.preset.lifetime() + 0.25),

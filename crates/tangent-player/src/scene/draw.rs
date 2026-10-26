@@ -243,7 +243,9 @@ pub fn render(
             }
         }
         state.previous = ids;
-        for (x, id, preset) in bursts.into_iter().take(32) {
+        for (x, _id, preset) in bursts.into_iter().take(32) {
+            let seed = state.variation.seed();
+            let mut variation = effects::Variation::new(seed as u64);
             let [r, g, b] = preset.rgb();
             let color = Color::srgb(r, g, b);
             #[cfg(not(target_arch = "wasm32"))]
@@ -251,6 +253,7 @@ pub fn render(
                 x,
                 y: burst_y,
                 preset,
+                seed,
             });
             // A soft, expanding shockwave remains visible across backends.
             state.ripples.push(Ripple {
@@ -263,11 +266,10 @@ pub fn render(
             let count = preset.count().min(80);
             let lifetime = preset.lifetime();
             let speed = preset.burst_radius() * scale / lifetime;
-            for i in 0..count {
-                let jitter = ((id.wrapping_mul(17) + i * 31) % 101) as f32 / 101.;
-                let angle = -std::f32::consts::PI
-                    * (0.08 + 0.84 * (i as f32 + jitter * 0.45) / count as f32);
-                let radial = 0.62 + ((i * 13) % 11) as f32 / 25.;
+            let lean = variation.range(-0.16, 0.16);
+            for _ in 0..count {
+                let angle = -std::f32::consts::PI * variation.range(0.08, 0.92) + lean;
+                let radial = variation.range(0.55, 1.15);
                 let (sin, cos) = angle.sin_cos();
                 let mut vx = cos * speed * radial;
                 let mut vy = sin * speed * radial - speed * 0.30;
@@ -275,14 +277,15 @@ pub fn render(
                     vx *= 0.78;
                     vy += speed * 0.5;
                 }
-                let size = scale * (5.5 + ((i * 7) % 5) as f32);
+                let size = scale * variation.range(5.5, 9.5);
+                let duration = lifetime * variation.range(0.72, 1.0);
                 state.particles.push(Particle {
-                    x,
-                    y: burst_y,
+                    x: x + scale * variation.range(-4., 4.),
+                    y: burst_y + scale * variation.range(-3., 3.),
                     vx,
                     vy,
-                    life: lifetime,
-                    duration: lifetime,
+                    life: duration,
+                    duration,
                     size,
                     color,
                 });

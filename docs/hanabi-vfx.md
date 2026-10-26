@@ -35,12 +35,17 @@ score; scoring should be integrated separately.
   OS DPI settings determine how physical pixels map to Bevy logical pixels.
 - Native Hanabi's particle size **and speed** use an effect-instance scale property;
   the browser fallback uses the same scale for size and travel distance.
+- Every burst receives a fresh seed from a session-seeded presentation PRNG.
+  Repeated keys and song restarts do not reset it. Native Hanabi explicitly sets
+  the per-instance PRNG seed; both backends vary particle speed, size and lifetime.
+  Web sparks also vary launch angle, fan lean and origin within a few pixels.
+  Preset colours, intensity, viewport scaling and reduced-motion behavior remain.
 - UI particles are capped at 520, rings at 24, and at most 32 bursts enter per frame.
   Hanabi GPU emitters despawn after their preset duration + 0.25 seconds.
 - `P` / Settings → Sparkles disables feedback effects. Importing a song,
   returning to the menu, and changing exercise reset streaks.
 - Color, duration, burst radius and particle counts live in `scene/effects.rs`,
-  independent of music evaluation. WebGL2 caps particles per visual burst at 56
+  independent of music evaluation. WebGL2 caps particles per visual burst at 80
   to avoid creating excessive Bevy UI nodes on modest GPUs.
 - CI deliberately builds WebGL2 and **Windows x64 / Linux x64** native targets;
   other desktop targets are excluded as in the latest `main` workflow.
@@ -63,6 +68,8 @@ and a wrong note, then reach 5 and 10 correct consecutive exercises. Repeat in
 that do and do not match the current score. Confirm that shockwaves, color and HUD are consistent in native and web.
 Resize from 1280×800 to 1920×1080 and confirm bursts grow proportionally;
 check an actual 4K viewport at normal and HiDPI scaling.
+In FreeForm, strike the same key repeatedly: each fan should have a different
+shape, particle speeds and fade times, including after returning to the menu.
 
 **Caveat:** Hanabi currently requires WebGPU on WASM; enabling it directly in
 the shipped WebGL2 application would break browsers without WebGPU. The default

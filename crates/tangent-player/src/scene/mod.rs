@@ -123,6 +123,7 @@ pub struct State {
     #[cfg(not(target_arch = "wasm32"))]
     gpu_bursts: Vec<effects::ScreenBurst>,
     feedback: effects::Feedback,
+    variation: effects::Variation,
     song_hits: tangent_core::practice::SongHits,
     recognition_notes: Vec<(u64, u8)>,
     recognition_status: String,
@@ -203,6 +204,7 @@ impl State {
             #[cfg(not(target_arch = "wasm32"))]
             gpu_bursts: vec![],
             feedback: effects::Feedback::default(),
+            variation: effects::Variation::new(platform::session_nonce()),
             song_hits: tangent_core::practice::SongHits::default(),
             recognition_notes: vec![],
             recognition_status: String::new(),
