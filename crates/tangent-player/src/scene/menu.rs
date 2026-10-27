@@ -5,7 +5,7 @@ use super::{controls::Action, draw::Drawing, *};
 /// available in State. It never fabricates a previous session or an achievement.
 pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
     let compact = l.width < 1000.;
-    let short = l.height < 620.;
+    let short = l.height < 700.;
     let pad = if compact { 20. } else { 48. };
     let title_y = if short { 20. } else { 50. };
 
@@ -46,7 +46,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         d.text(x, title_y + 114., "Choose what to learn", 14., t.muted);
         let top = title_y + if short { 137. } else { 156. };
         let height = if short {
-            ((l.height - top - 48.) / 5. - 8.).clamp(30., 48.)
+            ((l.height - top - 48.) / 6. - 8.).clamp(30., 48.)
         } else {
             62.
         };
@@ -70,6 +70,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 "Five Finger Flow",
                 "Play a five-note pattern up and down",
                 Action::TrainFiveFinger,
+            ),
+            (
+                "Major Scale Run",
+                "One octave up and down in all 12 major keys",
+                Action::TrainMajorScale,
             ),
             ("Back to main menu", "", Action::Main),
         ]

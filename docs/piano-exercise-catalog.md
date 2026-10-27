@@ -15,6 +15,7 @@ Katalogen skal støtte pianister fra første notelesing til avansert improvisasj
 | ID | Status | Levert avgrensning |
 |---|---|---|
 | N02 | Implementert, simulert MIDI testet | Keyboard Explorer: nøyaktig oktavflytting, tre nivåer, REF-markør, hint/lyd og lagrede forsøk. [ADR-0027](adr/0027-keyboard-explorer.md). Navnequiz og fysisk P-45-validering gjenstår. |
+| S03 | Implementert første variant | Én oktav opp/ned i 12 durskalaer, riktige tonenavn, veiledende fingre og poeng/historikk per hel skala. [ADR-0030](adr/0030-major-scale-run.md). Flere oktaver, legato og timing gjenstår. |
 | T01 | Implementert første variant | Five Finger Flow: ni-toners opp/ned-mønster, tre nivåer, veiledende fingre, slipp per tone og lagret poengsum per helt mønster. [ADR-0028](adr/0028-five-finger-sequences.md). Legato, begge hender samtidig, timing og fysisk P-45-validering gjenstår. |
 
 De øvrige oppføringene er forslag. Eksisterende Read notes / Play chords er fortsatt basisfunksjoner, ikke en påstand om at hele N01/N03/H03-spesifikasjonen er levert.

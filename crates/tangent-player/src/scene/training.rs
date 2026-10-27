@@ -151,11 +151,11 @@ pub(super) fn grade(state: &mut State, grade: effects::Grade) {
     }
     if !matches!(
         state.mode,
-        Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+        Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger | Mode::MajorScale
     ) {
         return;
     }
-    if state.mode == Mode::FiveFinger
+    if matches!(state.mode, Mode::FiveFinger | Mode::MajorScale)
         && grade == effects::Grade::Correct
         && !state.practice.sequence_accepted()
     {
@@ -174,7 +174,9 @@ pub(super) fn grade(state: &mut State, grade: effects::Grade) {
 }
 pub(super) fn released(state: &mut State) {
     // Mistakes/assistance/response time belong to the entire pattern.
-    if state.mode == Mode::FiveFinger && state.practice.sequence_step() > 0 {
+    if matches!(state.mode, Mode::FiveFinger | Mode::MajorScale)
+        && state.practice.sequence_step() > 0
+    {
         return;
     }
     if state
@@ -196,7 +198,7 @@ pub(super) fn tick(state: &mut State, dt: f32, focused: bool) {
         && !state.help
         && matches!(
             state.mode,
-            Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+            Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger | Mode::MajorScale
         )
         && !state.practice.waiting_release()
         && state.held.is_empty()
@@ -217,7 +219,7 @@ pub(super) fn tick(state: &mut State, dt: f32, focused: bool) {
         && !state.help
         && matches!(
             state.mode,
-            Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+            Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger | Mode::MajorScale
         )
         && !state.practice.waiting_release()
         && state.held.is_empty()

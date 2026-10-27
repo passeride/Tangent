@@ -1,7 +1,16 @@
-//! T01 pattern/fingering guidance. Input progression and score live in core.
+//! Shared T01/S03 sequence and advisory fingering guidance. Input progression and score live in core.
 use super::{controls::Action, draw::Drawing, *};
 pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
-    let plan = state.practice.flow_task().unwrap();
+    let scale = state.practice.scale_task();
+    let flow = state.practice.flow_task();
+    let notes = state.practice.sequence_notes().unwrap();
+    let left_hand = scale
+        .as_ref()
+        .map_or_else(|| flow.as_ref().unwrap().left, |t| t.left);
+    let fingers = scale.as_ref().map_or_else(
+        || flow.as_ref().unwrap().fingers().to_vec(),
+        |t| t.fingers(),
+    );
     let step = state.practice.sequence_step();
     let compact = l.width < 600.;
     let short = l.height < 500.;
@@ -9,7 +18,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     d.text(
         x,
         18.,
-        "Train / Five Finger Flow",
+        if scale.is_some() {
+            "Train / Major Scale Run"
+        } else {
+            "Train / Five Finger Flow"
+        },
         if compact { 18. } else { 22. },
         t.ink,
     );
@@ -17,19 +30,36 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         x,
         52.,
         format!(
-            "{} position: play up, then down",
-            if plan.left { "Left-hand" } else { "Right-hand" }
+            "{} {}: up / down",
+            if left_hand { "Left" } else { "Right" },
+            scale.as_ref().map_or("position", |t| t.name())
         ),
         if compact { 13. } else { 19. },
         t.ink,
     );
+    if scale.is_some() && state.practice.level == tangent_core::practice::Level::Chromatic {
+        d.button(
+            state,
+            l.width - l.margin - 192.,
+            70.,
+            100.,
+            match state.practice.clef {
+                tangent_core::practice::ReadingClef::Treble => "Hand: R",
+                tangent_core::practice::ReadingClef::Bass => "Hand: L",
+                tangent_core::practice::ReadingClef::Mixed => "Alternate",
+            },
+            Action::PracticeClef,
+            t,
+        );
+    }
     let run = state.training.model.run.as_ref();
     d.text(
         x,
         80.,
         format!(
-            "{} / 12 patterns / {} pts",
+            "{} / 12{} / {} pts",
             run.map_or(0, |r| r.trials.len()),
+            if compact { "" } else { " patterns" },
             run.map_or(0, |r| r.points)
         ),
         12.,
@@ -52,7 +82,12 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 match state.practice.level {
                     tangent_core::practice::Level::Stepwise => "Right C",
                     tangent_core::practice::Level::Mixed => "Left C",
-                    tangent_core::practice::Level::Chromatic => "Moving",
+                    tangent_core::practice::Level::Chromatic =>
+                        if scale.is_some() {
+                            "12 keys"
+                        } else {
+                            "Moving"
+                        },
                 }
             ),
             Action::PracticeLevel,
@@ -97,7 +132,17 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     );
     let row_w = (l.width - 2. * l.margin).min(850.);
     let left = (l.width - row_w) * 0.5;
-    let cell = row_w / 9.;
+    let visible = if compact && scale.is_some() {
+        8
+    } else {
+        notes.len()
+    };
+    let first = if compact && scale.is_some() && step >= 8 {
+        7
+    } else {
+        0
+    };
+    let cell = row_w / visible as f32;
     let y = if short {
         172.
     } else {
@@ -108,12 +153,11 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
     } else {
         112.
     };
-    let fingers = plan.fingers();
-    for (i, finger) in fingers.iter().enumerate().take(plan.notes.len()) {
+    for (i, finger) in fingers.iter().enumerate().skip(first).take(visible) {
         let current = i == step;
         let done = i < step;
         let r = layout::Rect {
-            x: left + i as f32 * cell + 2.,
+            x: left + (i - first) as f32 * cell + 2.,
             y,
             w: cell - 4.,
             h,
@@ -144,7 +188,9 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         d.text(
             r.x + 5.,
             r.y + if short { 5. } else { 21. },
-            plan.note_label(i),
+            scale
+                .as_ref()
+                .map_or_else(|| flow.as_ref().unwrap().note_label(i), |t| t.note_label(i)),
             font,
             if current { t.colors[0] } else { t.ink },
         );
@@ -185,8 +231,9 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         x,
         l.strike - 45.,
         format!(
-            "Step {} / 9  /  {}",
+            "Step {} / {}  /  {}",
             step + 1,
+            notes.len(),
             if assisted {
                 "Hint/audio assistance"
             } else {

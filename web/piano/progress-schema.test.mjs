@@ -59,3 +59,11 @@ const guidedDb=new SQL.Database(db.export());migrate(guidedDb);
 assert.deepEqual(readProgress(guidedDb).find(r=>r.id==='guided-context-test').context.guided,{early_ms:250});
 for(const early_ms of [-1,501,1.5])assert.throws(()=>writeProgress(db,{...song,context:{...context,guided:{early_ms}}}));
 console.log('Guided context: saved input window and invalid tolerance rejection passed.');
+
+const scale={...run,id:'major-scale-session',mode:'major-scale-run',label:'Major Scale Run',trials:[{...run.trials[0],skill:'scale:1:L:6'}]};
+writeProgress(db,scale);
+const scaleDb=new SQL.Database(db.export());migrate(scaleDb);
+assert.equal(readProgress(scaleDb).find(r=>r.id===scale.id).trials[0].skill,'scale:1:L:6');
+for(const skill of ['scale:2:R:0','scale:1:X:0','scale:1:R:12','scale:1:L:01','note:0:0:60'])
+ assert.throws(()=>writeProgress(db,{...scale,trials:[{...scale.trials[0],skill}]}));
+console.log('Major Scale Run: exact key/hand evidence, export/reopen and invalid task rejection passed.');

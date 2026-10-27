@@ -263,3 +263,10 @@ authored for Tangent in the same disclosed context above. No dependencies or
 external assets were added. The browser fixture is an original generated five-note
 MusicXML sequence; its three screenshots show the actual Bevy app, not mockups.
 See [ADR-0029](docs/adr/0029-sequential-play.md).
+
+## Major Scale Run — 2026-10-27
+
+Original S03 scale plans, Bevy presentation integration, versioned evidence and
+synthetic tests implement the concrete remaining Train TODO. Existing sequence,
+audio and storage boundaries are reused. No new dependencies, external music,
+assets or excluded implementation sources were imported. See ADR-0030.

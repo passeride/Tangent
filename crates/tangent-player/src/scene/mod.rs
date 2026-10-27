@@ -58,6 +58,7 @@ enum Mode {
     Chords,
     Explorer,
     FiveFinger,
+    MajorScale,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SettingsTab {
@@ -361,7 +362,11 @@ impl State {
             } else if key.is_none()
                 && matches!(
                     self.mode,
-                    Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+                    Mode::Notes
+                        | Mode::Chords
+                        | Mode::Explorer
+                        | Mode::FiveFinger
+                        | Mode::MajorScale
                 )
             {
                 let held: Vec<_> = self.held.values().copied().collect();
@@ -419,7 +424,11 @@ impl State {
                     Some(&selection),
                 )),
                 Mode::Play | Mode::FreeForm => Some(effects::Grade::Neutral),
-                Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger => {
+                Mode::Notes
+                | Mode::Chords
+                | Mode::Explorer
+                | Mode::FiveFinger
+                | Mode::MajorScale => {
                     let target_member = effects::belongs_to_target(&self.practice, key);
                     let held: Vec<_> = self.held.values().copied().collect();
                     if self.practice.answer(&held) {
@@ -492,7 +501,7 @@ impl State {
         self.stop_reference();
         if !matches!(
             self.mode,
-            Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+            Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger | Mode::MajorScale
         ) || self.help
         {
             return;

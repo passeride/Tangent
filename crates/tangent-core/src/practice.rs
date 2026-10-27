@@ -52,6 +52,7 @@ pub enum Exercise {
     Chords,
     KeyboardExplorer,
     FiveFinger,
+    MajorScale,
 }
 #[derive(Debug, Default)]
 pub struct Practice {
@@ -88,6 +89,34 @@ impl Practice {
             ..Default::default()
         }
     }
+    pub fn major_scale() -> Self {
+        Self {
+            exercise: Exercise::MajorScale,
+            ..Default::default()
+        }
+    }
+    pub fn scale_task(&self) -> Option<crate::major_scale::MajorScaleTask> {
+        (self.exercise == Exercise::MajorScale).then(|| {
+            let index = self.completed % 12
+                + if self.level == Level::Chromatic
+                    && (self.clef == ReadingClef::Bass
+                        || self.clef == ReadingClef::Mixed && self.completed % 2 == 1)
+                {
+                    12
+                } else {
+                    0
+                };
+            crate::major_scale::MajorScaleTask::generate(self.level, index)
+        })
+    }
+    pub fn sequence_notes(&self) -> Option<Vec<u8>> {
+        self.scale_task()
+            .map(|t| t.notes)
+            .or_else(|| self.flow_task().map(|t| t.notes))
+    }
+    pub fn is_sequence(&self) -> bool {
+        matches!(self.exercise, Exercise::FiveFinger | Exercise::MajorScale)
+    }
     pub fn flow_task(&self) -> Option<crate::five_finger::FiveFingerTask> {
         (self.exercise == Exercise::FiveFinger)
             .then(|| crate::five_finger::FiveFingerTask::generate(self.level, self.completed))
@@ -96,18 +125,18 @@ impl Practice {
         self.sequence.cursor()
     }
     pub fn sequence_accepted(&self) -> bool {
-        self.flow_task()
-            .is_some_and(|p| self.sequence.accepted(&p.notes))
+        self.sequence_notes()
+            .is_some_and(|notes| self.sequence.accepted(&notes))
     }
     pub fn waiting_release(&self) -> bool {
-        if self.exercise == Exercise::FiveFinger {
+        if self.is_sequence() {
             self.sequence.waiting_release()
         } else {
             self.waiting_release
         }
     }
     pub fn wrong(&self) -> bool {
-        if self.exercise == Exercise::FiveFinger {
+        if self.is_sequence() {
             self.sequence.wrong()
         } else {
             self.wrong
@@ -129,6 +158,13 @@ impl Practice {
             .then(|| crate::explorer::ExplorerTask::generate(self.level, self.completed))
     }
     pub fn curriculum_name(&self) -> &'static str {
+        if self.exercise == Exercise::MajorScale {
+            return match self.level {
+                Level::Stepwise => "Right / C",
+                Level::Mixed => "Left / C",
+                Level::Chromatic => "12 keys / both hands",
+            };
+        }
         if self.exercise == Exercise::FiveFinger {
             return match self.level {
                 Level::Stepwise => "Right / C",
@@ -154,8 +190,8 @@ impl Practice {
         }
     }
     pub fn target(&self) -> Vec<u8> {
-        if let Some(task) = self.flow_task() {
-            return self.sequence.target(&task.notes).into_iter().collect();
+        if let Some(notes) = self.sequence_notes() {
+            return self.sequence.target(&notes).into_iter().collect();
         }
         if let Some(task) = self.explorer_task() {
             return vec![task.target];
@@ -267,9 +303,9 @@ impl Practice {
         };
     }
     pub fn answer(&mut self, held: &[u8]) -> bool {
-        if let Some(task) = self.flow_task() {
+        if let Some(notes) = self.sequence_notes() {
             use crate::sequence::SequenceEvent;
-            let event = self.sequence.input(&task.notes, held);
+            let event = self.sequence.input(&notes, held);
             if event == SequenceEvent::PatternReleased {
                 self.completed += 1;
                 self.hint = false;

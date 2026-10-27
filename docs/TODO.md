@@ -96,7 +96,8 @@ notes / Play chords remain the foundations; new exercise deliveries are explicit
   register levels, advisory fingers, release-gated input, whole-pattern scores,
   hint/Hear assistance and durable evidence/retry (ADR-0028).
   Legato, both hands together and calibrated timing remain future work.
-- [ ] S03 Major Scale Run: reuse the sequence runner for one-octave major scales
-  with explicit key spelling, advisory fingers and exact ordered pitch input.
+- [x] S03 Major Scale Run: one-octave major scales in all 12 keys, explicit
+  spelling, advisory fingers, exact ordered input and whole-scale history/retry
+  ([ADR-0030](adr/0030-major-scale-run.md)). Physical P-45 validation remains open.
 
 See [the 83-exercise catalogue](piano-exercise-catalog.md) for later candidates.

@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node playback-clock.test.mjs && node progress-schema.test.mjs && node midi-output.test.mjs && node storage-schema.test.mjs && node fingerprint-schema.test.mjs && node library-schema.test.mjs && node smoke.mjs && node storage-smoke.mjs && node library-smoke.mjs && node practice-midi-smoke.mjs && node progress-smoke.mjs && node speed-smoke.mjs && node passage-smoke.mjs && node hud-smoke.mjs && node goal-smoke.mjs && node bindings-smoke.mjs && node personalization-smoke.mjs && node piano3d-smoke.mjs && node explorer-smoke.mjs && node flow-smoke.mjs && node guided-smoke.mjs",
+    "test": "node playback-clock.test.mjs && node progress-schema.test.mjs && node midi-output.test.mjs && node storage-schema.test.mjs && node fingerprint-schema.test.mjs && node library-schema.test.mjs && node smoke.mjs && node storage-smoke.mjs && node library-smoke.mjs && node practice-midi-smoke.mjs && node progress-smoke.mjs && node speed-smoke.mjs && node passage-smoke.mjs && node hud-smoke.mjs && node goal-smoke.mjs && node bindings-smoke.mjs && node personalization-smoke.mjs && node piano3d-smoke.mjs && node explorer-smoke.mjs && node flow-smoke.mjs && node scale-smoke.mjs && node guided-smoke.mjs",
     "postinstall": "node prepare-sqlite.mjs"
   },
   "devDependencies": {

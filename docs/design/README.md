@@ -64,3 +64,5 @@ Create original layouts; reference material needs a source and rights record.
 - [Five Finger Flow](five-finger-flow.md) — T01 five-note positions, suggested fingers and whole-pattern progress.
 
 - [Sequential Play](sequential-play.md) — first-pass note/chord waiting with saved early-input tolerance.
+
+- [Major Scale Run](major-scale-run.md) — S03 one-octave scales in 12 keys, advisory fingers and whole-scale progress.

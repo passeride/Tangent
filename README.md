@@ -242,3 +242,8 @@ The session piano is a procedural, lit 3D keyboard with chamfered keys, key depr
 Train also includes **Keyboard Explorer**: learn octave/key patterns through exact register transfers, three levels, optional hints/reference audio and saved scored attempts. See [N02](docs/design/keyboard-explorer.md).
 
 **Five Finger Flow** adds ordered five-note up/down patterns, suggested fingers, three position/register levels and saved whole-pattern scores. See [T01](docs/design/five-finger-flow.md).
+
+**Major Scale Run** adds one-octave up/down scales in all 12 major keys, explicit
+spellings, suggested fingers and saved whole-scale scores. Three levels offer
+right C, left C and all keys. This evaluates pitch/order with release per note;
+see [S03](docs/design/major-scale-run.md).

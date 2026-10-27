@@ -69,3 +69,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0028: Five Finger Flow](0028-five-finger-sequences.md) — reusable release-gated sequences, whole-pattern scoring and versioned pattern evidence.
 
 - [ADR-0029: Sequential Play](0029-sequential-play.md) — shared clock/output barriers, exact chords, early input and comparable guided history.
+
+- [ADR-0030: Major Scale Run](0030-major-scale-run.md) — one-octave scale plans, shared sequence input and durable key/hand evidence.

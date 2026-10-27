@@ -485,7 +485,10 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                     Action::PracticeHint,
                 ),
             ]);
-            if matches!(state.mode, Mode::Explorer | Mode::FiveFinger) {
+            if matches!(
+                state.mode,
+                Mode::Explorer | Mode::FiveFinger | Mode::MajorScale
+            ) {
                 entries.retain(|(_, action)| !matches!(action, Action::PracticeClef));
             }
             if state.screen == Screen::Session && state.mode == Mode::Play {

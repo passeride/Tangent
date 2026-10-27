@@ -35,6 +35,7 @@ pub enum Action {
     TrainNotes,
     TrainExplorer,
     TrainFiveFinger,
+    TrainMajorScale,
     TrainChords,
     Play,
     Restart,
@@ -124,6 +125,7 @@ impl Action {
             Self::TrainNotes => "train-notes",
             Self::TrainExplorer => "train-explorer",
             Self::TrainFiveFinger => "train-five-finger",
+            Self::TrainMajorScale => "train-major-scale",
             Self::TrainChords => "train-chords",
             Self::Play => "play",
             Self::Slower => "speed-slower",
@@ -388,7 +390,9 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
                     state.help = true;
                 } else {
                     use tangent_core::practice::{Level, ReadingClef};
-                    let action = if run.mode == "five-finger-flow" {
+                    let action = if run.mode == "major-scale-run" {
+                        Action::TrainMajorScale
+                    } else if run.mode == "five-finger-flow" {
                         Action::TrainFiveFinger
                     } else if run.mode == "keyboard-explorer" {
                         Action::TrainExplorer
@@ -521,7 +525,8 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
         | Action::TrainNotes
         | Action::TrainChords
         | Action::TrainExplorer
-        | Action::TrainFiveFinger => {
+        | Action::TrainFiveFinger
+        | Action::TrainMajorScale => {
             training::end(state, false);
             state.panic();
             state.help = false;
@@ -532,11 +537,14 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
                 Action::TrainNotes => Mode::Notes,
                 Action::TrainExplorer => Mode::Explorer,
                 Action::TrainFiveFinger => Mode::FiveFinger,
+                Action::TrainMajorScale => Mode::MajorScale,
                 Action::TrainChords => Mode::Chords,
                 _ => Mode::Play,
             };
             let (clef, level) = (state.practice.clef, state.practice.level);
-            state.practice = if state.mode == Mode::FiveFinger {
+            state.practice = if state.mode == Mode::MajorScale {
+                tangent_core::practice::Practice::major_scale()
+            } else if state.mode == Mode::FiveFinger {
                 tangent_core::practice::Practice::five_finger()
             } else if state.mode == Mode::Explorer {
                 tangent_core::practice::Practice::explorer()
@@ -546,7 +554,7 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             state.practice.configure(clef, level);
             if matches!(
                 state.mode,
-                Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+                Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger | Mode::MajorScale
             ) {
                 training::start(state);
             }
@@ -691,7 +699,7 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
                 );
             } else if matches!(
                 state.mode,
-                Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+                Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger | Mode::MajorScale
             ) {
                 keys.extend(state.practice.target());
             }
@@ -765,7 +773,7 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             };
             let active_practice = matches!(
                 state.mode,
-                Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger
+                Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger | Mode::MajorScale
             );
             if active_practice {
                 training::end(state, false);

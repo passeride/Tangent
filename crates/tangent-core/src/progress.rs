@@ -70,9 +70,12 @@ impl Run {
                 crate::practice::Exercise::Chords => "chords",
                 crate::practice::Exercise::KeyboardExplorer => "keyboard-explorer",
                 crate::practice::Exercise::FiveFinger => "five-finger-flow",
+                crate::practice::Exercise::MajorScale => "major-scale-run",
             }
             .into(),
-            label: if p.flow_task().is_some() {
+            label: if p.scale_task().is_some() {
+                format!("Major Scale Run / {}", p.curriculum_name())
+            } else if p.flow_task().is_some() {
                 format!("Five Finger Flow / {}", p.curriculum_name())
             } else if p.explorer_task().is_some() {
                 format!("Keyboard Explorer / {}", p.curriculum_name())
@@ -294,7 +297,12 @@ impl Run {
                 .all(|c| c.is_ascii_alphanumeric() || c == '-')
             && matches!(
                 self.mode.as_str(),
-                "notes" | "chords" | "play" | "keyboard-explorer" | "five-finger-flow"
+                "notes"
+                    | "chords"
+                    | "play"
+                    | "keyboard-explorer"
+                    | "five-finger-flow"
+                    | "major-scale-run"
             )
             && self
                 .piece_id
@@ -329,6 +337,11 @@ impl Run {
                     .trials
                     .iter()
                     .all(|t| crate::five_finger::FiveFingerTask::from_skill(&t.skill).is_some()))
+            && (self.mode != "major-scale-run"
+                || self
+                    .trials
+                    .iter()
+                    .all(|t| crate::major_scale::MajorScaleTask::from_skill(&t.skill).is_some()))
             && self.errors <= 100000
             && self.elapsed_ms <= 604800000
             && self
@@ -386,7 +399,7 @@ impl Training {
     }
     pub fn answer(&mut self, p: &Practice, skipped: bool) {
         // Intermediate correct steps are feedback, never completed tasks.
-        if p.flow_task().is_some() && !skipped && !p.sequence_accepted() {
+        if p.is_sequence() && !skipped && !p.sequence_accepted() {
             return;
         }
         let skill = skill(p);
@@ -427,7 +440,7 @@ impl Training {
     }
     pub fn choose(&self, p: &mut Practice) {
         p.review_target = None;
-        if !self.adaptive || p.explorer_task().is_some() || p.flow_task().is_some() {
+        if !self.adaptive || p.explorer_task().is_some() || p.is_sequence() {
             return;
         }
         let original = p.completed;
@@ -482,6 +495,9 @@ impl Training {
     }
 }
 pub fn skill(p: &Practice) -> String {
+    if let Some(task) = p.scale_task() {
+        return task.skill();
+    }
     if let Some(task) = p.flow_task() {
         return task.skill();
     }
@@ -502,6 +518,14 @@ pub fn skill(p: &Practice) -> String {
 }
 /// Human-readable skill identity without exposing a target in the exercise HUD.
 pub fn skill_label(tag: &str) -> Option<String> {
+    if tag.starts_with("scale:") {
+        let t = crate::major_scale::MajorScaleTask::from_skill(tag)?;
+        return Some(format!(
+            "{} {} major",
+            if t.left { "Left" } else { "Right" },
+            t.name()
+        ));
+    }
     if tag.starts_with("flow:") {
         let task = crate::five_finger::FiveFingerTask::from_skill(tag)?;
         return Some(format!(

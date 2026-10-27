@@ -1,7 +1,7 @@
 //! Practice notation and live pitch pointers; no musical evaluation rules.
 use super::{controls::Action, draw::Drawing, *};
 pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
-    if state.mode == Mode::FiveFinger {
+    if matches!(state.mode, Mode::FiveFinger | Mode::MajorScale) {
         super::flow_view::render(d, state, l, t);
         return;
     }

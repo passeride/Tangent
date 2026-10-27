@@ -17,3 +17,5 @@ pub mod five_finger;
 pub mod sequence;
 
 pub mod guided;
+
+pub mod major_scale;

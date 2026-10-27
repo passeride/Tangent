@@ -16,7 +16,7 @@ function validContext(c) {
 }
 function valid(r) {
  const int=(n,max)=>Number.isSafeInteger(n)&&n>=0&&n<=max;
- return r && (r.version??1)===1 && /^[a-zA-Z0-9-]{8,100}$/.test(r.id) && ['notes','chords','play','keyboard-explorer','five-finger-flow'].includes(r.mode)
+ return r && (r.version??1)===1 && /^[a-zA-Z0-9-]{8,100}$/.test(r.id) && ['notes','chords','play','keyboard-explorer','five-finger-flow','major-scale-run'].includes(r.mode)
  && (r.piece_id==null||typeof r.piece_id==='string'&&/^[a-fA-F0-9]{64}$/.test(r.piece_id))
  && (r.context==null || r.mode==='play' && validContext(r.context))
  && (r.matched_targets==null || r.mode==='play' && r.context && Array.isArray(r.matched_targets)
@@ -41,6 +41,7 @@ function valid(r) {
    const notes=tokens.map(Number),root=notes[0];
    return root<=120&&notes.every((n,i)=>n===root+[0,2,4,5,7,5,4,2,0][i]);
  }))
+ && (r.mode!=='major-scale-run'||r.trials.every(t=>/^scale:1:[LR]:(?:[0-9]|1[01])$/.test(t.skill)))
  && r.points===(r.song_correct??0)*100+r.trials.reduce((n,t)=>n+(t.skipped||t.assisted?0:t.clean?100:40),0);
 }
 export function writeProgress(db,r) {
