@@ -533,6 +533,7 @@ mod hit_tests {
                 start_us: 0,
                 end_us: 1000000,
                 written: None,
+                rhythm: None,
             });
         }
         let mut hits = SongHits::default();
@@ -558,6 +559,7 @@ mod hit_tests {
                 start_us: 1_000_000,
                 end_us: 1_500_000,
                 written: None,
+                rhythm: None,
             }],
             notation: None,
             warnings: vec![],

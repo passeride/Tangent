@@ -270,12 +270,20 @@ fn authored_row(
             let color = n
                 .performance_note
                 .map_or(t.muted, |id| super::personal::note_color(state, id, t));
+            let rhythm = NoteRhythm::written(n);
             let Some(p) = &n.pitch else {
                 d.glyph(
                     nx - 3.,
                     bottom - gap * 2.,
-                    rest(n.value),
+                    rest(rhythm.map(|r| r.value)),
                     gap * 4.,
+                    color.with_alpha(0.6),
+                );
+                d.rhythm_dots(
+                    nx + gap * 0.7,
+                    bottom - gap * 2.5,
+                    gap,
+                    rhythm.map_or(0, |r| r.dots),
                     color.with_alpha(0.6),
                 );
                 continue;
@@ -312,32 +320,15 @@ fn authored_row(
                 *expected = written.alteration;
             }
             let duration = n.duration.quarters();
-            let hollow = matches!(n.value, Some(NoteValue::Whole | NoteValue::Half))
-                || n.value.is_none() && duration >= 2.;
-            let flag = matches!(
-                n.value,
-                Some(
-                    NoteValue::Eighth
-                        | NoteValue::Sixteenth
-                        | NoteValue::ThirtySecond
-                        | NoteValue::SixtyFourth
-                )
-            ) || n.value.is_none() && duration < 1.;
-            if matches!(n.value, Some(NoteValue::Whole)) || n.value.is_none() && duration >= 4. {
-                d.glyph(nx - gap * 0.8, ny, '\u{e0a2}', gap * 4., color);
-            } else {
-                d.note(nx, ny, gap * 0.44, color, hollow, flag);
-            }
-            for dot in 0..n.dots {
-                d.rect(
-                    nx + gap * (0.9 + dot as f32 * 0.5),
-                    ny - 1.5,
-                    3.,
-                    3.,
-                    color,
-                    2.,
-                );
-            }
+            d.rhythmic_note(
+                nx,
+                ny,
+                gap * 0.59,
+                color,
+                rhythm,
+                p.step >= if is_bass { 22 } else { 34 },
+                p.step.rem_euclid(2) == 0,
+            );
             if n.tie_to_next {
                 d.line(
                     nx + gap * 0.5,
@@ -452,6 +443,8 @@ fn rest(value: Option<NoteValue>) -> char {
         Some(NoteValue::Half) => '\u{e4e4}',
         Some(NoteValue::Eighth) => '\u{e4e6}',
         Some(NoteValue::Sixteenth) => '\u{e4e7}',
+        Some(NoteValue::ThirtySecond) => '\u{e4e8}',
+        Some(NoteValue::SixtyFourth) => '\u{e4e9}',
         _ => '\u{e4e5}',
     }
 }
@@ -593,13 +586,14 @@ fn legacy_row(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme, start
         if !accidental.is_empty() {
             d.text(x - 20., y - 11., accidental, 14., color);
         }
-        d.note(
+        d.rhythmic_note(
             x,
             y,
-            5.,
+            gap * 0.59,
             color,
-            n.end_us - n.start_us >= 800_000,
-            n.end_us - n.start_us < 300_000,
+            n.rhythm,
+            p.step >= if p.bass { 22 } else { 34 },
+            p.step.rem_euclid(2) == 0,
         );
         d.line(
             x,

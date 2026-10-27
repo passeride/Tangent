@@ -233,6 +233,7 @@ mod tests {
                     start_us: index as u64 * 250_000,
                     end_us: (index as u64 + 1) * 250_000,
                     written: None,
+                    rhythm: None,
                 });
             }
         }
@@ -298,6 +299,7 @@ mod tests {
             start_us: 0,
             end_us: 200_000,
             written: None,
+            rhythm: None,
         });
         let idx = index_song(&s);
         assert_eq!(idx.melodies.len(), 1);

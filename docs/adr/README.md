@@ -75,3 +75,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0031: Independent notation layers](0031-combinable-note-views.md) — combined sheet/falling views, live input markers and block note names.
 
 - [ADR-0032: Scalable score overlay](0032-scalable-sheet-overlay.md) — full-height falling field and multi-system score.
+
+- [ADR-0033: Rhythmic reading and note glyphs](0033-rhythmic-reading-and-note-glyphs.md) - source-beat MIDI estimates and Bravura notes/flags.

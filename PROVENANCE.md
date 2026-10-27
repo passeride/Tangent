@@ -284,3 +284,10 @@ Original Bevy layout, bounded preference, page selection and synthetic browser t
 implement the owner-requested full-height falling view, scaled score overlay and
 multi-system sheet. Existing notation and input paths are reused. No external
 code, assets or dependencies were added; see ADR-0032.
+
+## Rhythmic reading and note glyphs - 2026-10-27
+
+Original shared rhythm inference, source-tick MIDI mapping and Bevy music-font
+presentation implement the owner's note-value request (ADR-0033). Existing
+Bravura and its notices are reused, with SMuFL primary documentation consulted.
+No new dependency, runtime asset or excluded project source was imported.

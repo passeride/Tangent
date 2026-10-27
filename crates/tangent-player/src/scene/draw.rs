@@ -32,7 +32,6 @@ pub(super) struct Drawing {
     labels: Vec<Label>,
     block_labels: Vec<String>,
     falling_region: Option<(f32, f32)>,
-    background: Color,
 }
 impl Drawing {
     pub(super) fn rect(&mut self, x: f32, y: f32, w: f32, h: f32, color: Color, radius: f32) {
@@ -174,20 +173,79 @@ impl Drawing {
         hollow: bool,
         flag: bool,
     ) {
-        self.rect(x - size, y - size * 0.6, size * 2., size * 1.2, color, size);
-        if hollow {
-            self.rect(
-                x - size + 2.,
-                y - size * 0.6 + 2.,
-                size * 2. - 4.,
-                size * 1.2 - 4.,
-                self.background,
-                size,
+        use tangent_core::notation::{NoteRhythm, NoteValue};
+        self.rhythmic_note(
+            x,
+            y,
+            size,
+            color,
+            Some(NoteRhythm {
+                value: if hollow {
+                    NoteValue::Half
+                } else if flag {
+                    NoteValue::Eighth
+                } else {
+                    NoteValue::Quarter
+                },
+                dots: 0,
+            }),
+            false,
+            false,
+        );
+    }
+    /// Precomposed Bravura notes keep the head, stem and curved flags aligned.
+    /// Unknown performance duration has a head only; live input uses `note`.
+    pub(super) fn rhythmic_note(
+        &mut self,
+        x: f32,
+        y: f32,
+        size: f32,
+        color: Color,
+        rhythm: Option<tangent_core::notation::NoteRhythm>,
+        down: bool,
+        on_line: bool,
+    ) {
+        use tangent_core::notation::NoteValue::*;
+        let glyph = rhythm.map_or('\u{e0a4}', |r| match (r.value, down) {
+            (Whole, _) => '\u{e1d2}',
+            (Half, false) => '\u{e1d3}',
+            (Half, true) => '\u{e1d4}',
+            (Quarter, false) => '\u{e1d5}',
+            (Quarter, true) => '\u{e1d6}',
+            (Eighth, false) => '\u{e1d7}',
+            (Eighth, true) => '\u{e1d8}',
+            (Sixteenth, false) => '\u{e1d9}',
+            (Sixteenth, true) => '\u{e1da}',
+            (ThirtySecond, false) => '\u{e1db}',
+            (ThirtySecond, true) => '\u{e1dc}',
+            (SixtyFourth, false) => '\u{e1dd}',
+            (SixtyFourth, true) => '\u{e1de}',
+        });
+        // Bravura's black/half head is 1.18 staff spaces wide (4 spaces/em).
+        let gap = size / 0.59;
+        let width = if rhythm.is_some_and(|r| r.value == Whole) {
+            1.69
+        } else {
+            1.18
+        };
+        self.glyph(x - gap * width * 0.5, y, glyph, gap * 4., color);
+        self.rhythm_dots(
+            x + gap * width * 0.5,
+            y - if on_line { gap * 0.5 } else { 0. },
+            gap,
+            rhythm.map_or(0, |r| r.dots),
+            color,
+        );
+    }
+    pub(super) fn rhythm_dots(&mut self, x: f32, y: f32, gap: f32, dots: u8, color: Color) {
+        for dot in 0..dots {
+            self.glyph(
+                x + gap * (0.35 + f32::from(dot) * 0.5),
+                y,
+                '\u{e1e7}',
+                gap * 4.,
+                color,
             );
-        }
-        self.line(x + size - 1., y - size * 4.5, 1.5, size * 4.5, color);
-        if flag {
-            self.rect(x + size, y - size * 4.5, size * 0.9, size * 1.8, color, 5.);
         }
     }
 }
@@ -210,10 +268,7 @@ pub fn render(
     };
     let l = Layout::new(window.width(), window.height(), &state.piano);
     let t = super::personal::palette(&state);
-    let mut d = Drawing {
-        background: t.bg,
-        ..Drawing::default()
-    };
+    let mut d = Drawing::default();
     state.buttons.clear();
     state.library.row_hits.clear();
     // Let the Camera2d background show through UI, so native Hanabi particles
@@ -836,13 +891,14 @@ fn falling(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
             }
         }
         if state.view == View::Notes {
-            d.note(
+            d.rhythmic_note(
                 r.x + r.w / 2.,
                 y,
                 (l.unit * 0.42).clamp(3., 7.),
                 color,
-                n.end_us - n.start_us >= 800_000,
-                n.end_us - n.start_us < 300_000,
+                n.rhythm,
+                false,
+                false,
             );
             if now >= n.start_us {
                 d.rect(
@@ -916,5 +972,46 @@ fn falling(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod rhythm_glyph_tests {
+    use super::*;
+    use tangent_core::notation::{NoteRhythm, NoteValue};
+
+    #[test]
+    fn short_notes_use_distinct_music_glyphs_without_rectangle_flags() {
+        for (value, up, down) in [
+            (NoteValue::Whole, '\u{e1d2}', '\u{e1d2}'),
+            (NoteValue::Half, '\u{e1d3}', '\u{e1d4}'),
+            (NoteValue::Quarter, '\u{e1d5}', '\u{e1d6}'),
+            (NoteValue::Eighth, '\u{e1d7}', '\u{e1d8}'),
+            (NoteValue::Sixteenth, '\u{e1d9}', '\u{e1da}'),
+            (NoteValue::ThirtySecond, '\u{e1db}', '\u{e1dc}'),
+            (NoteValue::SixtyFourth, '\u{e1dd}', '\u{e1de}'),
+        ] {
+            for (stem_down, expected) in [(false, up), (true, down)] {
+                let mut d = Drawing::default();
+                d.rhythmic_note(
+                    100.,
+                    100.,
+                    5.9,
+                    Color::WHITE,
+                    Some(NoteRhythm { value, dots: 2 }),
+                    stem_down,
+                    true,
+                );
+                assert!(d.shapes.is_empty());
+                assert_eq!(d.labels.len(), 3);
+                assert_eq!(d.labels[0].text, expected.to_string());
+                assert!(d.labels.iter().all(|label| label.music));
+                assert!(d.labels[1..].iter().all(|label| label.text == "\u{e1e7}"));
+            }
+        }
+        let mut d = Drawing::default();
+        d.rhythmic_note(100., 100., 5.9, Color::WHITE, None, false, false);
+        assert_eq!(d.labels[0].text, "\u{e0a4}");
+        assert_eq!(d.labels.len(), 1);
     }
 }

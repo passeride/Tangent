@@ -41,6 +41,10 @@ pub fn midi(bytes: &[u8], title: String) -> Result<Song, String> {
                 start_us: n.start_us,
                 end_us: n.end_us,
                 written: None,
+                // PPQ already expresses musical time across every tempo change.
+                rhythm: tangent_core::notation::NoteRhythm::from_quarters(
+                    (n.end_tick - n.start_tick) as f64 / f64::from(source.ticks_per_quarter),
+                ),
             });
         }
         for e in track.events {
@@ -94,6 +98,84 @@ pub fn study() -> Song {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tangent_core::notation::{NoteRhythm, NoteValue};
+
+    #[test]
+    fn midi_rhythm_uses_ticks_across_tempo_changes() {
+        // 6/8, 120 BPM; C lasts a quarter with a mid-note change to 240 BPM.
+        // D lasts an eighth at 240 BPM. Playback speed never changes these values.
+        let events = [
+            0, 0xff, 0x58, 4, 6, 3, 24, 8, 0, 0xff, 0x51, 3, 7, 0xa1, 0x20, 0, 0x90, 60, 90, 0x81,
+            0x70, 0xff, 0x51, 3, 3, 0xd0, 0x90, 0x81, 0x70, 0x80, 60, 0, 0, 0x90, 62, 90, 0x81,
+            0x70, 0x80, 62, 0, 0, 0xff, 0x2f, 0,
+        ];
+        let mut bytes = b"MThd\0\0\0\x06\0\0\0\x01\x01\xe0MTrk".to_vec();
+        bytes.extend((events.len() as u32).to_be_bytes());
+        bytes.extend(events);
+        let song = midi(&bytes, "Tempo changes".into()).unwrap();
+        assert_eq!(song.notes[0].end_us, 375_000);
+        assert_eq!(song.notes[1].end_us - song.notes[1].start_us, 125_000);
+        assert_eq!(
+            song.notes[0].rhythm,
+            Some(NoteRhythm {
+                value: NoteValue::Quarter,
+                dots: 0
+            })
+        );
+        assert_eq!(
+            song.notes[1].rhythm,
+            Some(NoteRhythm {
+                value: NoteValue::Eighth,
+                dots: 0
+            })
+        );
+    }
+
+    #[test]
+    fn musicxml_falling_rhythm_preserves_authored_type_on_repeat_visits() {
+        let song = study();
+        assert!(song.notes.iter().all(|n| n.rhythm.is_some()));
+        let score = song.notation.as_ref().unwrap();
+        for n in score.measures.iter().flat_map(|m| &m.notes) {
+            if let Some(id) = n.performance_note
+                && !n.tie_from_previous
+            {
+                assert_eq!(
+                    song.notes.iter().find(|p| p.id == id).unwrap().rhythm,
+                    NoteRhythm::written(n)
+                );
+            }
+        }
+    }
+    #[test]
+    fn written_tuplet_type_wins_over_duration_and_missing_type_is_inferred() {
+        let xml = br#"<score-partwise version="4.0"><part-list>
+            <score-part id="P1"><part-name>Piano</part-name></score-part>
+            </part-list><part id="P1"><measure number="1"><attributes>
+            <divisions>3</divisions><time><beats>4</beats><beat-type>4</beat-type></time>
+            <clef><sign>G</sign><line>2</line></clef></attributes>
+            <note><pitch><step>C</step><octave>4</octave></pitch><duration>1</duration>
+            <type>eighth</type><time-modification><actual-notes>3</actual-notes>
+            <normal-notes>2</normal-notes></time-modification></note>
+            <note><pitch><step>D</step><octave>4</octave></pitch><duration>9</duration></note>
+            </measure></part></score-partwise>"#;
+        let song = song(xml, "Rhythm".into()).unwrap();
+        assert_eq!(
+            song.notes[0].rhythm,
+            Some(NoteRhythm {
+                value: NoteValue::Eighth,
+                dots: 0
+            })
+        );
+        assert_eq!(
+            song.notes[1].rhythm,
+            Some(NoteRhythm {
+                value: NoteValue::Half,
+                dots: 1
+            })
+        );
+    }
+
     #[test]
     fn musicxml_preserves_composer_metadata() {
         let song = study();

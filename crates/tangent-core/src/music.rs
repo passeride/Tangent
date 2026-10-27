@@ -10,6 +10,9 @@ pub struct PerformanceNote {
     pub end_us: u64,
     /// Authored spelling is optional. MIDI adapters must not fabricate it.
     pub written: Option<WrittenPitch>,
+    /// First written segment for MusicXML; source-tick estimate for MIDI.
+    /// None means the rhythmic value is unavailable, not a quarter note.
+    pub rhythm: Option<crate::notation::NoteRhythm>,
 }
 #[derive(Debug, Clone, Serialize)]
 pub struct WrittenPitch {

@@ -123,7 +123,7 @@ pub struct MeasureVisit {
     pub end_us: u64,
     pub timing: Vec<BeatTime>,
 }
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum NoteValue {
     Whole,
     Half,
@@ -132,6 +132,84 @@ pub enum NoteValue {
     Sixteenth,
     ThirtySecond,
     SixtyFourth,
+}
+
+/// A written value, or a conservative reading estimate from MIDI source beats.
+/// This does not change playback, infer rests, or reconstruct authored notation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct NoteRhythm {
+    pub value: NoteValue,
+    pub dots: u8,
+}
+impl NoteRhythm {
+    pub fn written(note: &WrittenNote) -> Option<Self> {
+        note.value
+            .map(|value| Self {
+                value,
+                dots: note.dots,
+            })
+            .or_else(|| Self::from_quarters(note.duration.quarters()))
+    }
+
+    /// Accept at most 8% articulation/rounding error. Irregular spans and tuplets
+    /// without an authored type stay unknown instead of acquiring a false flag.
+    pub fn from_quarters(quarters: f64) -> Option<Self> {
+        if !quarters.is_finite() || quarters <= 0. {
+            return None;
+        }
+        let values = [
+            NoteValue::Whole,
+            NoteValue::Half,
+            NoteValue::Quarter,
+            NoteValue::Eighth,
+            NoteValue::Sixteenth,
+            NoteValue::ThirtySecond,
+            NoteValue::SixtyFourth,
+        ];
+        let mut best = None;
+        let mut error = 0.08_f64;
+        for (index, value) in values.into_iter().enumerate() {
+            for dots in 0..=3_u8 {
+                let expected = 4. / 2_f64.powi(index as i32) * (2. - 2_f64.powi(-i32::from(dots)));
+                let distance = (quarters - expected).abs() / expected;
+                if distance <= error {
+                    error = distance;
+                    best = Some(Self { value, dots });
+                }
+            }
+        }
+        best
+    }
+}
+
+#[cfg(test)]
+mod rhythm_tests {
+    use super::*;
+    #[test]
+    fn beat_values_and_dots_do_not_depend_on_tempo_or_meter_denominator() {
+        for (q, value, dots) in [
+            (4., NoteValue::Whole, 0),
+            (3., NoteValue::Half, 1),
+            (1., NoteValue::Quarter, 0),
+            (0.75, NoteValue::Eighth, 1),
+            (0.25, NoteValue::Sixteenth, 0),
+            (0.125, NoteValue::ThirtySecond, 0),
+            (0.0625, NoteValue::SixtyFourth, 0),
+            (1.75, NoteValue::Quarter, 2),
+        ] {
+            assert_eq!(
+                NoteRhythm::from_quarters(q),
+                Some(NoteRhythm { value, dots })
+            );
+        }
+        assert_eq!(
+            NoteRhythm::from_quarters(0.96).unwrap().value,
+            NoteValue::Quarter
+        );
+        for q in [0., -1., f64::NAN, f64::INFINITY, 1. / 3., 0.6, 20.] {
+            assert!(NoteRhythm::from_quarters(q).is_none());
+        }
+    }
 }
 impl QuarterFraction {
     pub fn quarters(self) -> f64 {

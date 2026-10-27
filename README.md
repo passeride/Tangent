@@ -252,3 +252,8 @@ In **Settings → Visuals**, enable the horizontal sheet and the vertical fallin
 view independently, choose the vertical style, and optionally show pitch names
 on blocks. Held notes appear in the played colour on the sheet and staff lanes;
 live MIDI spelling is approximate. When both layers are on, a scalable sheet overlays the full-height falling view. Sheet-only mode fits multiple systems on screen.
+
+Note views now use Bravura music-font noteheads, stems and curved flags through
+64ths, with augmentation dots and matching short rests. MusicXML written values
+are preserved; MIDI values are estimated from source beats across tempo changes,
+with unknown rhythms left unclassified. See [rhythmic reading](docs/adr/0033-rhythmic-reading-and-note-glyphs.md).
