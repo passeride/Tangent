@@ -68,7 +68,8 @@ pub(super) fn song(
     };
     let mut written_measures = Vec::new();
     for (index, m) in measures.iter().enumerate() {
-        written_measures.push(NotatedMeasure {
+        let mut written = NotatedMeasure {
+            beam_groups: vec![],
             label: m.label.clone(),
             duration: fraction(m.length, grid)?,
             notes: m.entries.iter().map(|e| e.note.clone()).collect(),
@@ -92,7 +93,9 @@ pub(super) fn song(
             repeat_start: m.repeat_start,
             repeat_end: m.repeat_end,
             ending: m.ending.clone(),
-        });
+        };
+        written.beam_groups = tangent_core::beaming::groups(&written);
+        written_measures.push(written);
     }
     let mut notes: Vec<PerformanceNote> = Vec::new();
     let mut voice_routes = BTreeMap::new();

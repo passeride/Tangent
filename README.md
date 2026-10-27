@@ -63,6 +63,10 @@ JSON import/export and hand colours. Demonstrations accept only unambiguous
 pitch/onset matches; unknown notes stay unassigned. Library row backgrounds also
 support double-click to Open. See [ADR-0025](docs/adr/0025-personal-themes-and-demonstrated-hands.md).
 
+The horizontal MusicXML score now groups short notes with shared beams, including
+mixed 16ths/32nds and chord stems. Written groups take priority; missing groups
+follow the meter. See [grouped notes](docs/design/grouped-notes.md).
+
 ## Screenshots
 
 Actual running app, captured with Chromium at 1440 px width using Tangent's

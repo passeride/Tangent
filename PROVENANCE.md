@@ -1,6 +1,6 @@
 # Provenance and implementation boundaries
 
-Updated: 2026-10-26.
+Updated: 2026-10-27.
 
 ## Current record
 
@@ -284,3 +284,11 @@ Original Bevy layout, bounded preference, page selection and synthetic browser t
 implement the owner-requested full-height falling view, scaled score overlay and
 multi-system sheet. Existing notation and input paths are reused. No external
 code, assets or dependencies were added; see ADR-0032.
+
+## Grouped notes — 2026-10-27
+
+Original Rust grouping/geometry, MusicXML adapter changes, synthetic test music
+and browser checks implement the owner's joined-note request in the disclosed
+context above. W3C MusicXML beam documentation informed the standards mapping;
+no external implementation, asset or dependency was imported. The six-measure
+fixture and running-app screenshots are new Tangent test material. See ADR-0033.

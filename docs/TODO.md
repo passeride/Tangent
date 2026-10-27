@@ -67,7 +67,8 @@ For user-facing sequencing, see the **proposed** [UX roadmap](design/ux-roadmap.
 - [x] Uncompressed partwise adapter, rational rhythm, voices/staves, sound ties/tempo.
 - [x] Bounded compressed MXL support through META-INF/container.xml (ADR-0010).
 - [x] Retain inherited key/time, written rhythm values/dots and tempo; initial clefs.
-- [ ] Full clef/attribute changes, tuplets/beams and engraving detail.
+- [x] Initial written/metric beam groups and shared chord stems ([ADR-0033](adr/0033-written-beam-groups.md)).
+- [ ] Full clef/attribute changes, tuplet brackets, cross-staff/rest-spanning beams and engraving detail.
 - [x] Authored measure layout, clefs/rests, barlines/houses and repeat-visit mapping.
 - [ ] Refined engraving collisions, ties/beam layout and full score pagination.
 - [x] Bounded sequential repeats and numbered endings.

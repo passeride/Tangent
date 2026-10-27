@@ -1,3 +1,7 @@
+if (process.env.TANGENT_CAPTURE_BEAMS === '1') {
+  await import('./beaming-smoke.mjs');
+  process.exit(0);
+}
 if (process.env.TANGENT_CAPTURE_GUIDED === '1') {
   await import('./guided-smoke.mjs');
   process.exit(0);
