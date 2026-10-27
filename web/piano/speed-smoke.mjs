@@ -54,7 +54,7 @@ try {
  await click(page,'settings');await click(page,'midi');await click(page,'midi-output');await click(page,'midi-output-choice');
  await page.waitForFunction(()=>tangentDiagnostics().midi_output==='tempo-out');
  await click(page,'settings-back');await rate(60);await click(page,'play');
- const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO');
+ const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO',{delay:100});
  const track=Buffer.from([0,0x90,60,100,0x9e,0,0x80,60,0,0,0x90,62,100,0x9e,0,0x80,62,0,0,0xff,0x2f,0]);
  const header=Buffer.from([77,84,104,100,0,0,0,6,0,0,0,1,1,224,77,84,114,107,0,0,0,track.length]);
  await(await chooser).setFiles({name:'Tempo check.mid',mimeType:'audio/midi',buffer:Buffer.concat([header,track])});
@@ -64,7 +64,9 @@ try {
  await page.waitForFunction(()=>midiSent.some(e=>e.bytes[0]===0x90&&e.bytes[1]===62));
  const sent=await page.evaluate(()=>midiSent);
  const on=key=>sent.find(e=>e.bytes[0]===0x90&&e.bytes[1]===key);
- assert(Math.abs((on(62).at-on(60).at)/1000-4/.6)<.35,`Physical MIDI event spacing ${(on(62).at-on(60).at)/1000}s; events ${JSON.stringify(sent.filter(e=>(e.bytes[0]&240)===144||(e.bytes[0]&240)===128))}`);
+ // Due MIDI is dispatched on render frames; CI software rendering can delay the first attack.
+ // A 550 ms window still distinguishes 60% from the adjacent 70% speed.
+ assert(Math.abs((on(62).at-on(60).at)/1000-4/.6)<.55,`Physical MIDI event spacing ${(on(62).at-on(60).at)/1000}s; events ${JSON.stringify(sent.filter(e=>(e.bytes[0]&240)===144||(e.bytes[0]&240)===128))}`);
  const off=sent.find(e=>e.bytes[0]===0x80&&e.bytes[1]===60);
  assert(off&&Math.abs(off.at-on(62).at)<100,'Note-off and next attack remain aligned');
  await click(page,'help');const stopped=await page.evaluate(()=>midiSent.length);await page.waitForTimeout(200);

@@ -65,7 +65,7 @@ try {
  await click(page,'toggle-score');await page.keyboard.press('Escape');await page.waitForFunction(()=>!tangentDiagnostics().settings_open);await click(page,'play');
  const events=[];for(let i=0;i<32;i++)events.push(0,0x90,60+i%8,100,0x87,0x40,0x80,60+i%8,0);events.push(0,0xff,0x2f,0);
  const track=Buffer.from(events),head=Buffer.from([77,84,104,100,0,0,0,6,0,0,0,1,1,224,77,84,114,107,0,0,0,0]);head.writeUInt32BE(track.length,18);
- const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO');
+ const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO',{delay:100});
  await(await chooser).setFiles({name:'systems.mid',mimeType:'audio/midi',buffer:Buffer.concat([head,track])});
  await page.waitForFunction(()=>tangentDiagnostics().notes===32&&tangentDiagnostics().written_measures===0);
  if(await page.evaluate(()=>tangentDiagnostics().help))await click(page,'play');

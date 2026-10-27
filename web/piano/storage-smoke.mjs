@@ -19,7 +19,7 @@ try {
     ["settings-visuals", "theme"],
     ["settings-audio", "instrument"],
     ["settings-effects", "effects"],
-    ["settings-visuals", "view"],
+    ["settings-visuals", "vertical-style"],
     ["settings-visuals", "range"],
     ["settings-audio", "quieter"],
     ["settings-audio", "hear"],

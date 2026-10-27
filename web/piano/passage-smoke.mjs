@@ -15,7 +15,7 @@ try {
  for(const key of [60,62,64,65,67,69,71,72])events.push(0,0x90,key,100,0x87,0x40,0x80,key,0);
  events.push(0,0xff,0x2f,0);
  const track=Buffer.from(events),head=Buffer.from([77,84,104,100,0,0,0,6,0,0,0,1,1,224,77,84,114,107,0,0,0,track.length]);
- const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO');
+ const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO',{delay:100});
  await(await chooser).setFiles({name:'Passage test.mid',mimeType:'audio/midi',buffer:Buffer.concat([head,track])});
  await page.waitForFunction(()=>tangentDiagnostics().notes===8);
  if(!(await page.evaluate(()=>tangentDiagnostics().help)))await click(page,'help');
@@ -46,7 +46,8 @@ try {
  await page.mouse.move(28+(1280-56)*5/8,778);await page.mouse.down();await page.waitForTimeout(150);await page.mouse.move(28+(1280-56)*4/8,778,{steps:12});await page.waitForTimeout(150);await page.mouse.up();await page.waitForTimeout(200);
  d=await page.evaluate(()=>tangentDiagnostics());assert(Math.abs(d.loop.end_us-4000000)<30000,JSON.stringify({loop:d.loop,help:d.help,position:d.position}));assert.equal(d.playing,false);
  await click(page,'help');await click(page,'loop-clear');assert.equal((await page.evaluate(()=>tangentDiagnostics())).loop,null);
- await page.setViewportSize({width:390,height:720});await page.waitForTimeout(400);
+ await page.setViewportSize({width:390,height:720});
+ await page.waitForFunction(()=>tangentDiagnostics().width===390&&tangentDiagnostics().height===720);
  d=await page.evaluate(()=>tangentDiagnostics());
  for(const b of d.buttons){assert(b.x>=0&&b.y>=0&&b.x+b.w<=390&&b.y+b.h<=720,`Button outside viewport: ${b.id}`);}
  await page.screenshot({path:'../../docs/screenshots/passage-practice-narrow.png'});

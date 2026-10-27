@@ -7,7 +7,7 @@ try {
  await ready(page,server.url);console.log('HUD: booted');await click(page,'start-play');
  const events=[];for(const key of [24,60,90,112])events.push(0,0x90,key,100,0x9e,0,0x80,key,0);events.push(0,0xff,0x2f,0);
  const track=Buffer.from(events),header=Buffer.from([77,84,104,100,0,0,0,6,0,0,0,1,1,224,77,84,114,107,0,0,0,track.length]);
- const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO');await(await chooser).setFiles({name:'Range check.mid',mimeType:'audio/midi',buffer:Buffer.concat([header,track])});
+ const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO',{delay:100});await(await chooser).setFiles({name:'Range check.mid',mimeType:'audio/midi',buffer:Buffer.concat([header,track])});
  await page.waitForFunction(()=>tangentDiagnostics().notes===4);await click(page,'help');await page.keyboard.press('KeyR');
  await page.waitForFunction(()=>tangentDiagnostics().key_rects.length===49);console.log('HUD: range checks');
  let d=await page.evaluate(()=>tangentDiagnostics());assert.deepEqual(d.offscreen,[1,2]);

@@ -14,7 +14,7 @@ try{
   Object.defineProperty(navigator,'permissions',{configurable:true,value:{query:async()=>({state:'granted'})}});
  });
  await ready(page,server.url);await click(page,'start-play');
- const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO');
+ const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO',{delay:100});
  await(await chooser).setFiles({name:'Sequential.musicxml',mimeType:'application/xml',buffer:Buffer.from(xml)});
  await page.waitForFunction(()=>tangentDiagnostics().notes===5);
  if(!await page.evaluate(()=>tangentDiagnostics().help))await click(page,'help');

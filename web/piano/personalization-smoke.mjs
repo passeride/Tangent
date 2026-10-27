@@ -8,7 +8,7 @@ try {
  await ready(page,server.url);await click(page,'start-play');await click(page,'help');
  const track=Buffer.from([0,0x90,60,100,0x87,0x40,0x80,60,0,0,0xff,0x2f,0]);
  const head=Buffer.from([77,84,104,100,0,0,0,6,0,0,0,1,1,224,77,84,114,107,0,0,0,track.length]);
- const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO');await(await chooser).setFiles({name:'Hands.mid',mimeType:'audio/midi',buffer:Buffer.concat([head,track])});
+ const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+KeyO',{delay:100});await(await chooser).setFiles({name:'Hands.mid',mimeType:'audio/midi',buffer:Buffer.concat([head,track])});
  await page.waitForFunction(()=>tangentDiagnostics().notes===1);
  await click(page,'settings');await click(page,'settings-visuals');await click(page,'hands-editor');
  await page.evaluate(()=>{const now=tangentPlatform.clock_us();tangentPlatform.clock_us=()=>now;});
