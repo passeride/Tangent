@@ -176,6 +176,7 @@ mod tests {
                 start_us,
                 end_us: start_us + 500_000,
                 written: None,
+                rhythm: None,
             })
             .collect(),
             events: vec![],

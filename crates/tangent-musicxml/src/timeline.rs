@@ -170,6 +170,7 @@ pub(super) fn song(
                         start_us: time(start)?,
                         end_us: time(end)?,
                         written: e.note.pitch.clone(),
+                        rhythm: tangent_core::notation::NoteRhythm::written(&e.note),
                     });
                     id
                 };

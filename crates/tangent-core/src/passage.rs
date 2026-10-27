@@ -119,6 +119,7 @@ mod integration_tests {
                 end_us: start_us + 500_000,
                 velocity: 90,
                 written: None,
+                rhythm: None,
             })
             .collect(),
             notation: None,

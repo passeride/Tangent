@@ -314,3 +314,10 @@ folder-scanning/bulk-import request. Browser filesystem permission documentation
 was consulted; no external implementation, dependencies or assets were added.
 The folder screenshot is generated from original synthetic MusicXML in the actual
 app. Native OS dialogs still require physical platform verification. See ADR-0035.
+
+## Rhythmic reading and note glyphs - 2026-10-27
+
+Original shared rhythm inference, source-tick MIDI mapping and Bevy music-font
+presentation implement the owner's note-value request (ADR-0036). Existing
+Bravura and its notices are reused, with SMuFL primary documentation consulted.
+No new dependency, runtime asset or excluded project source was imported.

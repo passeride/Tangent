@@ -303,12 +303,20 @@ fn authored_row(
             let color = n
                 .performance_note
                 .map_or(t.muted, |id| super::personal::note_color(state, id, t));
+            let rhythm = NoteRhythm::written(n);
             let Some(p) = &n.pitch else {
                 d.glyph(
                     nx - 3.,
                     bottom - gap * 2.,
-                    rest(n.value),
+                    rest(rhythm.map(|r| r.value)),
                     gap * 4.,
+                    color.with_alpha(0.6),
+                );
+                d.rhythm_dots(
+                    nx + gap * 0.7,
+                    bottom - gap * 2.5,
+                    gap,
+                    rhythm.map_or(0, |r| r.dots),
                     color.with_alpha(0.6),
                 );
                 continue;
@@ -345,43 +353,31 @@ fn authored_row(
                 *expected = written.alteration;
             }
             let duration = n.duration.quarters();
-            let hollow = matches!(n.value, Some(NoteValue::Whole | NoteValue::Half))
-                || n.value.is_none() && duration >= 2.;
-            let flag = matches!(
-                n.value,
-                Some(
-                    NoteValue::Eighth
-                        | NoteValue::Sixteenth
-                        | NoteValue::ThirtySecond
-                        | NoteValue::SixtyFourth
-                )
-            ) || n.value.is_none() && duration < 1.;
-            if matches!(n.value, Some(NoteValue::Whole)) || n.value.is_none() && duration >= 4. {
-                d.glyph(nx - gap * 0.8, ny, '\u{e0a2}', gap * 4., color);
-            } else {
-                if beamed.contains(&note_index) {
-                    d.note_head(nx, ny, gap * 0.44, color, hollow);
-                } else {
-                    single_note(
-                        d,
-                        n,
-                        Vec2::new(nx, ny),
-                        gap,
-                        color,
-                        hollow,
-                        flag,
-                        p.step < if is_bass { 22 } else { 34 },
-                    );
-                }
-            }
-            for dot in 0..n.dots {
-                d.rect(
-                    nx + gap * (0.9 + dot as f32 * 0.5),
-                    ny - 1.5,
-                    3.,
-                    3.,
+            if beamed.contains(&note_index) {
+                d.note_head(nx, ny, gap * 0.44, color, false);
+                d.rhythm_dots(
+                    nx + gap * 0.44,
+                    ny - if p.step.rem_euclid(2) == 0 {
+                        gap * 0.5
+                    } else {
+                        0.
+                    },
+                    gap,
+                    rhythm.map_or(0, |r| r.dots),
                     color,
-                    2.,
+                );
+            } else {
+                d.rhythmic_note(
+                    nx,
+                    ny,
+                    gap * 0.44,
+                    color,
+                    rhythm,
+                    n.stem
+                        .map_or(p.step >= if is_bass { 22 } else { 34 }, |stem| {
+                            stem == StemDirection::Down
+                        }),
+                    p.step.rem_euclid(2) == 0,
                 );
             }
             if n.tie_to_next {
@@ -415,44 +411,6 @@ fn authored_row(
     bar(d, right, treble, bass, gap, 1., t.staff);
 }
 
-/// Individual flags retain the exact number of rhythmic levels, including hooks' neighbours.
-#[allow(clippy::too_many_arguments)]
-fn single_note(
-    d: &mut Drawing,
-    n: &WrittenNote,
-    at: Vec2,
-    gap: f32,
-    color: Color,
-    hollow: bool,
-    flag: bool,
-    default_up: bool,
-) {
-    d.note_head(at.x, at.y, gap * 0.44, color, hollow);
-    let up = n.stem.map_or(default_up, |s| s == StemDirection::Up);
-    let direction = if up { -1. } else { 1. };
-    let x = at.x - direction * (gap * 0.44 - 1.);
-    let tip = at.y + direction * gap * 3.5;
-    d.line(
-        x,
-        tip.min(at.y),
-        (gap * 0.13).max(1.),
-        (tip - at.y).abs(),
-        color,
-    );
-    if flag {
-        let count = tangent_core::beaming::levels(n).max(1);
-        for level in 0..count {
-            let y = tip - direction * f32::from(level) * gap * 0.7;
-            d.glyph(
-                x,
-                y,
-                if up { '\u{e240}' } else { '\u{e241}' },
-                gap * 4.,
-                color,
-            );
-        }
-    }
-}
 #[allow(clippy::too_many_arguments)]
 fn beam_groups(
     d: &mut Drawing,
@@ -642,6 +600,8 @@ fn rest(value: Option<NoteValue>) -> char {
         Some(NoteValue::Half) => '\u{e4e4}',
         Some(NoteValue::Eighth) => '\u{e4e6}',
         Some(NoteValue::Sixteenth) => '\u{e4e7}',
+        Some(NoteValue::ThirtySecond) => '\u{e4e8}',
+        Some(NoteValue::SixtyFourth) => '\u{e4e9}',
         _ => '\u{e4e5}',
     }
 }
@@ -783,13 +743,14 @@ fn legacy_row(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme, start
         if !accidental.is_empty() {
             d.text(x - 20., y - 11., accidental, 14., color);
         }
-        d.note(
+        d.rhythmic_note(
             x,
             y,
-            5.,
+            gap * 0.59,
             color,
-            n.end_us - n.start_us >= 800_000,
-            n.end_us - n.start_us < 300_000,
+            n.rhythm,
+            p.step >= if p.bass { 22 } else { 34 },
+            p.step.rem_euclid(2) == 0,
         );
         d.line(
             x,

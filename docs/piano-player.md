@@ -34,8 +34,8 @@ static app and generated WASM; serve it over HTTP rather than opening file URLs.
   note input is supported; hardware pedals/controllers are not yet interpreted.
 - Percussion channels are silent and omitted from the piano render window.
 
-Imported MIDI is a **performance**, not authored notation. Sharp spelling and
-symbol duration categories are approximate. MusicXML now has an explicit initial
+Imported MIDI is a **performance**, not authored notation. Sharp spelling is approximate. Rhythmic values now use source ticks/PPQ,
+with a conservative 8% tolerance; uncertain spans show a head without a stem. MusicXML now has an explicit initial
 import subset; a full score engraver is not implemented. Program changes are retained in the performance stream
 but all melodic channels use the selected piano. Pressure, SysEx, bank/program
 instruments, RPN tuning/bend-range changes and pedal-aware scoring are not rendered.

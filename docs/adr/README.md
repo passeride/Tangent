@@ -81,3 +81,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0034: Metadata providers and local artwork](0034-metadata-providers-and-local-artwork.md) — shared provider interface, reviewed MusicBrainz/CAA candidates and SQLite v6 covers.
 
 - [ADR-0035: Library folders and bulk import](0035-library-folders-and-bulk-import.md) — saved roots, permission-aware startup scans and 500-file selections.
+
+- [ADR-0036: Rhythmic reading and note glyphs](0036-rhythmic-reading-and-note-glyphs.md) - source-beat MIDI estimates and Bravura notes/flags.
