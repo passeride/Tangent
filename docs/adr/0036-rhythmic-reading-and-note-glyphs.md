@@ -57,3 +57,17 @@ no excluded fork source or external assets consulted.
 
 - https://smufl.formats.music/latest/tables/individual-notes.html
 - https://smufl.formats.music/latest/tables/rests.html
+
+## Integration with main
+
+Resolved against the existing beam-group renderer rather than replacing it.
+Standalone notes use complete Bravura glyphs; grouped notes use Bravura heads
+with the established shared stems, slope and numbered beams. Explicit authored
+stem direction remains authoritative. ADR-0033 retains ownership of grouping.
+
+The integrated tree passes all 145 workspace Rust tests, native/workspace and
+WASM Clippy with warnings denied, formatting and a release WASM build. The
+actual Bevy browser beam scenario passes chord stems, up/down directions, mixed
+values/hooks, 6/8, scaled/narrow systems and view switching. Updated desktop
+and mobile captures were visually inspected; reproduce with
+`TANGENT_CAPTURE_BEAMS=1 node web/piano/capture.mjs`.
