@@ -32,12 +32,12 @@ assert.equal(db.exec("PRAGMA integrity_check")[0].values[0][0], "ok");
 db.close();
 // Upgrade a real v2 catalog without changing any existing settings or fingerprints.
 const old = new SQL.Database(); migrate(old);
-old.run("DROP TABLE practice_details; DROP TABLE library_songs; PRAGMA user_version=2;");
+old.run("DROP TABLE library_folder; DROP TABLE library_enrichment; DROP TABLE practice_details; DROP TABLE library_songs; PRAGMA user_version=2;");
 old.run("INSERT INTO fingerprint_songs VALUES ('legacy','Preserved','now')");
 migrate(old);
 assert.equal(listLibrary(old).total, 0);
 assert.equal(old.exec("SELECT title FROM fingerprint_songs")[0].values[0][0], "Preserved");
-assert.equal(old.exec("PRAGMA user_version")[0].values[0][0], 5);
+assert.equal(old.exec("PRAGMA user_version")[0].values[0][0], 7);
 old.close();
 console.log("Library SQLite passed: v2 migration, deduplication, original bytes, pagination, export/reopen, delete and input bounds.");
 
@@ -70,7 +70,7 @@ assert.throws(()=>editLibraryMetadata(searchable,"a".repeat(64),"", "Bach"));
 assert.throws(()=>editLibraryMetadata(searchable,"a".repeat(64),"x".repeat(161), "Bach"));
 searchable.close();
 // Schema-v3 libraries acquire Unicode search keys without losing source bytes.
-const v3=new SQL.Database();migrate(v3);v3.run("DROP TABLE practice_details; DROP TABLE library_songs;");v3.run(libraryMigration);
+const v3=new SQL.Database();migrate(v3);v3.run("DROP TABLE library_folder; DROP TABLE library_enrichment; DROP TABLE practice_details; DROP TABLE library_songs;");v3.run(libraryMigration);
 v3.run("INSERT INTO library_songs VALUES(?,?,?,?,?,?,?,?)",["c".repeat(64),"ØVING","MusicXML",1,2,source,"now","now"]);
 migrate(v3);
 assert.equal(listLibrary(v3,0,6,"øving").total,1);

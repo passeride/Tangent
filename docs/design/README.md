@@ -66,3 +66,9 @@ Create original layouts; reference material needs a source and rights record.
 - [Sequential Play](sequential-play.md) — first-pass note/chord waiting with saved early-input tolerance.
 
 - [Major Scale Run](major-scale-run.md) — S03 one-octave scales in 12 keys, advisory fingers and whole-scale progress.
+
+- [Grouped notes](grouped-notes.md) — joined rhythmic beams and chord stems in the scalable MusicXML score.
+
+- [Library artwork and metadata providers](library-metadata-providers.md) — provider evaluation, review flow and local cover thumbnails.
+
+- [Saved library folders](library-folders.md) — startup/manual scans and larger file selections, with browser permission boundaries.

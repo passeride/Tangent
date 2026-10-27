@@ -13,6 +13,7 @@ pub struct Pool {
     labels: Vec<Entity>,
 }
 struct Shape {
+    rotation: f32,
     r: Rect,
     color: Color,
     radius: f32,
@@ -32,11 +33,13 @@ pub(super) struct Drawing {
     labels: Vec<Label>,
     block_labels: Vec<String>,
     falling_region: Option<(f32, f32)>,
+    pub(super) beam_groups: Vec<serde_json::Value>,
 }
 impl Drawing {
     pub(super) fn rect(&mut self, x: f32, y: f32, w: f32, h: f32, color: Color, radius: f32) {
         if w > 0. && h > 0. {
             self.shapes.push(Shape {
+                rotation: 0.,
                 r: Rect { x, y, w, h },
                 color,
                 radius,
@@ -44,8 +47,9 @@ impl Drawing {
             });
         }
     }
-    fn image(&mut self, r: Rect, image: Handle<Image>) {
+    pub(super) fn image(&mut self, r: Rect, image: Handle<Image>) {
         self.shapes.push(Shape {
+            rotation: 0.,
             r,
             color: Color::WHITE,
             radius: 0.,
@@ -163,6 +167,34 @@ impl Drawing {
         self.text(x + 20., y + h - 60., title, 19., t.ink);
         self.text(x + 20., y + h - 33., subtitle, 11., t.muted);
         state.buttons.push((Rect { x, y, w, h }, action));
+    }
+    /// A sloping beam is one rotated UI rectangle, on the existing canvas.
+    pub(super) fn segment(&mut self, a: Vec2, b: Vec2, thickness: f32, color: Color) {
+        let delta = b - a;
+        let width = delta.length();
+        if width <= 0. {
+            return;
+        }
+        let middle = (a + b) * 0.5;
+        self.rect(
+            middle.x - width * 0.5,
+            middle.y - thickness * 0.5,
+            width,
+            thickness,
+            color,
+            0.,
+        );
+        self.shapes.last_mut().unwrap().rotation = delta.y.atan2(delta.x);
+    }
+    pub(super) fn note_head(&mut self, x: f32, y: f32, size: f32, color: Color, hollow: bool) {
+        let gap = size / 0.59;
+        self.glyph(
+            x - size,
+            y,
+            if hollow { '\u{e0a3}' } else { '\u{e0a4}' },
+            gap * 4.,
+            color,
+        );
     }
     pub(super) fn note(
         &mut self,
@@ -601,10 +633,12 @@ pub fn render(
             })
             .collect();
         let mut report = serde_json::json!({"status":state.status,"title":state.song.title,"library_total":state.library.total,"library_items":state.library.items,"library_editing":state.library.edit.is_some(),"library_focus":state.library.focus.map(|f|match f {library::Field::Search=>"search",library::Field::Title=>"title",library::Field::Composer=>"composer"}),"library_query":state.library.query,"library_sort":library::SORTS[state.library.sort],"library_format":library::FORMATS[state.library.format],"library_status":state.library.status,"screen":format!("{:?}",state.screen),"mode":format!("{:?}",state.mode),"completed":state.practice.completed,"preferences":state.preferences(),"storage_status":state.storage_status,"target":state.practice.target(),"position":state.transport.position_us,"playing":state.transport.playing,"volume":state.volume,"view":format!("{:?}",state.view),"staff_lines":if matches!(state.view,View::Staff|View::Notes|View::Score){10}else{0},"notes":state.song.notes.len(),"buttons":button_report,"width":l.width,"height":l.height,"live":state.held.values().copied().collect::<Vec<_>>(),"key_rects":key_rects,"renderer":"bevy-wgpu","help":state.help,"settings_open":state.settings_open,"settings_tab":state.settings_tab.title(),"ending_labels":d.labels.iter().filter(|s|matches!(s.text.as_str(),"1."|"2.")).count(),"music_clefs":d.labels.iter().filter(|s|s.music&&matches!(s.text.as_str(),"\u{e050}"|"\u{e062}")).count(),"written_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.len()),"measure_ranges":state.song.notation.as_ref().map(|s|s.playback.iter().take(200).map(|v|serde_json::json!({"start_us":v.start_us,"end_us":v.end_us,"measure":v.measure,"pass":v.pass})).collect::<Vec<_>>()),"measure_visits":state.song.notation.as_ref().map_or(0,|s|s.playback.len()),"ending_measures":state.song.notation.as_ref().map_or(0,|s|s.measures.iter().filter(|m|m.ending.is_some()).count())});
+        report.as_object_mut().unwrap().extend(serde_json::json!({"folder_open":state.library.folder_open,"folder_path":state.library.folder_path,"folder_auto":state.library.folder_auto,"folder_busy":state.library.folder_busy,"folder_status":state.library.folder_status}).as_object().unwrap().clone());
+        report.as_object_mut().unwrap().extend(serde_json::json!({"metadata_open":state.library.lookup.open,"metadata_status":state.library.lookup.status,"metadata_candidates":state.library.lookup.candidates,"metadata_ready":state.library.lookup.ready,"cover_count":state.library.cover_handles.len()}).as_object().unwrap().clone());
         report.as_object_mut().unwrap().extend(serde_json::json!({"practice_run":state.training.model.run,"practice_result":state.training.result,"progress_history":state.training.model.history.iter().take(12).collect::<Vec<_>>(),"progress_pending":state.training.pending.len(),"bindings_page":state.shortcuts.page,"bindings_status":state.shortcuts.status,"bindings_capture":state.shortcuts.capture.is_some(),"progress_status":state.training.status,"adaptive":state.training.model.adaptive,"hud_labels":d.labels.iter().filter(|s|s.y<70.).map(|s|s.text.as_str()).collect::<Vec<_>>(),"offscreen":super::session_hud::offscreen(&state),"goal":state.goal.as_ref().map(|g|serde_json::json!({"completed":g.model.completed(),"required":g.model.required(),"reached":g.model.reached()})),"loop":state.transport.passage(),"loop_a":state.loop_a,"selected_part":state.selected_part,"focused_control":state.focused_button.and_then(|i|state.buttons.get(i)).map(|(_,a)|a.id()),"practice_played_label":d.labels.iter().find(|s|s.text.starts_with("Played ")).map(|s|s.text.as_str()),"reference_keys":state.reference_keys,"vfx_scale":effects::viewport_scale(l.width,l.height),"vfx_particles":state.particles.len(),"vfx_ripples":state.ripples.len(),"practice_waiting_release":state.practice.waiting_release(),"streak":state.feedback.streak(),"best_streak":state.feedback.best(),"effects_backend":if cfg!(target_arch="wasm32") {"webgl2-fallback"} else {"hanabi+ui"},"practice_wrong":state.practice.wrong(),"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output,"midi_output_preferred":state.preferred_midi_output,"midi_outputs":state.midi_outputs.iter().map(|p|serde_json::json!({"id":p.id,"name":p.name})).collect::<Vec<_>>(),"midi_dropdown_open":state.midi_dropdown_open,"midi_dropdown_page":state.midi_dropdown_page}).as_object().unwrap().clone());
         report.as_object_mut().unwrap().extend(serde_json::json!({
             "show_score":state.show_score,"show_vertical":state.show_vertical,"note_names":state.note_names,
-            "score_scale":state.score_scale,"score_rows":super::score::row_count(&state,&l),"falling_region":d.falling_region,
+            "beam_groups":d.beam_groups,"score_scale":state.score_scale,"score_rows":super::score::row_count(&state,&l),"falling_region":d.falling_region,
             "block_labels":d.block_labels,"visible_labels":d.labels.iter().map(|s|s.text.as_str()).collect::<Vec<_>>()
         }).as_object().unwrap().clone());
         report.as_object_mut().unwrap().extend(serde_json::json!({"guided_waiting":guided::waiting(&state),"guided_gate":state.guidance.engine.barrier(),"guided_targets":state.guidance.engine.targets(),"flow_notes":state.practice.sequence_notes(),"flow_step":state.practice.sequence_step(),"flow_left":state.practice.scale_task().map(|p|p.left).or_else(||state.practice.flow_task().map(|p|p.left)),"explorer_source":state.practice.explorer_task().map(|task|task.source),"piano_renderer":"bevy-pbr-3d","piano_keys":state.piano.keys.len(),"personal_open":state.personal.open,"personal_token":state.personal.token,"personal_status":state.personal.status,"personal_matched":state.personal.matched,"personal_unresolved":state.personal.unresolved}).as_object().unwrap().clone());
@@ -637,6 +671,10 @@ fn apply(
                     border_radius: BorderRadius::all(px(s.radius)),
                     ..default()
                 },
+                UiTransform {
+                    rotation: Rot2::radians(s.rotation),
+                    ..default()
+                },
                 BackgroundColor(s.color),
                 GlobalZIndex(i as i32),
                 Visibility::Visible,
@@ -649,7 +687,10 @@ fn apply(
                 commands.entity(entity).remove::<ImageNode>();
             }
         } else {
-            commands.entity(entity).insert(Visibility::Hidden);
+            commands
+                .entity(entity)
+                .insert(Visibility::Hidden)
+                .remove::<ImageNode>();
         }
     }
     for (i, &entity) in pool.labels.iter().enumerate() {

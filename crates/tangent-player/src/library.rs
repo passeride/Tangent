@@ -2,6 +2,10 @@
 use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) struct Entry {
+    #[serde(default)]
+    pub enrichment: Option<tangent_core::metadata::Candidate>,
+    #[serde(default)]
+    pub has_cover: bool,
     pub id: String,
     pub title: String,
     pub composer: String,

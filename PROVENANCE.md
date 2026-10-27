@@ -1,6 +1,6 @@
 # Provenance and implementation boundaries
 
-Updated: 2026-10-26.
+Updated: 2026-10-27.
 
 ## Current record
 
@@ -285,9 +285,39 @@ implement the owner-requested full-height falling view, scaled score overlay and
 multi-system sheet. Existing notation and input paths are reused. No external
 code, assets or dependencies were added; see ADR-0032.
 
+## Grouped notes — 2026-10-27
+
+Original Rust grouping/geometry, MusicXML adapter changes, synthetic test music
+and browser checks implement the owner's joined-note request in the disclosed
+context above. W3C MusicXML beam documentation informed the standards mapping;
+no external implementation, asset or dependency was imported. The six-measure
+fixture and running-app screenshots are new Tangent test material. See ADR-0033.
+
+## Metadata providers and library covers — 2026-10-27
+
+Original provider contracts/parsing, bounded HTTP/image adapters, SQLite v6
+annotations and Bevy review flow implement the owner's metadata/album-cover
+request. Official MusicBrainz/CAA, TheAudioDB, Apple Search API and ureq documents
+were consulted for interfaces, terms and provider selection; no excluded code was
+used. ureq 3.5.0 is a new independently published dependency; image 0.25.10 was
+already Bevy-resolved and is now direct for bounded raster decoding. Notices were
+regenerated from actual dependency sources. Tests and captures use original
+synthetic artist/album responses and a generated gradient PNG. No real album
+cover is redistributed in the repository. Live provider access could not be
+verified from this environment; see ADR-0034 and its linked brief.
+
+## Library folders and bulk import — 2026-10-27
+
+Original bounded directory discovery/background ingestion, browser handle storage,
+Bevy folder controls, SQLite v7 migration and synthetic tests implement the owner's
+folder-scanning/bulk-import request. Browser filesystem permission documentation
+was consulted; no external implementation, dependencies or assets were added.
+The folder screenshot is generated from original synthetic MusicXML in the actual
+app. Native OS dialogs still require physical platform verification. See ADR-0035.
+
 ## Rhythmic reading and note glyphs - 2026-10-27
 
 Original shared rhythm inference, source-tick MIDI mapping and Bevy music-font
-presentation implement the owner's note-value request (ADR-0033). Existing
+presentation implement the owner's note-value request (ADR-0036). Existing
 Bravura and its notices are reused, with SMuFL primary documentation consulted.
 No new dependency, runtime asset or excluded project source was imported.

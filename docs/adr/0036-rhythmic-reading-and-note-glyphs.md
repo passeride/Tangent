@@ -1,4 +1,4 @@
-# ADR-0033: Rhythmic reading and music-font notes
+# ADR-0036: Rhythmic reading and music-font notes
 
 - Status: Accepted
 - Decision date: 2026-10-27
@@ -39,8 +39,11 @@ markers reuse font notes without interpreting the player's held duration.
 
 No new dependency, asset or audio/scoring/timing behavior. MIDI remains an
 approximate time-spaced reading aid: articulation, beaming, voice separation,
-rests, ties, bar splitting and tuplets are not reconstructed. Authored beaming,
-collision avoidance, tuplet brackets and curved ties remain engraving follow-up.
+rests, ties, bar splitting and tuplets are not reconstructed. Authored beaming and shared chord stems remain implemented by
+[ADR-0033](0033-written-beam-groups.md); beamed heads reuse the music font while
+keeping the established beam geometry. Authored stem directions take precedence
+over staff-based defaults. Collision avoidance, tuplet brackets and curved ties
+remain engraving follow-up.
 
 Regression tests cover rhythmic classes, dots, rejected spans, tempo changes
 inside MIDI notes, compound meter and MusicXML written values. Native/WASM

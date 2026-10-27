@@ -76,4 +76,10 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 
 - [ADR-0032: Scalable score overlay](0032-scalable-sheet-overlay.md) — full-height falling field and multi-system score.
 
-- [ADR-0033: Rhythmic reading and note glyphs](0033-rhythmic-reading-and-note-glyphs.md) - source-beat MIDI estimates and Bravura notes/flags.
+- [ADR-0033: Written beam groups](0033-written-beam-groups.md) — authored/metric rhythmic groups, shared chord stems and scaled beams/hooks.
+
+- [ADR-0034: Metadata providers and local artwork](0034-metadata-providers-and-local-artwork.md) — shared provider interface, reviewed MusicBrainz/CAA candidates and SQLite v6 covers.
+
+- [ADR-0035: Library folders and bulk import](0035-library-folders-and-bulk-import.md) — saved roots, permission-aware startup scans and 500-file selections.
+
+- [ADR-0036: Rhythmic reading and note glyphs](0036-rhythmic-reading-and-note-glyphs.md) - source-beat MIDI estimates and Bravura notes/flags.

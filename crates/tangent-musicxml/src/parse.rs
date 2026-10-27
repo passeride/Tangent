@@ -211,6 +211,12 @@ pub(super) fn part(
                         end,
                         note: WrittenNote {
                             performance_note: None,
+                            beams: beams(n, warnings)?,
+                            stem: match text(n, "stem") {
+                                Some("up") => Some(StemDirection::Up),
+                                Some("down") => Some(StemDirection::Down),
+                                _ => None,
+                            },
                             staff,
                             voice: text(n, "voice").unwrap_or("1").into(),
                             onset: fraction(start, grid)?,
@@ -362,4 +368,38 @@ fn pitch(n: Node<'_, '_>) -> Result<(Option<WrittenPitch>, Option<u8>)> {
         }),
         Some(key),
     ))
+}
+
+fn beams(n: Node<'_, '_>, warnings: &mut BTreeSet<String>) -> Result<Vec<Beam>> {
+    let mut result = vec![];
+    for b in n.children().filter(|b| b.has_tag_name("beam")) {
+        let level: u8 = b
+            .attribute("number")
+            .unwrap_or("1")
+            .parse()
+            .map_err(|_| "Invalid beam number")?;
+        if !(1..=8).contains(&level) {
+            return Err("Beam number must be 1..8".into());
+        }
+        if level > 4 {
+            warnings.insert("Beams beyond 64th notes are not displayed.".into());
+            continue;
+        }
+        let value = match b.text().unwrap_or("").trim() {
+            "begin" => BeamValue::Begin,
+            "continue" => BeamValue::Continue,
+            "end" => BeamValue::End,
+            "forward hook" => BeamValue::ForwardHook,
+            "backward hook" => BeamValue::BackwardHook,
+            _ => return Err("Invalid beam value".into()),
+        };
+        if result.iter().any(|a: &Beam| a.level == level) {
+            return Err("Duplicate beam level on a note".into());
+        }
+        if b.attribute("fan").is_some_and(|fan| fan != "none") {
+            warnings.insert("Fanned beams display as ordinary beams.".into());
+        }
+        result.push(Beam { level, value });
+    }
+    Ok(result)
 }

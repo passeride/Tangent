@@ -64,6 +64,8 @@ pub struct QuarterFraction {
 }
 #[derive(Debug, Clone, Serialize)]
 pub struct NotatedMeasure {
+    /// Derived written layout plan, computed once by the importer.
+    pub beam_groups: Vec<crate::beaming::BeamGroup>,
     pub label: String,
     pub duration: QuarterFraction,
     pub notes: Vec<WrittenNote>,
@@ -77,6 +79,9 @@ pub struct NotatedMeasure {
 }
 #[derive(Debug, Clone, Serialize)]
 pub struct WrittenNote {
+    /// Authored beam marks; absent means use conservative meter-based grouping.
+    pub beams: Vec<Beam>,
+    pub stem: Option<StemDirection>,
     pub performance_note: Option<usize>,
     pub staff: u16,
     pub voice: String,
@@ -259,4 +264,23 @@ impl MeasureVisit {
             (quarter - a.quarter.quarters()) / (b.quarter.quarters() - a.quarter.quarters());
         a.offset_us + ((b.offset_us - a.offset_us) as f64 * fraction).round() as u64
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum StemDirection {
+    Up,
+    Down,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum BeamValue {
+    Begin,
+    Continue,
+    End,
+    ForwardHook,
+    BackwardHook,
+}
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct Beam {
+    pub level: u8,
+    pub value: BeamValue,
 }

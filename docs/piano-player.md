@@ -293,3 +293,14 @@ Mode/window persist, and results/retries save them with the passage context.
 Sequential coverage is distinct from continuous coverage and is not a timing score.
 See [ADR-0029](adr/0029-sequential-play.md) and [screenshots/brief](design/sequential-play.md).
 Run `cd web/piano && node guided-smoke.mjs` for the real WASM/MIDI integration check.
+
+## Grouped short notes
+
+MusicXML's horizontal score automatically joins eighths through 64ths with beams
+and shares stems within beamed chords. Authored beam marks/up-down stems take
+priority; unmarked rhythms group conservatively by beat (three eighths per
+compound beat in 6/8). Rests/gaps, staff/voice boundaries and barlines separate
+automatic groups. Mixed values retain secondary beams and partial hooks. The
+existing score scale and combined overlay apply without a new setting. MIDI
+remains an approximate time-based view. See [ADR-0033](adr/0033-written-beam-groups.md)
+for the supported engraving boundaries.

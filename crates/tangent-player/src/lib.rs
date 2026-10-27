@@ -1,4 +1,5 @@
 //! Bevy application state, with explicit browser rendering/audio adapters.
+mod cover;
 mod import;
 mod library;
 mod personalization;

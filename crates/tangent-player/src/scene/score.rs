@@ -200,7 +200,35 @@ fn authored_row(
         }
         let space = (width - inset - gap * 1.5).max(12.);
         let q = m.duration.quarters().max(0.001);
-        let at = |beat: f64| x + inset + space * (beat / q).clamp(0., 1.) as f32;
+        // Reserve room for each written attack before distributing rhythmic space.
+        // The same map places notes, tempo marks and the moving playhead.
+        let mut beats: Vec<_> = m
+            .notes
+            .iter()
+            .map(|n| n.onset.quarters())
+            .filter(|b| *b >= 0. && *b <= q)
+            .collect();
+        beats.extend([0., q]);
+        beats.sort_by(f64::total_cmp);
+        beats.dedup();
+        let intervals = (beats.len() - 1) as f32;
+        let dense = beats
+            .windows(2)
+            .any(|b| space * (((b[1] - b[0]) / q) as f32) < gap * 1.25);
+        let reserve = if dense {
+            (gap * 1.25).min(space * 0.65 / intervals)
+        } else {
+            0.
+        };
+        let at = |beat: f64| {
+            let beat = beat.clamp(0., q);
+            let i = beats
+                .partition_point(|b| *b <= beat)
+                .saturating_sub(1)
+                .min(beats.len() - 2);
+            let column = i as f32 + ((beat - beats[i]) / (beats[i + 1] - beats[i])) as f32;
+            x + inset + reserve * column + (space - reserve * intervals) * (beat / q) as f32
+        };
         d.text(x + 3., treble - gap * 5.3, &m.label, 10., t.muted);
         bar(d, x, treble, bass, gap, 1., t.staff);
         if m.repeat_start {
@@ -259,7 +287,12 @@ fn authored_row(
         }
         // Accidental state is per staff/octave/letter and resets each measure.
         let mut accidentals = BTreeMap::new();
-        for n in &m.notes {
+        let beamed: BTreeSet<_> = m
+            .beam_groups
+            .iter()
+            .flat_map(|g| g.chords.iter().flatten().copied())
+            .collect();
+        for (note_index, n) in m.notes.iter().enumerate() {
             let is_bass = score
                 .staves
                 .iter()
@@ -320,25 +353,44 @@ fn authored_row(
                 *expected = written.alteration;
             }
             let duration = n.duration.quarters();
-            d.rhythmic_note(
-                nx,
-                ny,
-                gap * 0.59,
-                color,
-                rhythm,
-                p.step >= if is_bass { 22 } else { 34 },
-                p.step.rem_euclid(2) == 0,
-            );
+            if beamed.contains(&note_index) {
+                d.note_head(nx, ny, gap * 0.44, color, false);
+                d.rhythm_dots(
+                    nx + gap * 0.44,
+                    ny - if p.step.rem_euclid(2) == 0 {
+                        gap * 0.5
+                    } else {
+                        0.
+                    },
+                    gap,
+                    rhythm.map_or(0, |r| r.dots),
+                    color,
+                );
+            } else {
+                d.rhythmic_note(
+                    nx,
+                    ny,
+                    gap * 0.44,
+                    color,
+                    rhythm,
+                    n.stem
+                        .map_or(p.step >= if is_bass { 22 } else { 34 }, |stem| {
+                            stem == StemDirection::Down
+                        }),
+                    p.step.rem_euclid(2) == 0,
+                );
+            }
             if n.tie_to_next {
                 d.line(
                     nx + gap * 0.5,
                     ny + gap * 0.9,
-                    (space * (duration / q) as f32 - gap).max(3.),
+                    (at(n.onset.quarters() + duration) - nx - gap).max(3.),
                     1.5,
                     color.with_alpha(0.5),
                 );
             }
         }
+        beam_groups(d, state, score, m, &at, treble, bass, gap, t);
         if index == visit.measure {
             let fraction = (now.saturating_sub(visit.start_us) as f64
                 / (visit.end_us - visit.start_us).max(1) as f64)
@@ -357,6 +409,111 @@ fn authored_row(
         }
     }
     bar(d, right, treble, bass, gap, 1., t.staff);
+}
+
+#[allow(clippy::too_many_arguments)]
+fn beam_groups(
+    d: &mut Drawing,
+    state: &State,
+    score: &NotatedScore,
+    m: &NotatedMeasure,
+    at: &impl Fn(f64) -> f32,
+    treble: f32,
+    bass: f32,
+    gap: f32,
+    t: theme::Theme,
+) {
+    for group in &m.beam_groups {
+        let staff = m.notes[group.chords[0][0]].staff;
+        let is_bass = score
+            .staves
+            .iter()
+            .find(|s| s.id == staff)
+            .is_some_and(|s| matches!(s.clef, Clef::Bass));
+        let bottom = if is_bass { bass } else { treble };
+        let base = if is_bass { 18 } else { 30 };
+        let ys: Vec<Vec<f32>> = group
+            .chords
+            .iter()
+            .map(|chord| {
+                chord
+                    .iter()
+                    .map(|&i| {
+                        let p = pitch(m.notes[i].pitch.as_ref().unwrap(), is_bass);
+                        bottom - (p.step - base) as f32 * gap * 0.5
+                    })
+                    .collect()
+            })
+            .collect();
+        let mean = ys.iter().flatten().sum::<f32>() / ys.iter().map(Vec::len).sum::<usize>() as f32;
+        let up = group
+            .stem
+            .map_or(mean > bottom - gap * 2., |s| s == StemDirection::Up);
+        let direction = if up { -1. } else { 1. };
+        let xs: Vec<_> = group
+            .chords
+            .iter()
+            .map(|chord| at(m.notes[chord[0]].onset.quarters()) - direction * (gap * 0.44 - 1.))
+            .collect();
+        let anchors: Vec<_> = ys
+            .iter()
+            .map(|chord| {
+                chord
+                    .iter()
+                    .copied()
+                    .reduce(if up { f32::min } else { f32::max })
+                    .unwrap()
+            })
+            .collect();
+        let length = (xs.last().unwrap() - xs[0]).max(1.);
+        let slope = (anchors.last().unwrap() - anchors[0]).clamp(-gap, gap) / length;
+        let mut origin = anchors[0] + direction * gap * 3.5;
+        // Every chord has a readable minimum stem, even with a middle-note peak.
+        for (&x, &y) in xs.iter().zip(&anchors) {
+            let limit = y + direction * gap * 3.5 - slope * (x - xs[0]);
+            origin = if up {
+                origin.min(limit)
+            } else {
+                origin.max(limit)
+            };
+        }
+        let beam_y = |x: f32| origin + slope * (x - xs[0]);
+        for (i, chord) in ys.iter().enumerate() {
+            let start = chord
+                .iter()
+                .copied()
+                .reduce(if up { f32::max } else { f32::min })
+                .unwrap();
+            let tip = beam_y(xs[i]);
+            let note = &m.notes[group.chords[i][0]];
+            let color = note
+                .performance_note
+                .map_or(t.ink, |id| super::personal::note_color(state, id, t));
+            d.line(
+                xs[i],
+                start.min(tip),
+                (gap * 0.13).max(1.),
+                (start - tip).abs(),
+                color,
+            );
+        }
+        for span in &group.spans {
+            let from = xs[span.from];
+            let to = if span.hook {
+                from + (xs[span.to] - from) * 0.35
+            } else {
+                xs[span.to]
+            };
+            let offset = -direction * f32::from(span.level - 1) * gap * 0.7;
+            d.segment(
+                Vec2::new(from, beam_y(from) + offset),
+                Vec2::new(to, beam_y(to) + offset),
+                gap * 0.42,
+                t.ink,
+            );
+        }
+        d.beam_groups.push(serde_json::json!({"measure":m.label,"staff":staff,"notes":group.chords.iter().map(Vec::len).sum::<usize>(),"stems":group.chords.len(),"up":up,"levels":group.spans.iter().map(|s|s.level).collect::<Vec<_>>(),"hooks":group.spans.iter().filter(|s|s.hook).count(),"slope":slope}));
+    }
 }
 /// Live MIDI is spelled approximately: the input does not carry written pitch.
 fn live_notes(

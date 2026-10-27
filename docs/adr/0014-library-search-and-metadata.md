@@ -63,3 +63,7 @@ that manual check verifies hardware rather than claiming CI measures MIDI latenc
 Original Tangent implementation using existing SQLite/serde/Bevy dependencies.
 KeyboardInput's text/state contract was checked against the official Bevy v0.20.0
 source. No excluded legacy implementation, fixtures or assets were consulted.
+
+[ADR-0034](0034-metadata-providers-and-local-artwork.md) adds separate reviewed
+external annotations and local cover artwork in schema v6, extending search to
+saved album/artist text without changing local title/composer ownership.

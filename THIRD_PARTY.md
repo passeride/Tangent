@@ -1,6 +1,6 @@
 # Third-party dependencies
 
-Generated from Cargo metadata/lockfiles on 2026-10-25. Includes resolved target/build dependencies; this is not a claim that each is linked into every target. The project-wide license remains unselected.
+Generated from Cargo metadata/lockfiles on 2026-10-27. Includes resolved target/build dependencies; this is not a claim that each is linked into every target. The project-wide license remains unselected.
 
 The shared Bevy 0.20 UI uses WebGL2/Web Audio in the browser and native wgpu/audio/MIDI on desktop. Native GPU effects use the pinned bevy_hanabi source commit in Cargo.lock; web uses bounded Bevy UI effects. The pure music/import crates remain independent of rendering.
 
@@ -49,6 +49,7 @@ The shared Bevy 0.20 UI uses WebGL2/Web Audio in the browser and native wgpu/aud
 | atomic-waker | 1.1.2 | Apache-2.0 OR MIT | https://github.com/smol-rs/atomic-waker |
 | atomicow | 1.2.0 | MIT OR Apache-2.0 | https://github.com/bevyengine/atomicow |
 | autocfg | 1.5.1 | Apache-2.0 OR MIT | https://github.com/cuviper/autocfg |
+| base64 | 0.23.1 | MIT OR Apache-2.0 | https://github.com/marshallpierce/rust-base64 |
 | bevy | 0.20.0 | MIT OR Apache-2.0 | https://github.com/bevyengine/bevy |
 | bevy_a11y | 0.20.0 | MIT OR Apache-2.0 | https://github.com/bevyengine/bevy |
 | bevy_android | 0.20.0 | MIT OR Apache-2.0 | https://github.com/bevyengine/bevy |
@@ -218,6 +219,7 @@ The shared Bevy 0.20 UI uses WebGL2/Web Audio in the browser and native wgpu/aud
 | futures-task | 0.3.34 | MIT OR Apache-2.0 | https://github.com/rust-lang/futures-rs |
 | futures-util | 0.3.34 | MIT OR Apache-2.0 | https://github.com/rust-lang/futures-rs |
 | gethostname | 1.1.0 | Apache-2.0 | https://codeberg.org/swsnr/gethostname.rs.git |
+| getrandom | 0.2.17 | MIT OR Apache-2.0 | https://github.com/rust-random/getrandom |
 | getrandom | 0.3.4 | MIT OR Apache-2.0 | https://github.com/rust-random/getrandom |
 | getrandom | 0.4.3 | MIT OR Apache-2.0 | https://github.com/rust-random/getrandom |
 | gl_generator | 0.14.0 | Apache-2.0 | https://github.com/brendanzab/gl-rs/ |
@@ -237,6 +239,8 @@ The shared Bevy 0.20 UI uses WebGL2/Web Audio in the browser and native wgpu/aud
 | heapless | 0.9.3 | MIT OR Apache-2.0 | https://github.com/rust-embedded/heapless |
 | hermit-abi | 0.5.3 | MIT OR Apache-2.0 | https://github.com/hermit-os/hermit-rs |
 | hexasphere | 19.0.0 | MIT OR Apache-2.0 | https://github.com/OptimisticPeach/hexasphere.git |
+| http | 1.5.0 | MIT OR Apache-2.0 | https://github.com/hyperium/http |
+| httparse | 1.10.1 | MIT OR Apache-2.0 | https://github.com/seanmonstar/httparse |
 | icu_collections | 2.4.0 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | icu_locale_core | 2.4.0 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | icu_locale_fallback | 2.4.0 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
@@ -400,6 +404,7 @@ The shared Bevy 0.20 UI uses WebGL2/Web Audio in the browser and native wgpu/aud
 | regex-automata | 0.4.18 | MIT OR Apache-2.0 | https://github.com/rust-lang/regex |
 | regex-syntax | 0.8.11 | MIT OR Apache-2.0 | https://github.com/rust-lang/regex |
 | renderdoc-sys | 1.1.0 | MIT OR Apache-2.0 | https://github.com/ebkalderon/renderdoc-rs |
+| ring | 0.17.14 | Apache-2.0 AND ISC | https://github.com/briansmith/ring |
 | rodio | 0.22.2 | MIT OR Apache-2.0 | https://github.com/RustAudio/rodio |
 | ron | 0.12.2 | MIT OR Apache-2.0 | https://github.com/ron-rs/ron |
 | roxmltree | 0.20.0 | MIT OR Apache-2.0 | https://github.com/RazrFalcon/roxmltree |
@@ -410,6 +415,9 @@ The shared Bevy 0.20 UI uses WebGL2/Web Audio in the browser and native wgpu/aud
 | rustc_version | 0.4.1 | MIT OR Apache-2.0 | https://github.com/djc/rustc-version-rs |
 | rustix | 0.38.44 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/rustix |
 | rustix | 1.1.5 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/rustix |
+| rustls | 0.23.46 | Apache-2.0 OR ISC OR MIT | https://github.com/rustls/rustls |
+| rustls-pki-types | 1.15.1 | MIT OR Apache-2.0 | https://github.com/rustls/pki-types |
+| rustls-webpki | 0.103.16 | ISC | https://github.com/rustls/webpki |
 | rustversion | 1.0.23 | MIT OR Apache-2.0 | https://github.com/dtolnay/rustversion |
 | same-file | 1.0.6 | Unlicense/MIT | https://github.com/BurntSushi/same-file |
 | scoped-tls | 1.0.1 | MIT/Apache-2.0 | https://github.com/alexcrichton/scoped-tls |
@@ -440,6 +448,7 @@ The shared Bevy 0.20 UI uses WebGL2/Web Audio in the browser and native wgpu/aud
 | stackfuture | 0.3.1 | MIT | https://github.com/microsoft/stackfuture |
 | static_assertions | 1.1.0 | MIT OR Apache-2.0 | https://github.com/nvzqz/static-assertions-rs |
 | strict-num | 0.1.1 | MIT | https://github.com/RazrFalcon/strict-num |
+| subtle | 2.6.1 | BSD-3-Clause | https://github.com/dalek-cryptography/subtle |
 | swash | 0.2.10 | Apache-2.0 OR MIT | https://github.com/dfrg/swash |
 | syn | 2.0.119 | MIT OR Apache-2.0 | https://github.com/dtolnay/syn |
 | syn | 3.0.9 | MIT OR Apache-2.0 | https://github.com/dtolnay/syn |
@@ -478,6 +487,10 @@ The shared Bevy 0.20 UI uses WebGL2/Web Audio in the browser and native wgpu/aud
 | unicode-width | 0.2.2 | MIT OR Apache-2.0 | https://github.com/unicode-rs/unicode-width |
 | unicode-xid | 0.2.6 | MIT OR Apache-2.0 | https://github.com/unicode-rs/unicode-xid |
 | unsynn | 0.3.0 | MIT OR Apache-2.0 | https://seed.pipapo.org/nodes/seed.pipapo.org/rad:z39WbeupErKS8TwbDS5yU8eZSa3C |
+| untrusted | 0.9.0 | ISC | https://github.com/briansmith/untrusted |
+| ureq | 3.5.0 | MIT OR Apache-2.0 | https://github.com/algesten/ureq |
+| ureq-proto | 0.6.5 | MIT OR Apache-2.0 | https://github.com/algesten/ureq-proto |
+| utf8-zero | 0.8.1 | MIT OR Apache-2.0 | https://github.com/algesten/utf8-zero |
 | utf8_iter | 1.0.4 | Apache-2.0 OR MIT | https://github.com/hsivonen/utf8_iter |
 | utf8parse | 0.2.2 | Apache-2.0 OR MIT | https://github.com/alacritty/vte |
 | uuid | 1.29.0 | Apache-2.0 OR MIT | https://github.com/uuid-rs/uuid |
@@ -486,6 +499,7 @@ The shared Bevy 0.20 UI uses WebGL2/Web Audio in the browser and native wgpu/aud
 | vcpkg | 0.2.15 | MIT/Apache-2.0 | https://github.com/mcgoo/vcpkg-rs |
 | version_check | 0.9.5 | MIT/Apache-2.0 | https://github.com/SergioBenitez/version_check |
 | walkdir | 2.5.0 | Unlicense/MIT | https://github.com/BurntSushi/walkdir |
+| wasi | 0.11.1+wasi-snapshot-preview1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/wasi |
 | wasip2 | 1.0.4+wasi-0.2.12 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/wasi-rs |
 | wasm-bindgen | 0.2.129 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen |
 | wasm-bindgen-futures | 0.4.79 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/futures |
@@ -505,6 +519,7 @@ The shared Bevy 0.20 UI uses WebGL2/Web Audio in the browser and native wgpu/aud
 | web-sys | 0.3.106 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/web-sys |
 | web-task | 1.1.3 | MIT OR Apache-2.0 | https://github.com/NthTensor/web-task |
 | web-time | 1.1.0 | MIT OR Apache-2.0 | https://github.com/daxpedda/web-time |
+| webpki-roots | 1.0.11 | CDLA-Permissive-2.0 | https://github.com/rustls/webpki-roots |
 | wesl | 0.6.0 | MIT OR Apache-2.0 | https://github.com/webgpu-tools/wesl-rs |
 | wesl-core | 0.1.0 | MIT OR Apache-2.0 | https://github.com/webgpu-tools/wesl-rs |
 | wesl-macros | 0.6.0 | MIT OR Apache-2.0 | https://github.com/webgpu-tools/wesl-rs |
@@ -575,11 +590,14 @@ The shared Bevy 0.20 UI uses WebGL2/Web Audio in the browser and native wgpu/aud
 | zerocopy-derive | 0.8.63 | BSD-2-Clause OR Apache-2.0 OR MIT | https://github.com/google/zerocopy |
 | zerofrom | 0.1.8 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | zerofrom-derive | 0.1.8 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
+| zeroize | 1.9.1 | Apache-2.0 OR MIT | https://github.com/RustCrypto/utils |
 | zerotrie | 0.2.5 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | zerovec | 0.11.9 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | zerovec-derive | 0.11.7 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | zlib-rs | 0.6.8 | Zlib | https://github.com/trifectatechfoundation/zlib-rs |
 | zmij | 1.0.23 | MIT | https://github.com/dtolnay/zmij |
+| zune-core | 0.5.3 | MIT OR Apache-2.0 OR Zlib | https://github.com/etemesi254/zune-image |
+| zune-jpeg | 0.5.15 | MIT OR Apache-2.0 OR Zlib | https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg |
 
 Checksums: Cargo.lock. License texts: [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt).
 

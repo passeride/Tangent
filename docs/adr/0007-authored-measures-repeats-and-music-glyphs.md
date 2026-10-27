@@ -81,3 +81,6 @@ real file import, audio, fullscreen, responsive pause UI, packaged /Tangent/ URL
 and the embedded desktop launcher smoke pass locally. Actual screenshots of clefs,
 watermarks and first/second endings were reviewed and committed via capture.mjs.
 Physical MIDI and native OS GPU/audio are not newly verified by this change.
+
+[ADR-0033](0033-written-beam-groups.md) extends the basic rendering with authored
+beam marks, conservative meter-based groups, shared chord stems and beams/hooks.

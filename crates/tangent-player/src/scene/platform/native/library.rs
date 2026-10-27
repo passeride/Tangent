@@ -103,17 +103,23 @@ pub(super) fn list(conn: &Connection, request: &Value) -> Result<Value, String> 
         "duration" => "duration_us,title COLLATE NOCASE,id",
         _ => "last_opened_at DESC,id",
     };
-    let total:i64=conn.query_row("SELECT COUNT(*) FROM library_songs WHERE instr(search_key,?1)>0 AND (?2='' OR format=?2)",
+    let total:i64=conn.query_row("SELECT COUNT(*) FROM library_songs WHERE (instr(search_key,?1)>0 OR EXISTS(SELECT 1 FROM library_enrichment e WHERE e.song_id=library_songs.id AND instr(e.search_key,?1)>0)) AND (?2='' OR format=?2)",
         params![query,format],|row|row.get(0)).map_err(|e|e.to_string())?;
     let mut stmt = conn
         .prepare(&format!(
-            "SELECT id,title,composer,format,duration_us,note_count FROM library_songs
-        WHERE instr(search_key,?1)>0 AND (?2='' OR format=?2) ORDER BY {order} LIMIT ?3 OFFSET ?4"
+            "SELECT id,title,composer,format,duration_us,note_count,
+         (SELECT payload FROM library_enrichment WHERE song_id=id),
+         COALESCE((SELECT length(cover)>0 FROM library_enrichment WHERE song_id=id),0) FROM library_songs
+        WHERE (instr(search_key,?1)>0 OR EXISTS(SELECT 1 FROM library_enrichment e WHERE e.song_id=library_songs.id AND instr(e.search_key,?1)>0)) AND (?2='' OR format=?2) ORDER BY {order} LIMIT ?3 OFFSET ?4"
         ))
         .map_err(|e| e.to_string())?;
     let items = stmt
         .query_map(params![query, format, limit, offset], |row| {
             Ok(Entry {
+                enrichment: row
+                    .get::<_, Option<String>>(6)?
+                    .and_then(|s| serde_json::from_str(&s).ok()),
+                has_cover: row.get::<_, bool>(7)?,
                 id: row.get(0)?,
                 title: row.get(1)?,
                 composer: row.get(2)?,
@@ -262,8 +268,10 @@ mod migration_tests {
     fn v3_source_metadata_survives_search_migration() {
         let conn = Connection::open_in_memory().unwrap();
         super::super::migrate(&conn).unwrap();
-        conn.execute_batch("DROP TABLE practice_details; DROP TABLE library_songs;")
-            .unwrap();
+        conn.execute_batch(
+            "DROP TABLE library_folder; DROP TABLE library_enrichment; DROP TABLE practice_details; DROP TABLE library_songs;",
+        )
+        .unwrap();
         conn.execute_batch(MIGRATION).unwrap();
         conn.execute(
             "INSERT INTO library_songs VALUES('legacy','ØVING','MIDI',1,1,?1,'now','now')",

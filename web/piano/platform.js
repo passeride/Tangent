@@ -1,3 +1,5 @@
+import {FolderLibrary} from "./folder-library.js";
+import {MetadataHttp} from "./metadata-http.js";
 // Browser capability adapter: audio, files, MIDI and the fullscreen API.
 // No rendering, menus, note placement or transport rules live in this module.
 import { PlaybackClock } from "./playback-clock.js";
@@ -5,6 +7,7 @@ import { MidiOutput } from "./midi-output.js";
 import { PianoAudio } from "./audio.js";
 import { openStorage } from "./storage.js";
 export async function installPlatform() {
+  const metadataHttp=new MetadataHttp();
   const canvas = document.getElementById("tangent"),
     file = document.getElementById("midi-file"),
     audio = new PianoAudio();
@@ -44,7 +47,7 @@ export async function installPlatform() {
     }
     reportOutputs();
   }
-  let storage = null;
+  let storage = null,folders=null;
   const storageStatus = text => queue.push({ type: "storage-status", text });
   try {
     storage = await openStorage();
@@ -105,37 +108,33 @@ export async function installPlatform() {
   let importSequence=0, lastImportSave=Promise.resolve(true);
   const importReceipts=new Map();
   let batchInfo={id:0,pending:false,total:0,saved:0};
-  async function load(bytes, title, ticket, fromLibrary=false) {
+  async function load(bytes, title, ticket, fromLibrary=false,catalogOnly=false) {
     if (ticket !== generation) return false;
     if (bytes.length > 16 * 1024 * 1024) throw Error("Music files must be 16 MiB or smaller.");
     const importTicket=++importSequence;
     const complete=new Promise(resolve=>importReceipts.set(importTicket,resolve));
-    queue.push({ type:"file",bytes:[...bytes],title,from_library:fromLibrary,import_ticket:importTicket });
+    queue.push({ type:"file",bytes:[...bytes],title,from_library:fromLibrary,catalog_only:catalogOnly,import_ticket:importTicket });
     return complete;
   }
-  file.onchange = async () => {
-    const selected=Array.from(file.files);
-    // Closing/resetting the native chooser may emit an empty change event.
-    // It must not cancel a batch whose File objects have already been captured.
-    if (!selected.length) return;
-    const ticket=++generation, batch=batchInfo.id+1;
-    batchInfo={id:batch,pending:true,total:selected.length,saved:0};
+  async function runImport(selected,catalogOnly=false,skipExisting=false){
+    if(!selected.length){queue.push({type:'library-scan',busy:false,text:'No supported music files found.'});return;}
+    const ticket=++generation,batch=batchInfo.id+1;batchInfo={id:batch,pending:true,total:selected.length,saved:0};let saved=0,skipped=0,failed=0,lastError='';
     try {
-      if (selected.length>20) throw Error("Choose at most 20 files at once.");
-      let saved=0;
-      for (const item of selected) {
-        if (ticket!==generation) break;
-        try {
-          if (item.size>16*1024*1024) throw Error(`${item.name}: exceeds 16 MiB`);
-          const ok=await load(new Uint8Array(await item.arrayBuffer()),item.name.replace(/\.(midi?|musicxml|xml|mxl)$/i,""),ticket);
-          if (ok) saved++;
-          if(batchInfo.id===batch) batchInfo.saved=saved;
-        } catch(error) { queue.push({type:"library-status",text:String(error.message??error)}); }
-      }
-      if (ticket===generation && selected.length>1) queue.push({type:"library-status",text:`Saved ${saved} of ${selected.length} files. Duplicate files update existing entries.`});
-    } catch(error) { queue.push({type:"library-status",text:String(error.message??error)}); }
-    finally { if(batchInfo.id===batch) batchInfo.pending=false; file.value=""; }
-  };
+      if(selected.length>10000)throw Error('Choose a smaller folder (10,000 files maximum).');
+      for(const item of selected){if(ticket!==generation)break;try{
+        if(item.size>16*1024*1024)throw Error(`${item.name}: exceeds 16 MiB`);
+        const bytes=new Uint8Array(await item.arrayBuffer());
+        if(skipExisting&&storage&&await storage.hasLibrarySource(await sourceId(bytes))){skipped++;}
+        else if(await load(bytes,item.name.replace(/\.(midi?|musicxml|xml|mxl)$/i,''),ticket,false,catalogOnly)){saved++;}else{failed++;}
+      }catch(error){failed++;lastError=String(error.message??error);}
+      if(batchInfo.id===batch)batchInfo.saved=saved;
+      queue.push({type:'library-scan',busy:true,text:`Imported ${saved}/${selected.length} · ${skipped} unchanged · ${failed} failed`});}
+    }catch(error){lastError=String(error.message??error);}finally{
+      if(batchInfo.id===batch){batchInfo.pending=false;const text=`${saved} imported · ${skipped} unchanged · ${failed} failed${lastError?' · '+lastError:''}`;queue.push({type:'library-scan',busy:false,text});queue.push({type:'library-updated',text});}
+    }
+  }
+  file.onchange=async()=>{const selected=Array.from(file.files);if(!selected.length)return;try{if(selected.length>500)throw Error('Choose at most 500 files at once.');await runImport(selected,state?.screen==='Library'||selected.length>1);}catch(error){queue.push({type:'library-status',text:String(error.message??error)});}finally{file.value='';}};
+  if(storage){folders=new FolderLibrary(storage,(files)=>runImport(files,true,true),message=>queue.push(message));folders.init().catch(fail);}
   async function midi() {
     if (!navigator.requestMIDIAccess)
       throw Error("Web MIDI unavailable. Use touch or the computer keyboard.");
@@ -214,7 +213,7 @@ export async function installPlatform() {
       const source=new Uint8Array(bytes), details=JSON.parse(metadata);
       if (storage) lastImportSave=Promise.all([sourceId(source),details.fingerprint?fingerprintId(details.fingerprint):null])
         .then(([id,fingerprint_id])=>storage.saveLibrarySong(id,source,{...details,fingerprint_id}))
-        .then(()=>{ queue.push({type:"library-updated",text:"Saved in library."});return true; })
+        .then(()=>{ if(!batchInfo.pending)queue.push({type:"library-updated",text:"Saved in library."});return true; })
         .catch(error=>{queue.push({type:"library-status",text:`Could not save piece: ${error.message??error}`});return false;});
       else {
         lastImportSave=Promise.resolve(false);
@@ -272,6 +271,24 @@ export async function installPlatform() {
             saved.then(ok=>resolve?.(ok));
             break;
           }
+          case "metadata-fetch": {
+            const request=JSON.parse(data);
+            metadataHttp.request(request).then(result=>queue.push({type:'metadata-response',ticket:request.ticket,kind:request.kind,...result,...(result.bytes?{bytes:[...result.bytes]}:{})})).catch(error=>queue.push({type:'metadata-response',ticket:request.ticket,kind:request.kind,error:String(error.message??error)}));break;
+          }
+          case "library-enrich": {
+            const request=JSON.parse(data);
+            if(storage)storage.writeEnrichment(request.id,request.candidate,new Uint8Array(request.bytes)).then(()=>queue.push({type:'library-updated',text:'Cover and external metadata saved.',enrichment:true})).catch(error=>queue.push({type:'library-status',text:String(error.message??error)}));
+            else queue.push({type:'library-status',text:'Local library unavailable.'});break;
+          }
+          case "library-enrichment-clear":
+            if(storage)storage.clearEnrichment(data).then(()=>queue.push({type:'library-updated',text:'External metadata removed.'})).catch(fail);break;
+          case "library-cover": {
+            const request=JSON.parse(data);
+            if(storage)storage.readCover(request.id).then(bytes=>queue.push({type:'library-cover',id:request.id,epoch:request.epoch,bytes:[...bytes]})).catch(error=>queue.push({type:'library-cover',id:request.id,epoch:request.epoch,bytes:[],error:String(error.message??error)}));break;
+          }
+          case "folder-choose":if(folders)folders.choose().catch(fail);break;
+          case "folder-scan":if(folders)folders.scan().catch(fail);break;
+          case "folder-clear":if(folders)folders.clear().catch(fail);break;
           case "library-edit": {
             const request=JSON.parse(data);
             if(storage) storage.editLibraryMetadata(request.id,request.title,request.composer)

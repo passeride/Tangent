@@ -16,12 +16,25 @@ pub enum Action {
     PracticeSkip,
     PracticeAdaptive,
     Library,
+    LibraryFolder,
+    FolderChoose,
+    FolderScan,
+    FolderClear,
+    FolderBack,
     LibraryOpen(usize),
     LibrarySearch,
     LibraryClearSearch,
     LibrarySort,
     LibraryFormat,
     LibraryEdit(usize),
+    MetadataOpen,
+    MetadataSearch(bool),
+    MetadataPreview(usize),
+    MetadataSave,
+    MetadataBack,
+    MetadataClose,
+    MetadataClear,
+    MetadataPage(bool),
     LibraryTitle,
     LibraryComposer,
     LibrarySaveMetadata,
@@ -112,11 +125,26 @@ impl Action {
             Self::PracticeSkip => "practice-skip",
             Self::PracticeAdaptive => "practice-adaptive",
             Self::Library => "library",
+            Self::LibraryFolder => "library-folder",
+            Self::FolderChoose => "folder-choose",
+            Self::FolderScan => "folder-scan",
+            Self::FolderClear => "folder-clear",
+            Self::FolderBack => "folder-back",
             Self::LibraryOpen(_) => "library-open",
             Self::LibrarySearch => "library-search",
             Self::LibraryClearSearch => "library-clear-search",
             Self::LibrarySort => "library-sort",
             Self::LibraryFormat => "library-format",
+            Self::MetadataOpen => "metadata-open",
+            Self::MetadataSearch(false) => "metadata-search",
+            Self::MetadataSearch(true) => "metadata-title-only",
+            Self::MetadataPreview(_) => "metadata-preview",
+            Self::MetadataSave => "metadata-save",
+            Self::MetadataBack => "metadata-back",
+            Self::MetadataClose => "metadata-close",
+            Self::MetadataClear => "metadata-clear",
+            Self::MetadataPage(false) => "metadata-previous",
+            Self::MetadataPage(true) => "metadata-next",
             Self::LibraryEdit(_) => "library-edit",
             Self::LibraryTitle => "library-title",
             Self::LibraryComposer => "library-composer",
@@ -448,7 +476,31 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             state.library.format = (state.library.format + 1) % library::FORMATS.len();
             state.library.reset_page();
         }
+        Action::MetadataOpen | Action::MetadataSearch(false) => metadata_view::search(state, false),
+        Action::MetadataSearch(true) => metadata_view::search(state, true),
+        Action::MetadataPreview(index) => metadata_view::preview(state, index),
+        Action::MetadataSave => metadata_view::save(state),
+        Action::MetadataBack => {
+            state.library.lookup.ticket += 1;
+            state.library.lookup.selected = None;
+            state.library.lookup.busy = false;
+        }
+        Action::MetadataClose => state.library.lookup.close(),
+        Action::MetadataClear => {
+            if let Some(edit) = &state.library.edit {
+                platform::action("library-enrichment-clear", &edit.id);
+            }
+        }
+        Action::MetadataPage(next) => {
+            let l = &mut state.library.lookup;
+            l.offset = if next {
+                l.offset + l.page_size
+            } else {
+                l.offset.saturating_sub(l.page_size)
+            };
+        }
         Action::LibraryEdit(index) => {
+            state.library.lookup.close();
             if let Some(entry) = state.library.items.get(index) {
                 state.library.edit = Some(library::Edit {
                     id: entry.id.clone(),
@@ -474,10 +526,30 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             }
         }
         Action::LibraryCancelEdit => {
+            state.library.lookup.close();
             state.library.edit = None;
             state.library.focus = None;
         }
+        Action::LibraryFolder => {
+            activate(state, Action::Library, false);
+            state.library.folder_open = true;
+        }
+        Action::FolderBack => state.library.folder_open = false,
+        Action::FolderChoose | Action::FolderScan | Action::FolderClear => {
+            if !state.library.folder_busy {
+                platform::action(
+                    match action {
+                        Action::FolderChoose => "folder-choose",
+                        Action::FolderScan => "folder-scan",
+                        _ => "folder-clear",
+                    },
+                    "",
+                );
+            }
+        }
         Action::Library => {
+            state.library.folder_open = false;
+            state.library.lookup.close();
             training::end(state, false);
             state.panic();
             state.help = false;
@@ -746,7 +818,9 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             .unwrap()
         }
         Action::Help => {
-            if state.settings_open {
+            if state.screen == Screen::Library && state.library.lookup.open {
+                state.library.lookup.close();
+            } else if state.settings_open {
                 state.settings_open = false;
                 state.help = state.screen == Screen::Session;
             } else {
@@ -921,7 +995,10 @@ pub fn input(
     }
     if state.screen == Screen::Library && !state.help && !capturing {
         state.library.tick(time.delta_secs());
-        if keys.just_pressed(KeyCode::Tab) && state.library.edit.is_some() {
+        if keys.just_pressed(KeyCode::Tab)
+            && state.library.edit.is_some()
+            && !state.library.lookup.open
+        {
             let field = if state.library.focus == Some(library::Field::Title) {
                 library::Field::Composer
             } else {
@@ -929,7 +1006,9 @@ pub fn input(
             };
             state.library.focus(field);
         }
-        if keys.just_pressed(KeyCode::Enter) || keys.just_pressed(KeyCode::NumpadEnter) {
+        if (keys.just_pressed(KeyCode::Enter) || keys.just_pressed(KeyCode::NumpadEnter))
+            && !state.library.lookup.open
+        {
             if state.library.edit.is_some() {
                 activate(&mut state, Action::LibrarySaveMetadata, false);
             } else {

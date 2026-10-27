@@ -63,6 +63,18 @@ JSON import/export and hand colours. Demonstrations accept only unambiguous
 pitch/onset matches; unknown notes stay unassigned. Library row backgrounds also
 support double-click to Open. See [ADR-0025](docs/adr/0025-personal-themes-and-demonstrated-hands.md).
 
+The horizontal MusicXML score now groups short notes with shared beams, including
+mixed 16ths/32nds and chord stems. Written groups take priority; missing groups
+follow the meter. See [grouped notes](docs/design/grouped-notes.md).
+
+Library → Edit → **Find cover** now offers reviewed MusicBrainz/Cover Art Archive
+artwork and metadata. Approved covers save locally for offline use; your local
+title/composer and original MIDI/MusicXML stay intact. See [the guide](docs/music-library.md#album-covers-and-external-metadata).
+
+Library → **Folder** now saves a music folder and scans subfolders at startup
+or on demand. Browser rescans follow folder permissions. Manual Import accepts
+up to 500 files; background catalog imports keep your active piece intact.
+
 ## Screenshots
 
 Actual running app, captured with Chromium at 1440 px width using Tangent's
@@ -256,4 +268,4 @@ live MIDI spelling is approximate. When both layers are on, a scalable sheet ove
 Note views now use Bravura music-font noteheads, stems and curved flags through
 64ths, with augmentation dots and matching short rests. MusicXML written values
 are preserved; MIDI values are estimated from source beats across tempo changes,
-with unknown rhythms left unclassified. See [rhythmic reading](docs/adr/0033-rhythmic-reading-and-note-glyphs.md).
+with unknown rhythms left unclassified. See [rhythmic reading](docs/adr/0036-rhythmic-reading-and-note-glyphs.md).
