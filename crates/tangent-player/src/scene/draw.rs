@@ -31,6 +31,7 @@ pub(super) struct Drawing {
     shapes: Vec<Shape>,
     labels: Vec<Label>,
     block_labels: Vec<String>,
+    falling_region: Option<(f32, f32)>,
     background: Color,
 }
 impl Drawing {
@@ -548,6 +549,7 @@ pub fn render(
         report.as_object_mut().unwrap().extend(serde_json::json!({"practice_run":state.training.model.run,"practice_result":state.training.result,"progress_history":state.training.model.history.iter().take(12).collect::<Vec<_>>(),"progress_pending":state.training.pending.len(),"bindings_page":state.shortcuts.page,"bindings_status":state.shortcuts.status,"bindings_capture":state.shortcuts.capture.is_some(),"progress_status":state.training.status,"adaptive":state.training.model.adaptive,"hud_labels":d.labels.iter().filter(|s|s.y<70.).map(|s|s.text.as_str()).collect::<Vec<_>>(),"offscreen":super::session_hud::offscreen(&state),"goal":state.goal.as_ref().map(|g|serde_json::json!({"completed":g.model.completed(),"required":g.model.required(),"reached":g.model.reached()})),"loop":state.transport.passage(),"loop_a":state.loop_a,"selected_part":state.selected_part,"focused_control":state.focused_button.and_then(|i|state.buttons.get(i)).map(|(_,a)|a.id()),"practice_played_label":d.labels.iter().find(|s|s.text.starts_with("Played ")).map(|s|s.text.as_str()),"reference_keys":state.reference_keys,"vfx_scale":effects::viewport_scale(l.width,l.height),"vfx_particles":state.particles.len(),"vfx_ripples":state.ripples.len(),"practice_waiting_release":state.practice.waiting_release(),"streak":state.feedback.streak(),"best_streak":state.feedback.best(),"effects_backend":if cfg!(target_arch="wasm32") {"webgl2-fallback"} else {"hanabi+ui"},"practice_wrong":state.practice.wrong(),"practice_hint":state.practice.hint,"practice_clef":state.practice.clef.name(),"practice_level":state.practice.level.name(),"expected_glow":expected_keys(&state),"solid_keys":state.held.values().copied().collect::<BTreeSet<_>>(),"midi_output":state.midi_output,"midi_output_preferred":state.preferred_midi_output,"midi_outputs":state.midi_outputs.iter().map(|p|serde_json::json!({"id":p.id,"name":p.name})).collect::<Vec<_>>(),"midi_dropdown_open":state.midi_dropdown_open,"midi_dropdown_page":state.midi_dropdown_page}).as_object().unwrap().clone());
         report.as_object_mut().unwrap().extend(serde_json::json!({
             "show_score":state.show_score,"show_vertical":state.show_vertical,"note_names":state.note_names,
+            "score_scale":state.score_scale,"score_rows":super::score::row_count(&state,&l),"falling_region":d.falling_region,
             "block_labels":d.block_labels,"visible_labels":d.labels.iter().map(|s|s.text.as_str()).collect::<Vec<_>>()
         }).as_object().unwrap().clone());
         report.as_object_mut().unwrap().extend(serde_json::json!({"guided_waiting":guided::waiting(&state),"guided_gate":state.guidance.engine.barrier(),"guided_targets":state.guidance.engine.targets(),"flow_notes":state.practice.sequence_notes(),"flow_step":state.practice.sequence_step(),"flow_left":state.practice.scale_task().map(|p|p.left).or_else(||state.practice.flow_task().map(|p|p.left)),"explorer_source":state.practice.explorer_task().map(|task|task.source),"piano_renderer":"bevy-pbr-3d","piano_keys":state.piano.keys.len(),"personal_open":state.personal.open,"personal_token":state.personal.token,"personal_status":state.personal.status,"personal_matched":state.personal.matched,"personal_unresolved":state.personal.unresolved}).as_object().unwrap().clone());
@@ -753,11 +755,19 @@ fn keyboard(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme, image: 
 
 fn musical_views(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
     if state.show_score && state.show_vertical {
-        let split = l.top + (l.strike - l.top) * 0.55;
-        let upper = l.region(l.top, split);
-        let lower = l.region(split + 4., l.strike);
-        super::score::render(d, state, &upper, t);
-        falling(d, state, &lower, t);
+        // The falling field retains its entire height; sheet is a readable overlay.
+        falling(d, state, l, t);
+        let bottom = (l.top + super::score::row_height(state, l)).min(l.strike);
+        d.rect(
+            l.margin,
+            l.top,
+            l.width - 2. * l.margin,
+            bottom - l.top,
+            t.bg.with_alpha(0.82),
+            5.,
+        );
+        let overlay = l.region(l.top, bottom);
+        super::score::render(d, state, &overlay, t);
     } else if state.show_score {
         super::score::render(d, state, l, t);
     } else if state.show_vertical {
@@ -785,6 +795,7 @@ fn staff(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
     }
 }
 fn falling(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
+    d.falling_region = Some((l.top, l.strike));
     if matches!(state.view, View::Staff | View::Notes) {
         staff(d, state, l, t);
         super::score::falling_structure(d, state, l, t);

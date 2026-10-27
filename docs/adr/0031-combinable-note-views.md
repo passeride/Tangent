@@ -1,6 +1,6 @@
 # ADR-0031: Independent notation layers and played-pitch feedback
 
-- Status: Accepted
+- Status: Accepted; split-screen layout superseded by [ADR-0032](0032-scalable-sheet-overlay.md)
 - Date: 2026-10-27
 - Delivery: independent horizontal score and vertical view, block labels and live pitch markers
 - Related: [ADR-0007](0007-authored-measures-repeats-and-music-glyphs.md), [ADR-0022](0022-readable-hud-and-keyboard-fit.md), [piano design](../design/piano-player.md)

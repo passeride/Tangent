@@ -2,13 +2,64 @@
 use super::{draw::Drawing, layout::Layout, theme, *};
 use tangent_core::notation::{ledger_steps, reading_pitch};
 use tangent_core::{music::WrittenPitch, notation::*};
+/// One system is sized by the saved scale and bounded by the available height.
+fn staff_gap(state: &State, l: &Layout) -> f32 {
+    (10. * f32::from(state.score_scale) / 100.)
+        .min((l.strike - l.top).max(1.) / 22.)
+        .max(1.)
+}
+pub(super) fn row_height(state: &State, l: &Layout) -> f32 {
+    staff_gap(state, l) * 22.
+}
+pub(super) fn row_count(state: &State, l: &Layout) -> usize {
+    if !state.show_score {
+        return 0;
+    }
+    if state.show_vertical {
+        return 1;
+    }
+    (((l.strike - l.top) / row_height(state, l)).floor() as usize).clamp(1, 32)
+}
 pub(super) fn render(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
+    let gap = staff_gap(state, l);
+    let rows = row_count(state, l);
     if let Some(score) = &state.song.notation {
-        authored(d, state, score, l, t);
+        if score.measures.is_empty() || score.playback.is_empty() {
+            return;
+        }
+        let visit_index = score
+            .playback
+            .partition_point(|v| v.end_us <= state.transport.position_us)
+            .min(score.playback.len() - 1);
+        let visit = &score.playback[visit_index];
+        let count = ((l.width / (gap * 30.)).floor() as usize).clamp(1, 4);
+        let page_size = count * rows;
+        let page = visit.measure / page_size * page_size;
+        for row in 0..rows {
+            let first = page + row * count;
+            if first >= score.measures.len() {
+                break;
+            }
+            let top = l.top + row as f32 * row_height(state, l);
+            let area = l.region(top, (top + row_height(state, l)).min(l.strike));
+            authored_row(d, state, score, &area, t, first, count, gap);
+        }
     } else {
-        legacy(d, state, l, t);
+        const SPAN: u64 = 8_000_000;
+        let block = state.transport.position_us / SPAN;
+        let start = block / rows as u64 * rows as u64 * SPAN;
+        for row in 0..rows {
+            let from = start + row as u64 * SPAN;
+            if from >= state.transport.duration_us && row > 0 {
+                break;
+            }
+            let top = l.top + row as f32 * row_height(state, l);
+            let area = l.region(top, (top + row_height(state, l)).min(l.strike));
+            legacy_row(d, state, &area, t, from, gap);
+        }
     }
 }
+
 fn pitch(p: &WrittenPitch, bass: bool) -> ReadingPitch {
     use tangent_core::music::PitchLetter::*;
     ReadingPitch {
@@ -26,22 +77,24 @@ fn pitch(p: &WrittenPitch, bass: bool) -> ReadingPitch {
         sharp: p.alteration > 0,
     }
 }
-fn authored(d: &mut Drawing, state: &State, score: &NotatedScore, l: &Layout, t: theme::Theme) {
-    if score.measures.is_empty() {
-        return;
-    }
+#[allow(clippy::too_many_arguments)]
+fn authored_row(
+    d: &mut Drawing,
+    state: &State,
+    score: &NotatedScore,
+    l: &Layout,
+    t: theme::Theme,
+    page: usize,
+    count: usize,
+    gap: f32,
+) {
     let now = state.transport.position_us;
     let visit_index = score
         .playback
         .partition_point(|v| v.end_us <= now)
-        .min(score.playback.len().saturating_sub(1));
-    let Some(visit) = score.playback.get(visit_index) else {
-        return;
-    };
-    let count = if l.width < 700. { 2 } else { 4 };
-    let page = visit.measure / count * count;
+        .min(score.playback.len() - 1);
+    let visit = &score.playback[visit_index];
     let end = (page + count).min(score.measures.len());
-    let gap = ((l.strike - l.top) / 24.).clamp(6., 14.);
     let treble = l.top + gap * 8.;
     let bass = treble + gap * 10.;
     let header = (gap * (7. + score.measures[page].key_fifths.unsigned_abs() as f32 * 0.7))
@@ -465,14 +518,12 @@ fn score_pitch(
     }
     p
 }
-fn legacy(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
-    let gap = ((l.strike - l.top) / 22.).clamp(5., 12.);
+fn legacy_row(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme, start: u64, gap: f32) {
     let treble = l.top + gap * 7.;
     let bass = treble + gap * 10.;
     let left = l.margin + 38.;
     let right = l.width - l.margin;
     let span = 8_000_000;
-    let start = state.transport.position_us / span * span;
     for bottom in [treble, bass] {
         for i in 0..5 {
             d.line(
@@ -558,15 +609,17 @@ fn legacy(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
             color.with_alpha(0.3),
         );
     }
-    let x = left + (right - left) * (state.transport.position_us - start) as f32 / span as f32;
-    live_notes(d, state, l, t, x, (treble, bass, gap));
-    d.line(
-        x,
-        l.top + 8.,
-        2.,
-        (bass + gap * 2. - l.top).min(l.strike - l.top),
-        t.colors[0],
-    );
+    if state.transport.position_us >= start && state.transport.position_us < start + span {
+        let x = left + (right - left) * (state.transport.position_us - start) as f32 / span as f32;
+        live_notes(d, state, l, t, x, (treble, bass, gap));
+        d.line(
+            x,
+            l.top + 8.,
+            2.,
+            (bass + gap * 2. - l.top).min(l.strike - l.top),
+            t.colors[0],
+        );
+    }
 }
 
 /// Measure and beat guides follow expanded performance visits in falling modes.

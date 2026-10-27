@@ -160,7 +160,7 @@ try {
     );
     const notation = await page.evaluate(() => tangentDiagnostics());
     assert.equal(notation.staff_lines,10);
-    assert.equal(notation.music_clefs,2);
+    assert.ok(notation.music_clefs >= 2 && notation.music_clefs % 2 === 0);
     assert.equal(notation.written_measures,16);
     assert.equal(notation.measure_visits,23);
     assert.equal(notation.ending_measures,6);
@@ -169,7 +169,7 @@ try {
   await page.waitForFunction(() => tangentDiagnostics().position === 5_000_000);
   await page.keyboard.press("ArrowRight");
   await page.waitForFunction(() => tangentDiagnostics().position === 10_000_000);
-  await page.waitForFunction(() => tangentDiagnostics().ending_labels === 2);
+  await page.waitForFunction(() => tangentDiagnostics().visible_labels.includes('1.') && tangentDiagnostics().visible_labels.includes('2.'));
   await page.keyboard.press("Home");
   await page.waitForFunction(() => tangentDiagnostics().position === 0);
   await page.keyboard.press("Space");

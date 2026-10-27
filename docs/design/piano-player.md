@@ -87,8 +87,7 @@ newly hand-drawn approximations.
 ## Independent notation layers
 
 Settings → Visuals offers Horizontal sheet and Vertical view on/off independently,
-vertical style (blocks, staff blocks or staff notes) and Names on blocks. Both
-views share the playing surface when enabled; both off leaves the keyboard.
+vertical style (blocks, staff blocks or staff notes) and Names on blocks. When both views are enabled, the score overlays the full-height falling view; both off leaves the keyboard. Sheet size is adjustable from 50–200%. In sheet-only mode, as many systems as fit are shown.
 Held notes are drawn in the played-input colour on the horizontal score at the
 playhead and on the rotated staff at the strike line, with sharp/ledger guidance.
 The score also labels held pitches. Live MIDI uses approximate sharp spelling;

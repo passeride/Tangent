@@ -118,6 +118,7 @@ pub struct State {
     show_score: bool,
     show_vertical: bool,
     note_names: bool,
+    score_scale: u16,
     hud: u8,
     range_summary: Option<session_hud::RangeSummary>,
     theme: usize,
@@ -211,6 +212,7 @@ impl State {
             show_score: false,
             show_vertical: true,
             note_names: false,
+            score_scale: 100,
             hud: 1,
             range_summary: None,
             theme: 0,
@@ -272,6 +274,7 @@ impl State {
             show_score: Some(self.show_score),
             show_vertical: Some(self.show_vertical),
             note_names: self.note_names,
+            score_scale: self.score_scale,
             hud: self.hud,
             theme: self.theme,
             effects: self.effects,
@@ -301,6 +304,7 @@ impl State {
         self.show_score = p.show_score.unwrap_or(p.view == 3);
         self.show_vertical = p.show_vertical.unwrap_or(p.view != 3);
         self.note_names = p.note_names;
+        self.score_scale = p.score_scale;
         self.hud = p.hud;
         self.theme = p.theme;
         self.effects = p.effects;

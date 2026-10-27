@@ -251,4 +251,4 @@ see [S03](docs/design/major-scale-run.md).
 In **Settings → Visuals**, enable the horizontal sheet and the vertical falling
 view independently, choose the vertical style, and optionally show pitch names
 on blocks. Held notes appear in the played colour on the sheet and staff lanes;
-live MIDI spelling is approximate. Both layers can be shown together.
+live MIDI spelling is approximate. When both layers are on, a scalable sheet overlays the full-height falling view. Sheet-only mode fits multiple systems on screen.

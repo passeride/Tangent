@@ -15,6 +15,8 @@ pub struct Preferences {
     pub show_vertical: Option<bool>,
     #[serde(default)]
     pub note_names: bool,
+    #[serde(default = "default_score_scale")]
+    pub score_scale: u16,
     #[serde(default = "default_hud")]
     pub hud: u8,
     pub theme: usize,
@@ -46,6 +48,9 @@ pub struct Preferences {
     #[serde(default)]
     pub midi_output_name: Option<String>,
 }
+fn default_score_scale() -> u16 {
+    100
+}
 fn default_early_ms() -> u16 {
     250
 }
@@ -71,6 +76,9 @@ impl Preferences {
         }
         if tangent_core::transport::PlaybackRate::new(self.speed_percent).is_none() {
             return Err("Invalid playback speed");
+        }
+        if !(50..=200).contains(&self.score_scale) || !self.score_scale.is_multiple_of(25) {
+            return Err("Invalid sheet scale");
         }
         if self.sequential_early_ms > 500 {
             return Err("Invalid sequential input window");
@@ -114,6 +122,7 @@ mod tests {
             show_score: Some(true),
             show_vertical: Some(false),
             note_names: false,
+            score_scale: 100,
             hud: 2,
             theme: 2,
             effects: false,
@@ -137,7 +146,7 @@ mod tests {
     #[test]
     fn legacy_view_and_independent_layers_round_trip() {
         let mut json = serde_json::to_value(settings()).unwrap();
-        for key in ["show_score", "show_vertical", "note_names"] {
+        for key in ["show_score", "show_vertical", "note_names", "score_scale"] {
             json.as_object_mut().unwrap().remove(key);
         }
         let old: Preferences = serde_json::from_value(json).unwrap();
@@ -146,6 +155,7 @@ mod tests {
             (None, None, false)
         );
         assert!(old.validate().is_ok());
+        assert_eq!(old.score_scale, 100);
         let mut both = settings();
         both.show_score = Some(true);
         both.show_vertical = Some(true);

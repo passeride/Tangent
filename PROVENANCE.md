@@ -277,3 +277,10 @@ Original Bevy presentation, preference migration and synthetic MIDI/browser test
 implement the owner's request for independent sheet/falling views, played note
 markers and optional note names. Existing notation and theme systems are reused.
 No dependency, excluded code or external asset was introduced; see ADR-0031.
+
+## Scalable sheet overlay — 2026-10-27
+
+Original Bevy layout, bounded preference, page selection and synthetic browser tests
+implement the owner-requested full-height falling view, scaled score overlay and
+multi-system sheet. Existing notation and input paths are reused. No external
+code, assets or dependencies were added; see ADR-0032.

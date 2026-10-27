@@ -58,6 +58,8 @@ pub enum Action {
     ToggleScore,
     ToggleVertical,
     NoteNames,
+    ScoreSmaller,
+    ScoreLarger,
     Theme,
     Hear,
     Effects,
@@ -152,6 +154,8 @@ impl Action {
             Self::ToggleScore => "toggle-score",
             Self::ToggleVertical => "toggle-vertical",
             Self::NoteNames => "note-names",
+            Self::ScoreSmaller => "score-smaller",
+            Self::ScoreLarger => "score-larger",
             Self::Theme => "theme",
             Self::Hear => "hear",
             Self::Effects => "effects",
@@ -682,6 +686,8 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             }
         }
         Action::NoteNames => state.note_names = !state.note_names,
+        Action::ScoreSmaller => state.score_scale = state.score_scale.saturating_sub(25).max(50),
+        Action::ScoreLarger => state.score_scale = (state.score_scale + 25).min(200),
         Action::Theme => state.theme = (state.theme + 1) % 3,
         Action::Hear => {
             training::end(state, false);

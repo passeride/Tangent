@@ -413,6 +413,14 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             ));
             entries.extend([
                 (
+                    format!("Sheet size − / {}%", state.score_scale),
+                    Action::ScoreSmaller,
+                ),
+                (
+                    format!("Sheet size + / {}%", state.score_scale),
+                    Action::ScoreLarger,
+                ),
+                (
                     format!(
                         "Vertical style: {}",
                         if state.view == View::Score {
