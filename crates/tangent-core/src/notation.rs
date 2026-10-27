@@ -167,13 +167,16 @@ impl NoteRhythm {
             NoteValue::SixtyFourth,
         ];
         let mut best = None;
-        let mut error = 0.08_f64;
+        let mut error = f64::INFINITY;
         for (index, value) in values.into_iter().enumerate() {
             for dots in 0..=3_u8 {
                 let expected = 4. / 2_f64.powi(index as i32) * (2. - 2_f64.powi(-i32::from(dots)));
                 let distance = (quarters - expected).abs() / expected;
-                if distance <= error {
-                    error = distance;
+                // Prefer a simple articulated value over a nearby multiply
+                // dotted value (e.g. 0.96 quarters is not a triple-dotted eighth).
+                let cost = distance + f64::from(dots) * 0.02;
+                if distance <= 0.08 && cost < error {
+                    error = cost;
                     best = Some(Self { value, dots });
                 }
             }
