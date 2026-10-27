@@ -270,3 +270,10 @@ Original S03 scale plans, Bevy presentation integration, versioned evidence and
 synthetic tests implement the concrete remaining Train TODO. Existing sequence,
 audio and storage boundaries are reused. No new dependencies, external music,
 assets or excluded implementation sources were imported. See ADR-0030.
+
+## Combined note views and played-pitch feedback — 2026-10-27
+
+Original Bevy presentation, preference migration and synthetic MIDI/browser tests
+implement the owner's request for independent sheet/falling views, played note
+markers and optional note names. Existing notation and theme systems are reused.
+No dependency, excluded code or external asset was introduced; see ADR-0031.

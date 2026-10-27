@@ -302,6 +302,7 @@ fn authored(d: &mut Drawing, state: &State, score: &NotatedScore, l: &Layout, t:
             // Piecewise timing follows tempo changes inside the measure.
             let beat = visit.quarter_at_time(now.saturating_sub(visit.start_us));
             let px = if fraction >= 1. { x + width } else { at(beat) };
+            live_notes(d, state, l, t, px, (treble, bass, gap));
             d.line(
                 px,
                 treble - gap * 4.8,
@@ -313,6 +314,75 @@ fn authored(d: &mut Drawing, state: &State, score: &NotatedScore, l: &Layout, t:
     }
     bar(d, right, treble, bass, gap, 1., t.staff);
 }
+/// Live MIDI is spelled approximately: the input does not carry written pitch.
+fn live_notes(
+    d: &mut Drawing,
+    state: &State,
+    l: &Layout,
+    t: theme::Theme,
+    x: f32,
+    staff: (f32, f32, f32),
+) {
+    let (treble, bass, gap) = staff;
+    let held: BTreeSet<_> = state.held.values().copied().collect();
+    for (index, &key) in held.iter().enumerate() {
+        let p = reading_pitch(key);
+        let base = if p.bass { 18 } else { 30 };
+        let bottom = if p.bass { bass } else { treble };
+        let y = bottom - (p.step - base) as f32 * gap * 0.5;
+        // Never project out-of-range pitches onto the wrong staff position.
+        if y < l.top + 4. || y > l.strike - 4. {
+            continue;
+        }
+        let span = held.len().saturating_sub(1) as f32 * gap * 2.;
+        let start = (x + gap)
+            .min(l.width - l.margin - gap - span)
+            .max(l.margin + gap);
+        let cx = start + index as f32 * gap * 2.;
+        for step in ledger_steps(p.step, base) {
+            let ly = bottom - (step - base) as f32 * gap * 0.5;
+            if ly >= l.top && ly <= l.strike {
+                d.line(cx - gap, ly, 2. * gap, 1.5, t.colors[0]);
+            }
+        }
+        if p.sharp {
+            d.glyph(cx - gap * 2., y, '\u{e262}', gap * 3., t.colors[0]);
+        }
+        // A contrasting outline identifies player input even when hand colours match.
+        d.rect(
+            cx - gap * 0.9,
+            y - gap * 0.6,
+            gap * 1.8,
+            gap * 1.2,
+            t.ink,
+            gap * 0.6,
+        );
+        d.rect(
+            cx - gap * 0.74,
+            y - gap * 0.44,
+            gap * 1.48,
+            gap * 0.88,
+            t.bg,
+            gap * 0.44,
+        );
+        d.note(cx, y, gap * 0.42, t.colors[0], false, false);
+    }
+    if !held.is_empty() {
+        let names = held
+            .iter()
+            .map(|&k| tangent_core::explorer::note_name(k))
+            .collect::<Vec<_>>()
+            .join(" / ");
+        d.text(
+            l.margin + 5.,
+            l.strike - 16.,
+            format!("Played {names}"),
+            11.,
+            t.colors[0],
+        );
+    }
+}
+
 fn bar(d: &mut Drawing, x: f32, treble: f32, bass: f32, gap: f32, width: f32, color: Color) {
     d.line(x, treble - gap * 4., width, bass - treble + gap * 4., color);
 }
@@ -489,6 +559,7 @@ fn legacy(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
         );
     }
     let x = left + (right - left) * (state.transport.position_us - start) as f32 / span as f32;
+    live_notes(d, state, l, t, x, (treble, bass, gap));
     d.line(
         x,
         l.top + 8.,

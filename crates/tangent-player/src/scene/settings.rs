@@ -412,7 +412,38 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 Action::Personal(1),
             ));
             entries.extend([
-                (format!("Notation: {}", state.view.name()), Action::View),
+                (
+                    format!(
+                        "Vertical style: {}",
+                        if state.view == View::Score {
+                            "Falling blocks"
+                        } else {
+                            state.view.name()
+                        }
+                    ),
+                    Action::VerticalStyle,
+                ),
+                (
+                    format!(
+                        "Horizontal sheet: {}",
+                        if state.show_score { "On" } else { "Off" }
+                    ),
+                    Action::ToggleScore,
+                ),
+                (
+                    format!(
+                        "Vertical view: {}",
+                        if state.show_vertical { "On" } else { "Off" }
+                    ),
+                    Action::ToggleVertical,
+                ),
+                (
+                    format!(
+                        "Names on blocks: {}",
+                        if state.note_names { "On" } else { "Off" }
+                    ),
+                    Action::NoteNames,
+                ),
                 (
                     format!("Theme: {}", ["Aurora", "Ember", "Paper"][state.theme]),
                     Action::Theme,
@@ -553,7 +584,10 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
 
     let cols = if (l.height < 420. && entries.len() > 6) || (l.height < 500. && entries.len() > 8) {
         3
-    } else if content_w >= 500. || l.height < 500. {
+    } else if content_w >= 500.
+        || l.height < 500.
+        || (state.settings_tab == SettingsTab::Visuals && entries.len() > 8)
+    {
         2
     } else {
         1

@@ -71,3 +71,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0029: Sequential Play](0029-sequential-play.md) — shared clock/output barriers, exact chords, early input and comparable guided history.
 
 - [ADR-0030: Major Scale Run](0030-major-scale-run.md) — one-octave scale plans, shared sequence input and durable key/hand evidence.
+
+- [ADR-0031: Independent notation layers](0031-combinable-note-views.md) — combined sheet/falling views, live input markers and block note names.

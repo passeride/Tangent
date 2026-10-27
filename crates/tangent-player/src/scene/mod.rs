@@ -115,6 +115,9 @@ pub struct State {
     selected_part: Option<usize>,
     piano: PianoLayout,
     view: View,
+    show_score: bool,
+    show_vertical: bool,
+    note_names: bool,
     hud: u8,
     range_summary: Option<session_hud::RangeSummary>,
     theme: usize,
@@ -205,6 +208,9 @@ impl State {
             selected_part: None,
             piano: PianoLayout::new(21, 108).unwrap(),
             view: View::Blocks,
+            show_score: false,
+            show_vertical: true,
+            note_names: false,
             hud: 1,
             range_summary: None,
             theme: 0,
@@ -263,6 +269,9 @@ impl State {
                 View::Notes => 2,
                 View::Score => 3,
             },
+            show_score: Some(self.show_score),
+            show_vertical: Some(self.show_vertical),
+            note_names: self.note_names,
             hud: self.hud,
             theme: self.theme,
             effects: self.effects,
@@ -289,6 +298,9 @@ impl State {
         self.shortcuts.config.fill_missing();
         self.shortcuts.piano.reset();
         self.view = [View::Blocks, View::Staff, View::Notes, View::Score][p.view as usize];
+        self.show_score = p.show_score.unwrap_or(p.view == 3);
+        self.show_vertical = p.show_vertical.unwrap_or(p.view != 3);
+        self.note_names = p.note_names;
         self.hud = p.hud;
         self.theme = p.theme;
         self.effects = p.effects;

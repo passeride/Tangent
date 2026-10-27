@@ -54,6 +54,10 @@ pub enum Action {
     Louder,
     Fullscreen,
     View,
+    VerticalStyle,
+    ToggleScore,
+    ToggleVertical,
+    NoteNames,
     Theme,
     Hear,
     Effects,
@@ -144,6 +148,10 @@ impl Action {
             Self::Louder => "louder",
             Self::Fullscreen => "fullscreen",
             Self::View => "view",
+            Self::VerticalStyle => "vertical-style",
+            Self::ToggleScore => "toggle-score",
+            Self::ToggleVertical => "toggle-vertical",
+            Self::NoteNames => "note-names",
             Self::Theme => "theme",
             Self::Hear => "hear",
             Self::Effects => "effects",
@@ -656,8 +664,24 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
                 View::Staff => View::Notes,
                 View::Notes => View::Score,
                 View::Score => View::Blocks,
+            };
+            set_view_layers(state);
+        }
+        Action::VerticalStyle => {
+            state.view = match state.view {
+                View::Blocks | View::Score => View::Staff,
+                View::Staff => View::Notes,
+                View::Notes => View::Blocks,
+            };
+        }
+        Action::ToggleScore => state.show_score = !state.show_score,
+        Action::ToggleVertical => {
+            state.show_vertical = !state.show_vertical;
+            if state.show_vertical && state.view == View::Score {
+                state.view = View::Blocks;
             }
         }
+        Action::NoteNames => state.note_names = !state.note_names,
         Action::Theme => state.theme = (state.theme + 1) % 3,
         Action::Hear => {
             training::end(state, false);
@@ -1067,5 +1091,15 @@ pub fn input(
     }
     for touch in touches.iter_just_canceled() {
         pointer(format!("touch:{}", touch.id()), None, false, false);
+    }
+}
+
+fn set_view_layers(state: &mut State) {
+    if state.view == View::Score {
+        state.show_score = true;
+        state.show_vertical = false;
+    } else {
+        state.show_vertical = true;
+        state.show_score = false;
     }
 }

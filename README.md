@@ -247,3 +247,8 @@ Train also includes **Keyboard Explorer**: learn octave/key patterns through exa
 spellings, suggested fingers and saved whole-scale scores. Three levels offer
 right C, left C and all keys. This evaluates pitch/order with release per note;
 see [S03](docs/design/major-scale-run.md).
+
+In **Settings → Visuals**, enable the horizontal sheet and the vertical falling
+view independently, choose the vertical style, and optionally show pitch names
+on blocks. Held notes appear in the played colour on the sheet and staff lanes;
+live MIDI spelling is approximate. Both layers can be shown together.

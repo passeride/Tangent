@@ -8,6 +8,13 @@ pub struct Preferences {
     #[serde(default)]
     pub bindings: tangent_core::input_bindings::Bindings,
     pub view: u8,
+    // None preserves the view chosen by installations predating independent layers.
+    #[serde(default)]
+    pub show_score: Option<bool>,
+    #[serde(default)]
+    pub show_vertical: Option<bool>,
+    #[serde(default)]
+    pub note_names: bool,
     #[serde(default = "default_hud")]
     pub hud: u8,
     pub theme: usize,
@@ -104,6 +111,9 @@ mod tests {
             personalization: Default::default(),
             bindings: Default::default(),
             view: 3,
+            show_score: Some(true),
+            show_vertical: Some(false),
+            note_names: false,
             hud: 2,
             theme: 2,
             effects: false,
@@ -123,6 +133,27 @@ mod tests {
             last_key: 84,
             midi_output_name: Some("Yamaha P-45".into()),
         }
+    }
+    #[test]
+    fn legacy_view_and_independent_layers_round_trip() {
+        let mut json = serde_json::to_value(settings()).unwrap();
+        for key in ["show_score", "show_vertical", "note_names"] {
+            json.as_object_mut().unwrap().remove(key);
+        }
+        let old: Preferences = serde_json::from_value(json).unwrap();
+        assert_eq!(
+            (old.show_score, old.show_vertical, old.note_names),
+            (None, None, false)
+        );
+        assert!(old.validate().is_ok());
+        let mut both = settings();
+        both.show_score = Some(true);
+        both.show_vertical = Some(true);
+        both.note_names = true;
+        assert_eq!(
+            serde_json::from_str::<Preferences>(&serde_json::to_string(&both).unwrap()).unwrap(),
+            both
+        );
     }
     #[test]
     fn bindings_round_trip_and_conflicts_are_rejected() {

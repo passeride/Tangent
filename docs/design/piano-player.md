@@ -83,3 +83,16 @@ tempo, repeats and first/second-ending brackets. The MIDI eight-second reading a
 remains a separate fallback. Rotated staff views show faint upright G/F watermarks
 and moving measure/beat/ending guides. The clefs are licensed font outlines, not
 newly hand-drawn approximations.
+
+## Independent notation layers
+
+Settings → Visuals offers Horizontal sheet and Vertical view on/off independently,
+vertical style (blocks, staff blocks or staff notes) and Names on blocks. Both
+views share the playing surface when enabled; both off leaves the keyboard.
+Held notes are drawn in the played-input colour on the horizontal score at the
+playhead and on the rotated staff at the strike line, with sharp/ledger guidance.
+The score also labels held pitches. Live MIDI uses approximate sharp spelling;
+MusicXML's authored notation retains its written spelling. Out-of-height notes
+remain named rather than appearing at a false staff position. These settings are
+saved; older view preferences migrate without changing the previous display.
+The V shortcut continues cycling the four legacy standalone views.

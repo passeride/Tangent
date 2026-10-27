@@ -49,6 +49,18 @@ impl Layout {
             },
         }
     }
+    pub fn region(&self, top: f32, strike: f32) -> Self {
+        Self {
+            width: self.width,
+            height: self.height,
+            top,
+            strike,
+            key_h: self.key_h,
+            unit: self.unit,
+            margin: self.margin,
+            progress: self.progress,
+        }
+    }
     pub fn key(&self, piano: &PianoLayout, key: u8) -> Option<Rect> {
         piano.keys.iter().find(|k| k.key == key).map(|k| Rect {
             x: self.margin + k.x * self.unit,
