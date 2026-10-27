@@ -702,12 +702,29 @@ fn update(
                             .collect()
                     })
                     .unwrap_or_default();
-                let ok = load_song(
-                    &mut state,
-                    &bytes,
-                    m["title"].as_str().unwrap_or("MIDI").into(),
-                    m["from_library"].as_bool().unwrap_or(false),
-                );
+                let ok = if m["catalog_only"].as_bool() == Some(true) {
+                    match import::song(&bytes, m["title"].as_str().unwrap_or("Score").into()) {
+                        Ok(song) => {
+                            let metadata = crate::library::ImportMetadata::from_song(&song, &bytes);
+                            platform::store_import(
+                                &bytes,
+                                &serde_json::to_string(&metadata).unwrap(),
+                            );
+                            true
+                        }
+                        Err(e) => {
+                            state.library.status = e;
+                            false
+                        }
+                    }
+                } else {
+                    load_song(
+                        &mut state,
+                        &bytes,
+                        m["title"].as_str().unwrap_or("MIDI").into(),
+                        m["from_library"].as_bool().unwrap_or(false),
+                    )
+                };
                 platform::action(
                     "import-result",
                     &serde_json::json!({"ticket":m["import_ticket"],"ok":ok}).to_string(),
@@ -733,6 +750,15 @@ fn update(
                         state.library.cover_handles.insert(id.into(), handle);
                     }
                 }
+            }
+            "library-folder" => {
+                state.library.folder_path = m["path"].as_str().unwrap_or("").into();
+                state.library.folder_auto = m["auto"].as_bool().unwrap_or(false);
+            }
+            "library-scan" => {
+                state.library.folder_busy = m["busy"].as_bool().unwrap_or(false);
+                state.library.folder_status = m["text"].as_str().unwrap_or("").into();
+                state.library.status = state.library.folder_status.clone();
             }
             "library-list" => {
                 if m["ticket"].as_u64() == Some(state.library.ticket) {

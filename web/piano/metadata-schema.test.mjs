@@ -18,5 +18,5 @@ assert.throws(()=>writeEnrichment(db,id,{...candidate,release_id:'../evil'},cove
 clearEnrichment(db,id);assert.equal(listLibrary(db).items[0].enrichment,null);assert.equal(listLibrary(db).items[0].title,'My edited title');
 writeEnrichment(db,id,candidate,cover);removeLibrarySong(db,id);assert.equal(db.exec('SELECT COUNT(*) FROM library_enrichment')[0].values[0][0],0);assert.throws(()=>writeEnrichment(db,id,candidate,cover),/no longer/);
 // A true v5 database migrates transactionally and preserves its originals/settings.
-let old=new SQL.Database(reopened.export());old.run('DROP TABLE library_enrichment;PRAGMA user_version=5;');migrate(old);assert.equal(listLibrary(old).items[0].composer,'My composer');assert.equal(old.exec('PRAGMA user_version')[0].values[0][0],6);migrate(old);
+let old=new SQL.Database(reopened.export());old.run('DROP TABLE library_folder; DROP TABLE library_enrichment;PRAGMA user_version=5;');migrate(old);assert.equal(listLibrary(old).items[0].composer,'My composer');assert.equal(old.exec('PRAGMA user_version')[0].values[0][0],7);migrate(old);
 console.log('Metadata SQLite: v5 migration, annotations/covers export/reopen, original fields/bytes, dedup/edit preservation, validation and cascade removal passed.');

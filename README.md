@@ -71,6 +71,10 @@ Library → Edit → **Find cover** now offers reviewed MusicBrainz/Cover Art Ar
 artwork and metadata. Approved covers save locally for offline use; your local
 title/composer and original MIDI/MusicXML stay intact. See [the guide](docs/music-library.md#album-covers-and-external-metadata).
 
+Library → **Folder** now saves a music folder and scans subfolders at startup
+or on demand. Browser rescans follow folder permissions. Manual Import accepts
+up to 500 files; background catalog imports keep your active piece intact.
+
 ## Screenshots
 
 Actual running app, captured with Chromium at 1440 px width using Tangent's

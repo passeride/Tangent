@@ -1,3 +1,4 @@
+if(process.env.TANGENT_CAPTURE_FOLDER==='1'){await import('./folder-smoke.mjs');process.exit(0);}
 if(process.env.TANGENT_CAPTURE_METADATA==='1'){await import('./metadata-smoke.mjs');process.exit(0);}
 if (process.env.TANGENT_CAPTURE_BEAMS === '1') {
   await import('./beaming-smoke.mjs');

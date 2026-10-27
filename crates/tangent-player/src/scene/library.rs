@@ -11,6 +11,11 @@ pub(super) enum Field {
 }
 pub(super) type Edit = crate::library::MetadataEdit;
 pub(super) struct Library {
+    pub folder_open: bool,
+    pub folder_path: String,
+    pub folder_auto: bool,
+    pub folder_busy: bool,
+    pub folder_status: String,
     pub row_hits: Vec<(layout::Rect, usize)>,
     pub last_click: Option<(String, f64, Vec2)>,
     pub page_size: usize,
@@ -36,6 +41,11 @@ pub(super) struct Library {
 impl Default for Library {
     fn default() -> Self {
         Self {
+            folder_open: false,
+            folder_path: String::new(),
+            folder_auto: false,
+            folder_busy: false,
+            folder_status: String::new(),
             row_hits: vec![],
             last_click: None,
             page_size: PAGE_SIZE,
@@ -167,6 +177,10 @@ pub(super) fn clip(text: &str, width: f32, size: f32) -> String {
     out
 }
 pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
+    if state.library.folder_open {
+        folder_view(d, state, l, t);
+        return;
+    }
     if state.library.lookup.open {
         metadata_view::render(d, state, l, t);
         return;
@@ -193,8 +207,8 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         13.,
         t.muted,
     );
-    let button = ((width - 16.) / 3.).min(180.);
-    d.button(state, x, 90., button, "Import files", Action::Import, t);
+    let button = ((width - 24.) / 4.).min(180.);
+    d.button(state, x, 90., button, "Import", Action::Import, t);
     d.button(
         state,
         x + button + 8.,
@@ -211,6 +225,15 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         button,
         "Back",
         Action::Main,
+        t,
+    );
+    d.button(
+        state,
+        x + (button + 8.) * 3.,
+        90.,
+        button,
+        "Folder",
+        Action::LibraryFolder,
         t,
     );
     let label = if state.library.query.is_empty() && state.library.focus != Some(Field::Search) {
@@ -500,6 +523,94 @@ fn render_edit(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) 
         t.muted,
     );
 }
+
+fn folder_view(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
+    let x = 24.;
+    let width = l.width - 48.;
+    d.text(x, 24., "Library folder", 28., t.ink);
+    let path = if state.library.folder_path.is_empty() {
+        "No folder selected"
+    } else {
+        &state.library.folder_path
+    };
+    d.text(x, 82., clip(path, width, 14.), 14., t.ink);
+    d.text(
+        x,
+        112.,
+        clip(
+            if state.library.folder_path.is_empty() {
+                "Choose a folder containing MIDI, MusicXML or MXL files."
+            } else if state.library.folder_auto {
+                "Scans on startup when folder access is available."
+            } else {
+                "Browser access may require selecting the folder again."
+            },
+            width,
+            11.,
+        ),
+        11.,
+        t.muted,
+    );
+    if !state.library.folder_busy {
+        d.button(
+            state,
+            x,
+            150.,
+            width.min(240.),
+            "Choose folder",
+            Action::FolderChoose,
+            t,
+        );
+        d.button(
+            state,
+            x,
+            192.,
+            width.min(240.),
+            "Scan now",
+            Action::FolderScan,
+            t,
+        );
+        if !state.library.folder_path.is_empty() {
+            d.button(
+                state,
+                x,
+                234.,
+                width.min(240.),
+                "Remove folder setting",
+                Action::FolderClear,
+                t,
+            );
+        }
+    }
+    d.button(
+        state,
+        x,
+        (l.height - 90.).max(278.),
+        110.,
+        "Back",
+        Action::FolderBack,
+        t,
+    );
+    d.text(
+        x,
+        l.height - 40.,
+        clip(&state.library.folder_status, width, 11.),
+        11.,
+        t.muted,
+    );
+    d.text(
+        x,
+        l.height - 22.,
+        clip(
+            "Includes subfolders. Saved pieces are never deleted by scans.",
+            width,
+            10.,
+        ),
+        10.,
+        t.muted,
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

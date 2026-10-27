@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {directoryFiles,FolderLibrary} from './folder-library.js';
+const file=name=>({kind:'file',name,async getFile(){return {name};}});
+const dir=(name,children)=>({kind:'directory',name,async *values(){yield* children;}});
+const root=dir('Music',[file('A.MID'),file('ignore.txt'),dir('sub',[file('b.musicxml'),file('c.mxl')])]);
+assert.deepEqual((await directoryFiles(root)).map(f=>f.name),['A.MID','b.musicxml','c.mxl']);
+let permission='prompt',reads=0,requests=0,events=[];root.queryPermission=async()=>permission;root.requestPermission=async()=>{requests++;permission='granted';return permission;};
+const storage={readDirectoryHandle:async()=>root,readFolderName:async()=>root.name,saveDirectoryHandle:async()=>{},saveFolderName:async()=>{}};
+const f=new FolderLibrary(storage,async files=>{reads+=files.length},v=>events.push(v));await f.init();assert.equal(reads,0,'Startup never prompts for folder permission');assert.equal(requests,0);await f.scan();assert.equal(requests,1);assert.equal(reads,3);await f.init();assert.equal(reads,6,'A granted stored handle scans on startup');await f.clear();assert.equal(f.handle,null);
+const huge=dir('huge',Array.from({length:10001},()=>file('x.txt')));await assert.rejects(directoryFiles(huge),/10,000/);
+console.log('Folder API: recursive filtering, stored handle startup, permission handoff, removal and traversal bound passed.');

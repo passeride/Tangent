@@ -70,3 +70,5 @@ Create original layouts; reference material needs a source and rights record.
 - [Grouped notes](grouped-notes.md) — joined rhythmic beams and chord stems in the scalable MusicXML score.
 
 - [Library artwork and metadata providers](library-metadata-providers.md) — provider evaluation, review flow and local cover thumbnails.
+
+- [Saved library folders](library-folders.md) — startup/manual scans and larger file selections, with browser permission boundaries.

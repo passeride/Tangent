@@ -16,6 +16,11 @@ pub enum Action {
     PracticeSkip,
     PracticeAdaptive,
     Library,
+    LibraryFolder,
+    FolderChoose,
+    FolderScan,
+    FolderClear,
+    FolderBack,
     LibraryOpen(usize),
     LibrarySearch,
     LibraryClearSearch,
@@ -120,6 +125,11 @@ impl Action {
             Self::PracticeSkip => "practice-skip",
             Self::PracticeAdaptive => "practice-adaptive",
             Self::Library => "library",
+            Self::LibraryFolder => "library-folder",
+            Self::FolderChoose => "folder-choose",
+            Self::FolderScan => "folder-scan",
+            Self::FolderClear => "folder-clear",
+            Self::FolderBack => "folder-back",
             Self::LibraryOpen(_) => "library-open",
             Self::LibrarySearch => "library-search",
             Self::LibraryClearSearch => "library-clear-search",
@@ -520,7 +530,25 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             state.library.edit = None;
             state.library.focus = None;
         }
+        Action::LibraryFolder => {
+            activate(state, Action::Library, false);
+            state.library.folder_open = true;
+        }
+        Action::FolderBack => state.library.folder_open = false,
+        Action::FolderChoose | Action::FolderScan | Action::FolderClear => {
+            if !state.library.folder_busy {
+                platform::action(
+                    match action {
+                        Action::FolderChoose => "folder-choose",
+                        Action::FolderScan => "folder-scan",
+                        _ => "folder-clear",
+                    },
+                    "",
+                );
+            }
+        }
         Action::Library => {
+            state.library.folder_open = false;
             state.library.lookup.close();
             training::end(state, false);
             state.panic();

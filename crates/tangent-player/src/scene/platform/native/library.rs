@@ -269,7 +269,7 @@ mod migration_tests {
         let conn = Connection::open_in_memory().unwrap();
         super::super::migrate(&conn).unwrap();
         conn.execute_batch(
-            "DROP TABLE library_enrichment; DROP TABLE practice_details; DROP TABLE library_songs;",
+            "DROP TABLE library_folder; DROP TABLE library_enrichment; DROP TABLE practice_details; DROP TABLE library_songs;",
         )
         .unwrap();
         conn.execute_batch(MIGRATION).unwrap();

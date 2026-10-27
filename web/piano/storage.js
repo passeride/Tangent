@@ -51,8 +51,13 @@ export async function openStorage() {
       .catch(error => { diagnostics.error = String(error.message ?? error); throw error; })
       .finally(() => { diagnostics.pending--; });
   }
+  function directoryHandle(value,write){return new Promise((resolve,reject)=>{const tx=files.transaction('files',write?'readwrite':'readonly'),store=tx.objectStore('files');const request=write?(value?store.put(value,'library-directory'):store.delete('library-directory')):store.get('library-directory');let result=null;request.onsuccess=()=>result=request.result??null;tx.oncomplete=()=>resolve(result);tx.onabort=()=>reject(tx.error);});}
   return {
     settings, diagnostics, saveSettings,
+    readDirectoryHandle:()=>directoryHandle(null,false),saveDirectoryHandle:value=>directoryHandle(value,true),
+    async readFolderName(){await tail;return transaction(db=>db.exec('SELECT path FROM library_folder WHERE id=1')[0]?.values[0][0]??'',false);},
+    saveFolderName(path){const result=tail.then(()=>transaction(db=>db.run("INSERT INTO library_folder(id,path) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET path=excluded.path",[path])));tail=result.catch(()=>{});return result;},
+    async hasLibrarySource(id){await tail;return transaction(db=>{const s=db.prepare('SELECT 1 FROM library_songs WHERE id=?');try{s.bind([id]);return s.step();}finally{s.free();}},false);},
     async readProgress() { await tail; return transaction(readProgress,false); },
     saveProgress(run) {
       diagnostics.pending++;

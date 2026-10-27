@@ -1,7 +1,7 @@
 # Local music library
 
 Choose **Library → Import files** and select one or more MIDI (.mid/.midi),
-MusicXML (.xml/.musicxml) or compressed MusicXML (.mxl) files. Up to 20 files can
+MusicXML (.xml/.musicxml) or compressed MusicXML (.mxl) files. Up to 500 files can
 be selected together; successful imports save their original bytes on this device.
 Identical source bytes reuse one entry. Unsupported/invalid files report an error.
 
@@ -43,3 +43,26 @@ and local edits. Missing covers keep a themed placeholder and can save metadata
 only. Database export includes covers (32 MiB total cover budget). See
 [the provider guide](design/library-metadata-providers.md) for service conditions,
 matching limitations and the explicit live-verification boundary.
+
+## Scan a music folder
+
+Choose **Library → Folder → Choose folder**. Native desktop saves the path and
+scans it, including subfolders, on startup. **Scan now** finds newly added music;
+**Remove folder setting** keeps all imported pieces. Scans preserve your active
+piece, edits, artwork and scores. Identical bytes are skipped, while a changed
+file becomes another source version. External file deletion does not delete the
+saved library copy. There is no continuous folder watcher in this version.
+
+The browser remembers a folder handle where supported and automatically scans
+only while read permission remains granted. Use **Scan now** to grant permission
+again. Other browsers use a folder-upload picker and need the folder selected
+again. Browser security does not permit typing an arbitrary disk path.
+
+Manual **Import** supports multi-selection: hold Ctrl/Shift on Windows (Cmd/Shift
+on macOS). Up to 500 files can be selected per batch; existing overall catalog
+limits above still apply. Results show new/unchanged/failed counts.
+See [ADR-0035](adr/0035-library-folders-and-bulk-import.md).
+
+A library entry removed while its source file remains in the selected folder
+will be imported again on the next scan. To keep it removed, move the external
+file outside the scanned folder as well.

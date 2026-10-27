@@ -305,3 +305,12 @@ regenerated from actual dependency sources. Tests and captures use original
 synthetic artist/album responses and a generated gradient PNG. No real album
 cover is redistributed in the repository. Live provider access could not be
 verified from this environment; see ADR-0034 and its linked brief.
+
+## Library folders and bulk import — 2026-10-27
+
+Original bounded directory discovery/background ingestion, browser handle storage,
+Bevy folder controls, SQLite v7 migration and synthetic tests implement the owner's
+folder-scanning/bulk-import request. Browser filesystem permission documentation
+was consulted; no external implementation, dependencies or assets were added.
+The folder screenshot is generated from original synthetic MusicXML in the actual
+app. Native OS dialogs still require physical platform verification. See ADR-0035.

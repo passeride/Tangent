@@ -4,6 +4,8 @@
 mod enrichment;
 #[path = "native/fingerprints.rs"]
 mod fingerprints;
+#[path = "native/folder.rs"]
+mod folder;
 #[path = "native/library.rs"]
 mod library;
 #[path = "native/metadata_http.rs"]
@@ -428,7 +430,7 @@ fn data_dir() -> Result<PathBuf, String> {
 fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch("PRAGMA foreign_keys = ON;")?;
     let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-    if version > 6 {
+    if version > 7 {
         return Err(rusqlite::Error::InvalidQuery);
     }
     if version == 0 {
@@ -494,6 +496,14 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     if version < 6 {
         conn.execute_batch("BEGIN;")?;
         if let Err(e) = conn.execute_batch(enrichment::MIGRATION) {
+            let _ = conn.execute_batch("ROLLBACK;");
+            return Err(e);
+        }
+        conn.execute_batch("COMMIT;")?;
+    }
+    if version < 7 {
+        conn.execute_batch("BEGIN;")?;
+        if let Err(e) = conn.execute_batch(folder::MIGRATION) {
             let _ = conn.execute_batch("ROLLBACK;");
             return Err(e);
         }
@@ -596,7 +606,7 @@ fn import_path(path: &Path, files: &mpsc::SyncSender<SourceFile>, out: &Sender<V
 fn pick_files() -> Result<Vec<PathBuf>, String> {
     #[cfg(target_os = "windows")]
     let output=Command::new("powershell").args(["-NoProfile","-STA","-Command",
-        "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); Add-Type -AssemblyName System.Windows.Forms; $d=New-Object System.Windows.Forms.OpenFileDialog; $d.Multiselect=$true; $d.Filter='Music files|*.mid;*.midi;*.xml;*.musicxml;*.mxl;*.json|All files|*.*'; if($d.ShowDialog() -eq 'OK'){ConvertTo-Json -Compress -InputObject @($d.FileNames)}"])
+        "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); Add-Type -AssemblyName System.Windows.Forms; $d=New-Object System.Windows.Forms.OpenFileDialog; $d.Multiselect=$true; $d.Title='Import music - Ctrl/Shift selects multiple files'; $d.Filter='Music files|*.mid;*.midi;*.xml;*.musicxml;*.mxl;*.json|All files|*.*'; if($d.ShowDialog() -eq 'OK'){ConvertTo-Json -Compress -InputObject @($d.FileNames)}"])
         .output().map_err(|e|format!("Could not open file picker: {e}"))?;
     #[cfg(target_os = "macos")]
     let output=Command::new("osascript").args(["-e", "set picked to choose file with prompt \"Open music scores\" with multiple selections allowed\nset paths to \"\"\nrepeat with f in picked\nset paths to paths & POSIX path of f & linefeed\nend repeat\nreturn paths"])
@@ -629,8 +639,8 @@ fn pick_files() -> Result<Vec<PathBuf>, String> {
         .filter(|p| !p.is_empty())
         .map(PathBuf::from)
         .collect();
-    if paths.len() > 20 {
-        return Err("Choose at most 20 files at once.".into());
+    if paths.len() > 500 {
+        return Err("Choose at most 500 files at once.".into());
     }
     Ok(paths)
 }
@@ -698,6 +708,11 @@ fn backend(
     let mut audio = Audio::new(&out);
     let db = storage(&out);
     let metadata_http = metadata_http::start(out.clone());
+    let folders = folder::start(
+        db.as_ref().map(|(_, p)| p.clone()),
+        out.clone(),
+        files.clone(),
+    );
     let mut midi = connect_midi(&out);
     loop {
         for (bytes, metadata) in imports.try_iter().take(1) {
@@ -919,20 +934,16 @@ fn backend(
                         let _ = out.send(json!({"type":"pause"}));
                         midi = connect_midi(&out);
                     }
-                    "import" => {
-                        let tx = rx_sender_file(files.clone(), out.clone());
-                        let picker_out = out.clone();
-                        thread::spawn(move || match pick_files() {
-                            Ok(paths) => {
-                                for path in paths {
-                                    tx(&path);
-                                }
-                            }
-                            Err(error) => {
-                                let _ =
-                                    picker_out.send(json!({"type":"library-status","text":error}));
-                            }
-                        });
+                    "import" | "folder-choose" | "folder-scan" | "folder-clear" => {
+                        let command = match name.as_str() {
+                            "folder-choose" => "choose",
+                            "folder-scan" => "scan",
+                            "folder-clear" => "clear",
+                            _ => "import",
+                        };
+                        if folders.try_send(command.into()).is_err() {
+                            let _=out.send(json!({"type":"library-scan","busy":false,"text":"A library task is already queued."}));
+                        }
                     }
                     "path" => import_path(Path::new(&value), &files, &out),
                     "sample" => {
@@ -962,12 +973,6 @@ fn backend(
         let _ = &midi;
     }
 }
-fn rx_sender_file(
-    files: mpsc::SyncSender<SourceFile>,
-    out: Sender<Value>,
-) -> impl Fn(&Path) + Send + 'static {
-    move |path| import_path(path, &files, &out)
-}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -984,7 +989,7 @@ mod tests {
         let version: i64 = db
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 6);
+        assert_eq!(version, 7);
         let rows: i64 = db
             .query_row("SELECT count(*) FROM scores", [], |r| r.get(0))
             .unwrap();

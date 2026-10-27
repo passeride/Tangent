@@ -154,7 +154,9 @@ fn execute(state: &mut State, command: &str, piano: bool) {
                 }
             }
             "nav_back" => {
-                if state.screen == Screen::Library && state.library.edit.is_some() {
+                if state.screen == Screen::Library && state.library.folder_open {
+                    controls::activate(state, Action::FolderBack, false);
+                } else if state.screen == Screen::Library && state.library.edit.is_some() {
                     controls::activate(state, Action::LibraryCancelEdit, false);
                 } else if state.screen == Screen::Library && state.library.focus.is_some() {
                     state.library.focus = None;

@@ -2,7 +2,8 @@
 import { libraryMigration, migrateLibraryV4 } from "./library-schema.js";
 import { progressMigration } from "./progress-schema.js";
 import { metadataMigration } from "./metadata-schema.js";
-export const schemaVersion = 6;
+import { folderMigration } from "./folder-library.js";
+export const schemaVersion = 7;
 
 export function migrate(db) {
   let version = db.exec("PRAGMA user_version")[0].values[0][0];
@@ -67,7 +68,8 @@ export function migrate(db) {
     catch (error) { db.run("ROLLBACK"); throw error; }
   }
   if (version === 4) { db.run(`BEGIN; ${progressMigration} COMMIT;`); version=5; }
-  if (version === 5) { db.run(`BEGIN; ${metadataMigration} COMMIT;`); }
+  if (version === 5) { db.run(`BEGIN; ${metadataMigration} COMMIT;`); version=6; }
+  if (version===6) { db.run(`BEGIN; ${folderMigration} COMMIT;`); }
 }
 
 export function readSettings(db) {
