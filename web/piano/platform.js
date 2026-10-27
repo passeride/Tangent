@@ -1,3 +1,4 @@
+import {MetadataHttp} from "./metadata-http.js";
 // Browser capability adapter: audio, files, MIDI and the fullscreen API.
 // No rendering, menus, note placement or transport rules live in this module.
 import { PlaybackClock } from "./playback-clock.js";
@@ -5,6 +6,7 @@ import { MidiOutput } from "./midi-output.js";
 import { PianoAudio } from "./audio.js";
 import { openStorage } from "./storage.js";
 export async function installPlatform() {
+  const metadataHttp=new MetadataHttp();
   const canvas = document.getElementById("tangent"),
     file = document.getElementById("midi-file"),
     audio = new PianoAudio();
@@ -271,6 +273,21 @@ export async function installPlatform() {
             const saved=result.ok?lastImportSave:Promise.resolve(false);
             saved.then(ok=>resolve?.(ok));
             break;
+          }
+          case "metadata-fetch": {
+            const request=JSON.parse(data);
+            metadataHttp.request(request).then(result=>queue.push({type:'metadata-response',ticket:request.ticket,kind:request.kind,...result,...(result.bytes?{bytes:[...result.bytes]}:{})})).catch(error=>queue.push({type:'metadata-response',ticket:request.ticket,kind:request.kind,error:String(error.message??error)}));break;
+          }
+          case "library-enrich": {
+            const request=JSON.parse(data);
+            if(storage)storage.writeEnrichment(request.id,request.candidate,new Uint8Array(request.bytes)).then(()=>queue.push({type:'library-updated',text:'Cover and external metadata saved.',enrichment:true})).catch(error=>queue.push({type:'library-status',text:String(error.message??error)}));
+            else queue.push({type:'library-status',text:'Local library unavailable.'});break;
+          }
+          case "library-enrichment-clear":
+            if(storage)storage.clearEnrichment(data).then(()=>queue.push({type:'library-updated',text:'External metadata removed.'})).catch(fail);break;
+          case "library-cover": {
+            const request=JSON.parse(data);
+            if(storage)storage.readCover(request.id).then(bytes=>queue.push({type:'library-cover',id:request.id,epoch:request.epoch,bytes:[...bytes]})).catch(error=>queue.push({type:'library-cover',id:request.id,epoch:request.epoch,bytes:[],error:String(error.message??error)}));break;
           }
           case "library-edit": {
             const request=JSON.parse(data);

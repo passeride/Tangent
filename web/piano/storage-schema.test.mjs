@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import initSqlJs from "sql.js";
-import { migrate, readSettings, writeSettings } from "./storage-schema.js";
+import { migrate, readSettings, writeSettings, schemaVersion } from "./storage-schema.js";
 const SQL = await initSqlJs();
 let db = new SQL.Database();
 migrate(db);
@@ -18,7 +18,7 @@ assert.deepEqual(readSettings(db), settings);
 assert.equal(db.exec("SELECT value FROM scores")[0].values[0][0], 3);
 assert.throws(() => db.run("INSERT INTO scores VALUES ('bad','missing','correct',1,'now')"), /FOREIGN KEY/);
 assert.equal(db.exec("PRAGMA integrity_check")[0].values[0][0], "ok");
-db.run("PRAGMA user_version = 6");
+db.run(`PRAGMA user_version = ${schemaVersion+1}`);
 assert.throws(() => migrate(db), /newer Tangent/);
 assert.equal(db.exec("SELECT count(*) FROM scores")[0].values[0][0], 1);
 assert.deepEqual(readSettings(db), settings);

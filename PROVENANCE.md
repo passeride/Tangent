@@ -292,3 +292,16 @@ and browser checks implement the owner's joined-note request in the disclosed
 context above. W3C MusicXML beam documentation informed the standards mapping;
 no external implementation, asset or dependency was imported. The six-measure
 fixture and running-app screenshots are new Tangent test material. See ADR-0033.
+
+## Metadata providers and library covers — 2026-10-27
+
+Original provider contracts/parsing, bounded HTTP/image adapters, SQLite v6
+annotations and Bevy review flow implement the owner's metadata/album-cover
+request. Official MusicBrainz/CAA, TheAudioDB, Apple Search API and ureq documents
+were consulted for interfaces, terms and provider selection; no excluded code was
+used. ureq 3.5.0 is a new independently published dependency; image 0.25.10 was
+already Bevy-resolved and is now direct for bounded raster decoding. Notices were
+regenerated from actual dependency sources. Tests and captures use original
+synthetic artist/album responses and a generated gradient PNG. No real album
+cover is redistributed in the repository. Live provider access could not be
+verified from this environment; see ADR-0034 and its linked brief.

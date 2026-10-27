@@ -55,16 +55,18 @@ export function listLibrary(db, offset = 0, limit = 8, query = "", sort = "recen
   limit = Math.max(1, Math.min(50, Math.floor(limit) || 8));
   const needle = String(query).trim().toLowerCase().slice(0, 256);
   const kind = ["MIDI","MusicXML","MXL"].includes(format) ? format : "";
-  const where = "WHERE instr(search_key,?)>0 AND (?='' OR format=?)";
+  const where = "WHERE (instr(search_key,?)>0 OR EXISTS(SELECT 1 FROM library_enrichment e WHERE e.song_id=library_songs.id AND instr(e.search_key,?)>0)) AND (?='' OR format=?)";
   const count = db.prepare(`SELECT COUNT(*) FROM library_songs ${where}`);
   let total;
-  try { count.bind([needle,kind,kind]); count.step(); total = count.get()[0]; } finally { count.free(); }
-  const stmt = db.prepare(`SELECT id,title,composer,format,duration_us,note_count FROM library_songs
+  try { count.bind([needle,needle,kind,kind]); count.step(); total = count.get()[0]; } finally { count.free(); }
+  const stmt = db.prepare(`SELECT id,title,composer,format,duration_us,note_count,
+      (SELECT payload FROM library_enrichment WHERE song_id=id) AS enrichment,
+      COALESCE((SELECT length(cover)>0 FROM library_enrichment WHERE song_id=id),0) AS has_cover FROM library_songs
     ${where} ORDER BY ${orderBy[sort] ?? orderBy.recent} LIMIT ? OFFSET ?`);
   const items = [];
   try {
-    stmt.bind([needle,kind,kind,limit,offset]);
-    while (stmt.step()) items.push(stmt.getAsObject());
+    stmt.bind([needle,needle,kind,kind,limit,offset]);
+    while (stmt.step()) {const row=stmt.getAsObject();row.enrichment=row.enrichment?JSON.parse(row.enrichment):null;row.has_cover=!!row.has_cover;items.push(row);}
   } finally { stmt.free(); }
   return { items, total };
 }
@@ -91,6 +93,7 @@ export function removeLibrarySong(db, id) {
   const statement = db.prepare("SELECT fingerprint_id FROM library_songs WHERE id=?");
   let fingerprintId;
   try { statement.bind([id]); if (statement.step()) fingerprintId = statement.get()[0]; } finally { statement.free(); }
+  db.run("DELETE FROM library_enrichment WHERE song_id=?",[id]);
   db.run("DELETE FROM library_songs WHERE id=?", [id]);
   if (fingerprintId) db.run(`DELETE FROM fingerprint_songs WHERE id=? AND NOT EXISTS
     (SELECT 1 FROM library_songs WHERE fingerprint_id=?)`, [fingerprintId,fingerprintId]);

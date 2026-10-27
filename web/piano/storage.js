@@ -1,3 +1,4 @@
+import {writeEnrichment,readCover,clearEnrichment} from "./metadata-schema.js";
 import { writeProgress, readProgress } from "./progress-schema.js";
 import { saveLibrarySong, listLibrary, readLibrarySource, removeLibrarySong, editLibraryMetadata } from "./library-schema.js";
 // Genuine SQLite bytes persisted atomically in IndexedDB. No UI or scoring rules.
@@ -71,6 +72,9 @@ export async function openStorage() {
       tail = result.catch(() => {});
       return result.finally(() => { diagnostics.pending--; });
     },
+    writeEnrichment(id,candidate,cover) { const result=tail.then(()=>transaction(db=>writeEnrichment(db,id,candidate,cover)));tail=result.catch(()=>{});return result; },
+    async readCover(id) {await tail;return transaction(db=>readCover(db,id),false);},
+    clearEnrichment(id) {const result=tail.then(()=>transaction(db=>clearEnrichment(db,id)));tail=result.catch(()=>{});return result;},
     async listLibrary(offset, limit, query, sort, format) { await tail; return transaction(db => listLibrary(db, offset, limit, query, sort, format), false); },
     editLibraryMetadata(id, title, composer) {
       const result = tail.then(() => transaction(db => editLibraryMetadata(db, id, title, composer)));

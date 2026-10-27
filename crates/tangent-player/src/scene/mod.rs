@@ -8,6 +8,7 @@ mod guided;
 mod layout;
 mod library;
 mod menu;
+mod metadata_view;
 mod passage;
 mod personal;
 mod piano3d;
@@ -612,7 +613,12 @@ pub fn run() {
     #[cfg(not(target_arch = "wasm32"))]
     platform::shutdown();
 }
-fn update(mut state: ResMut<State>, time: Res<Time>, windows: Query<&Window>) {
+fn update(
+    mut state: ResMut<State>,
+    time: Res<Time>,
+    windows: Query<&Window>,
+    mut images: ResMut<Assets<Image>>,
+) {
     let now = platform::clock_us();
     let elapsed = (now - state.clock).max(0.) as u64;
     state.clock = now;
@@ -707,10 +713,55 @@ fn update(mut state: ResMut<State>, time: Res<Time>, windows: Query<&Window>) {
                     &serde_json::json!({"ticket":m["import_ticket"],"ok":ok}).to_string(),
                 );
             }
+            "metadata-response" => metadata_view::receive(&mut state, m, &mut images),
+            "library-cover" => {
+                if m["epoch"].as_u64() != Some(state.library.cover_epoch) {
+                    continue;
+                }
+                if let Some(id) = m["id"].as_str() {
+                    if !state
+                        .library
+                        .items
+                        .iter()
+                        .any(|e| e.id == id && e.has_cover)
+                    {
+                        continue;
+                    }
+                    let bytes: Vec<u8> =
+                        serde_json::from_value(m["bytes"].clone()).unwrap_or_default();
+                    if let Ok(handle) = metadata_view::image(&bytes, &mut images) {
+                        state.library.cover_handles.insert(id.into(), handle);
+                    }
+                }
+            }
             "library-list" => {
                 if m["ticket"].as_u64() == Some(state.library.ticket) {
                     state.library.items =
                         serde_json::from_value(m["items"].clone()).unwrap_or_default();
+                    let ids: BTreeSet<_> = state
+                        .library
+                        .items
+                        .iter()
+                        .filter(|e| e.has_cover)
+                        .map(|e| e.id.clone())
+                        .collect();
+                    state.library.cover_handles.retain(|id, _| ids.contains(id));
+                    state.library.cover_requested.retain(|id| ids.contains(id));
+                    let covers: Vec<_> = state
+                        .library
+                        .items
+                        .iter()
+                        .filter(|e| e.has_cover && !state.library.cover_requested.contains(&e.id))
+                        .map(|e| e.id.clone())
+                        .collect();
+                    for id in covers {
+                        state.library.cover_requested.insert(id.clone());
+                        platform::action(
+                            "library-cover",
+                            &serde_json::json!({"id":id,"epoch":state.library.cover_epoch})
+                                .to_string(),
+                        );
+                    }
                     state.library.total = m["total"].as_u64().unwrap_or(0) as usize;
                     if state.library.offset > 0 && state.library.items.is_empty() {
                         state.library.offset =
@@ -720,10 +771,20 @@ fn update(mut state: ResMut<State>, time: Res<Time>, windows: Query<&Window>) {
                 }
             }
             "library-status" => {
+                state.library.lookup.busy = false;
+                if state.library.lookup.open {
+                    state.library.lookup.status = m["text"].as_str().unwrap_or("").into();
+                }
                 state.library.status = m["text"].as_str().unwrap_or("").into();
                 state.status = state.library.status.clone();
             }
             "library-updated" => {
+                if m["enrichment"].as_bool() == Some(true) {
+                    state.library.lookup.close();
+                }
+                state.library.cover_epoch += 1;
+                state.library.cover_handles.clear();
+                state.library.cover_requested.clear();
                 if m["metadata"].as_bool() == Some(true) {
                     state.library.edit = None;
                     state.library.focus = None;

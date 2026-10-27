@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {MetadataHttp,allowedMetadataUrl} from './metadata-http.js';
+let time=0,requests=[],waits=[];
+const url='https://musicbrainz.org/ws/2/recording/?query=test&fmt=json';
+const h=new MetadataHttp(async(u,o)=>{requests.push([u,o]);return new Response('{"recordings":[]}',{headers:{'Content-Type':'application/json'}})},()=>time,async ms=>{waits.push(ms);time+=ms;});
+await h.request({url,kind:'search'});await h.request({url,kind:'search'});assert.equal(requests.length,1,'Success cache avoids repeat requests');await h.request({url:url+'2',kind:'search'});assert.equal(waits.at(-1),1100);assert.equal(requests[0][1].credentials,'omit');
+for(const u of ['file:///tmp/cover','https://coverartarchive.org.evil/front-250','https://localhost/'])assert.equal(allowedMetadataUrl(u,true),false);
+await assert.rejects(h.request({url:'http://evil',kind:'search'}),/Unsupported/);
+const large=new MetadataHttp(async()=>new Response('x',{headers:{'Content-Length':'1048577'}}),()=>0,async()=>{});await assert.rejects(large.request({url,kind:'search'}),/too large/);
+const failed=new MetadataHttp(async()=>new Response('',{status:503}),()=>0,async()=>{});await assert.rejects(failed.request({url,kind:'search'}),/503/);
+const notFound=new MetadataHttp(async()=>new Response('',{status:404}),()=>0,async()=>{});await assert.rejects(notFound.request({url:'https://coverartarchive.org/release/11111111-1111-1111-1111-111111111111/front-250',kind:'cover'}),/No front cover/);
+console.log('Metadata HTTP: cache, serial provider rate limit, no credentials, destination/size bounds and unavailable service handling passed.');

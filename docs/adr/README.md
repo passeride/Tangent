@@ -77,3 +77,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0032: Scalable score overlay](0032-scalable-sheet-overlay.md) — full-height falling field and multi-system score.
 
 - [ADR-0033: Written beam groups](0033-written-beam-groups.md) — authored/metric rhythmic groups, shared chord stems and scaled beams/hooks.
+
+- [ADR-0034: Metadata providers and local artwork](0034-metadata-providers-and-local-artwork.md) — shared provider interface, reviewed MusicBrainz/CAA candidates and SQLite v6 covers.

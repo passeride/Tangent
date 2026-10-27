@@ -25,6 +25,10 @@ pub(super) struct Library {
     pub format: usize,
     pub focus: Option<Field>,
     pub edit: Option<Edit>,
+    pub lookup: metadata_view::Lookup,
+    pub cover_handles: BTreeMap<String, Handle<Image>>,
+    pub cover_requested: BTreeSet<String>,
+    pub cover_epoch: u64,
     selected: bool,
     modifiers: [bool; 4],
     search_delay: Option<f32>,
@@ -46,6 +50,10 @@ impl Default for Library {
             format: 0,
             focus: None,
             edit: None,
+            lookup: metadata_view::Lookup::default(),
+            cover_handles: BTreeMap::new(),
+            cover_requested: BTreeSet::new(),
+            cover_epoch: 0,
             selected: false,
             modifiers: [false; 4],
             search_delay: None,
@@ -149,7 +157,7 @@ impl Library {
         }
     }
 }
-fn clip(text: &str, width: f32, size: f32) -> String {
+pub(super) fn clip(text: &str, width: f32, size: f32) -> String {
     let max = (width / (size * 0.62)).max(4.) as usize;
     let mut out: String = text.chars().take(max).collect();
     if text.chars().count() > max {
@@ -159,6 +167,10 @@ fn clip(text: &str, width: f32, size: f32) -> String {
     out
 }
 pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) {
+    if state.library.lookup.open {
+        metadata_view::render(d, state, l, t);
+        return;
+    }
     let x = 24.;
     let width = (l.width - 48.).max(120.);
     if state.library.edit.is_some() {
@@ -276,22 +288,59 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             },
             index,
         ));
-        let text_width = if narrow { width } else { width - 246. };
-        d.text(x, y, clip(&entry.title, text_width, 16.), 16., t.ink);
+        let cover_size = 44.;
+        if let Some(handle) = state.library.cover_handles.get(&entry.id) {
+            d.image(
+                layout::Rect {
+                    x,
+                    y,
+                    w: cover_size,
+                    h: cover_size,
+                },
+                handle.clone(),
+            );
+        } else {
+            d.rect(x, y, cover_size, cover_size, t.panel, 5.);
+            d.glyph(x + 13., y + 30., '\u{e1d5}', 30., t.colors[0]);
+        }
+        let text_x = x + 56.;
+        let text_width = if narrow { width - 56. } else { width - 302. };
+        d.text(text_x, y, clip(&entry.title, text_width, 16.), 16., t.ink);
         let seconds = entry.duration_us / 1_000_000;
+        let artist = entry
+            .enrichment
+            .as_ref()
+            .map(|c| c.artists.join(", "))
+            .unwrap_or_default();
+        let album = entry
+            .enrichment
+            .as_ref()
+            .map(|c| format!(" · {}", c.album))
+            .unwrap_or_default();
         let detail = format!(
-            "{} · {} · {}:{:02} · {} notes",
+            "{}{} · {} · {}:{:02} · {} notes",
             if entry.composer.is_empty() {
-                "Unknown composer"
+                if artist.is_empty() {
+                    "Unknown composer"
+                } else {
+                    &artist
+                }
             } else {
                 &entry.composer
             },
+            album,
             entry.format,
             seconds / 60,
             seconds % 60,
             entry.note_count
         );
-        d.text(x, y + 23., clip(&detail, text_width, 11.), 11., t.muted);
+        d.text(
+            text_x,
+            y + 23.,
+            clip(&detail, text_width, 11.),
+            11.,
+            t.muted,
+        );
         let bx = if narrow { x } else { l.width - 262. };
         let by = if narrow { y + 45. } else { y };
         d.button(state, bx, by, 66., "Open", Action::LibraryOpen(index), t);
@@ -405,16 +454,47 @@ fn render_edit(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::Theme) 
         Action::LibraryCancelEdit,
         t,
     );
+    d.button(
+        state,
+        x,
+        275.,
+        (width * 0.5 - 4.).min(240.),
+        "Find cover",
+        Action::MetadataOpen,
+        t,
+    );
+    if state.library.items.iter().any(|e| {
+        state
+            .library
+            .edit
+            .as_ref()
+            .is_some_and(|edit| edit.id == e.id)
+            && e.enrichment.is_some()
+    }) {
+        d.button(
+            state,
+            x + (width * 0.5 + 4.).min(248.),
+            275.,
+            (width * 0.5 - 4.).min(240.),
+            "Remove metadata",
+            Action::MetadataClear,
+            t,
+        );
+    }
     d.text(
         x,
-        280.,
-        "Type to edit · Ctrl+A selects all · Tab changes field",
+        (l.height - 55.).min(335.),
+        clip(
+            "Type to edit · Ctrl+A selects all · Tab changes field",
+            width,
+            11.,
+        ),
         11.,
         t.muted,
     );
     d.text(
         x,
-        305.,
+        (l.height - 30.).min(360.),
         clip(&state.library.status, width, 11.),
         11.,
         t.muted,

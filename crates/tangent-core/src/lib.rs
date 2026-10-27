@@ -21,3 +21,5 @@ pub mod guided;
 pub mod major_scale;
 
 pub mod beaming;
+
+pub mod metadata;

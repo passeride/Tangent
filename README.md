@@ -67,6 +67,10 @@ The horizontal MusicXML score now groups short notes with shared beams, includin
 mixed 16ths/32nds and chord stems. Written groups take priority; missing groups
 follow the meter. See [grouped notes](docs/design/grouped-notes.md).
 
+Library → Edit → **Find cover** now offers reviewed MusicBrainz/Cover Art Archive
+artwork and metadata. Approved covers save locally for offline use; your local
+title/composer and original MIDI/MusicXML stay intact. See [the guide](docs/music-library.md#album-covers-and-external-metadata).
+
 ## Screenshots
 
 Actual running app, captured with Chromium at 1440 px width using Tangent's

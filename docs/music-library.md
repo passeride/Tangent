@@ -27,3 +27,19 @@ Limits: 16 MiB per file, 128 MiB of source bytes, 500 pieces. Clearing browser s
 data removes that browser's library. Save errors are shown; playback remains
 available even when storage is unavailable. See [ADR-0014](adr/0014-library-search-and-metadata.md)
 and the [short P-45 test](test-p45.md).
+
+## Album covers and external metadata
+
+Choose **Edit → Find cover**, preview an album release, then **Use cover &
+metadata**. The first provider is MusicBrainz with Cover Art Archive. Search uses
+the displayed title/composer as title/artist hints; **Title only** helps when a
+classical composer differs from a recording artist. Matching is a suggestion,
+not a claim about the original arrangement. No score/MIDI bytes are uploaded.
+
+Saved artwork works offline and survives reimport/reopen. Local title/composer
+remain yours; artist/album/date/country and source IDs are separate annotations.
+Search also finds saved album/artist text. **Remove metadata** keeps your source
+and local edits. Missing covers keep a themed placeholder and can save metadata
+only. Database export includes covers (32 MiB total cover budget). See
+[the provider guide](design/library-metadata-providers.md) for service conditions,
+matching limitations and the explicit live-verification boundary.

@@ -1,9 +1,13 @@
 //! Desktop capability adapter. No browser, loopback HTTP or webview.
 //! The Bevy/render thread never opens devices, blocks on SQLite, or parses files.
+#[path = "native/enrichment.rs"]
+mod enrichment;
 #[path = "native/fingerprints.rs"]
 mod fingerprints;
 #[path = "native/library.rs"]
 mod library;
+#[path = "native/metadata_http.rs"]
+mod metadata_http;
 #[path = "native/midi_output.rs"]
 mod midi_output;
 #[path = "native/progress.rs"]
@@ -424,7 +428,7 @@ fn data_dir() -> Result<PathBuf, String> {
 fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch("PRAGMA foreign_keys = ON;")?;
     let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-    if version > 5 {
+    if version > 6 {
         return Err(rusqlite::Error::InvalidQuery);
     }
     if version == 0 {
@@ -482,6 +486,14 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     if version < 5 {
         conn.execute_batch("BEGIN;")?;
         if let Err(e) = conn.execute_batch(progress::MIGRATION) {
+            let _ = conn.execute_batch("ROLLBACK;");
+            return Err(e);
+        }
+        conn.execute_batch("COMMIT;")?;
+    }
+    if version < 6 {
+        conn.execute_batch("BEGIN;")?;
+        if let Err(e) = conn.execute_batch(enrichment::MIGRATION) {
             let _ = conn.execute_batch("ROLLBACK;");
             return Err(e);
         }
@@ -685,6 +697,7 @@ fn backend(
 ) {
     let mut audio = Audio::new(&out);
     let db = storage(&out);
+    let metadata_http = metadata_http::start(out.clone());
     let mut midi = connect_midi(&out);
     loop {
         for (bytes, metadata) in imports.try_iter().take(1) {
@@ -813,6 +826,28 @@ fn backend(
                             let _ = out.send(
                                 json!({"type":"library-status","text":"Local library unavailable"}),
                             );
+                        }
+                    }
+                    "metadata-fetch" => {
+                        if let Ok(request) = serde_json::from_str::<Value>(&value)
+                            && metadata_http.try_send(request.clone()).is_err()
+                        {
+                            let _=out.send(json!({"type":"metadata-response","ticket":request["ticket"],"kind":request["kind"],"error":"Metadata queue is busy. Try again."}));
+                        }
+                    }
+                    "library-enrich" | "library-enrichment-clear" | "library-cover" => {
+                        if let Some((conn, _)) = &db {
+                            let result = match name.as_str() {
+                                "library-cover"=>serde_json::from_str::<Value>(&value).map_err(|e|e.to_string()).and_then(|r|enrichment::cover(conn,r["id"].as_str().unwrap_or("")).map(|mut v|{v["epoch"]=r["epoch"].clone();v})),
+                                "library-enrichment-clear"=>enrichment::clear(conn,&value).map(|_|json!({"type":"library-updated","text":"External metadata removed."})),
+                                _=>serde_json::from_str(&value).map_err(|e|e.to_string()).and_then(|r|enrichment::save(conn,&r)).map(|_|json!({"type":"library-updated","text":"Cover and external metadata saved.","enrichment":true})),
+                            };
+                            let _ = out.send(
+                                result
+                                    .unwrap_or_else(|e| json!({"type":"library-status","text":e})),
+                            );
+                        } else {
+                            let _=out.send(json!({"type":"library-status","text":"Local library unavailable."}));
                         }
                     }
                     "library-edit" => {
@@ -949,7 +984,7 @@ mod tests {
         let version: i64 = db
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 5);
+        assert_eq!(version, 6);
         let rows: i64 = db
             .query_row("SELECT count(*) FROM scores", [], |r| r.get(0))
             .unwrap();

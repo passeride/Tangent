@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import initSqlJs from 'sql.js';
+import {readFile} from 'node:fs/promises';
+import {migrate} from './storage-schema.js';
+import {saveLibrarySong,listLibrary,removeLibrarySong,readLibrarySource,editLibraryMetadata} from './library-schema.js';
+import {writeEnrichment,readCover,clearEnrichment,validCandidate} from './metadata-schema.js';
+const SQL=await initSqlJs();let db=new SQL.Database();migrate(db);
+const id='a'.repeat(64),source=new Uint8Array([1,2,3]),meta={title:'Local title',composer:'Local composer',format:'MIDI',duration_us:1000000,note_count:4};
+saveLibrarySong(db,id,source,meta);
+const candidate={provider:'musicbrainz',recording_id:'11111111-1111-1111-1111-111111111111',release_id:'22222222-2222-2222-2222-222222222222',title:'Morning lantern',artists:['Example pianist'],album:'Quiet keys',date:'2001',country:'NO',disambiguation:'',length_ms:180000,release_group_id:null,isrcs:[],provider_score:95,title_match:true,creator_match:false};
+const cover=new Uint8Array(await readFile(new URL('../../crates/tangent-player/tests/fixtures/metadata-cover.png',import.meta.url)));
+assert.ok(validCandidate(candidate));writeEnrichment(db,id,candidate,cover);
+assert.equal(listLibrary(db).items[0].title,'Local title');assert.equal(listLibrary(db).items[0].composer,'Local composer');assert.equal(listLibrary(db).items[0].enrichment.artists[0],'Example pianist');assert.equal(listLibrary(db).items[0].has_cover,true);assert.equal(listLibrary(db,0,8,'quiet keys').total,1);assert.equal(listLibrary(db,0,8,'example pianist').total,1);
+assert.deepEqual(readLibrarySource(db,id).source,source);saveLibrarySong(db,id,source,meta);assert.equal(listLibrary(db).items[0].has_cover,true);
+editLibraryMetadata(db,id,'My edited title','My composer');assert.equal(listLibrary(db).items[0].enrichment.album,'Quiet keys');
+const reopened=new SQL.Database(db.export());migrate(reopened);assert.deepEqual(readCover(reopened,id),cover);
+assert.throws(()=>writeEnrichment(db,id,{...candidate,release_id:'../evil'},cover),/Invalid/);assert.throws(()=>writeEnrichment(db,id,candidate,new Uint8Array([60,115,118,103])),/PNG/);
+clearEnrichment(db,id);assert.equal(listLibrary(db).items[0].enrichment,null);assert.equal(listLibrary(db).items[0].title,'My edited title');
+writeEnrichment(db,id,candidate,cover);removeLibrarySong(db,id);assert.equal(db.exec('SELECT COUNT(*) FROM library_enrichment')[0].values[0][0],0);assert.throws(()=>writeEnrichment(db,id,candidate,cover),/no longer/);
+// A true v5 database migrates transactionally and preserves its originals/settings.
+let old=new SQL.Database(reopened.export());old.run('DROP TABLE library_enrichment;PRAGMA user_version=5;');migrate(old);assert.equal(listLibrary(old).items[0].composer,'My composer');assert.equal(old.exec('PRAGMA user_version')[0].values[0][0],6);migrate(old);
+console.log('Metadata SQLite: v5 migration, annotations/covers export/reopen, original fields/bytes, dedup/edit preservation, validation and cascade removal passed.');
