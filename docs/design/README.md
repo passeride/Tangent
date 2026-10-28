@@ -72,3 +72,7 @@ Create original layouts; reference material needs a source and rights record.
 - [Library artwork and metadata providers](library-metadata-providers.md) — provider evaluation, review flow and local cover thumbnails.
 
 - [Saved library folders](library-folders.md) — startup/manual scans and larger file selections, with browser permission boundaries.
+
+- [Refactoring and library review](refactoring-and-library-review.md) — proposed notation/UI/capability reuse, candidates and staged experiments.
+
+- [Display scaling and library extent](display-scaling-and-library-layout.md) — proposed 4K readability, app zoom and viewport-filling list requirements.

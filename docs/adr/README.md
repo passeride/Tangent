@@ -83,3 +83,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0035: Library folders and bulk import](0035-library-folders-and-bulk-import.md) — saved roots, permission-aware startup scans and 500-file selections.
 
 - [ADR-0036: Rhythmic reading and note glyphs](0036-rhythmic-reading-and-note-glyphs.md) - source-beat MIDI estimates and Bravura notes/flags.
+
+- [ADR-0037: Notation and UI refactoring](0037-notation-and-ui-refactoring.md) — proposed library evaluation, retained domain boundaries and 4K/library layout work.

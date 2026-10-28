@@ -5,6 +5,25 @@ this file tracks the remaining work, not an authorization gate.
 
 For user-facing sequencing, see the **proposed** [UX roadmap](design/ux-roadmap.md), [user stories](design/user-stories-and-journeys.md) and [product north star](design/product-north-star.md). The prioritized practice-loop bet is passage looping, honest hand/part isolation and action-oriented results. Initial implementation now includes source-time loops, explicit parts, authored measure snapping, contextual retry, HUD presets, keyboard fitting and session-local goals (ADR-0021–0023). The remaining milestones are proposals; see the execution-plan delivery log.
 
+## Planned refactoring: notation, UI and established libraries
+
+See [the assessment](design/refactoring-and-library-review.md),
+[4K/library requirements](design/display-scaling-and-library-layout.md) and
+[proposed ADR-0037](adr/0037-notation-and-ui-refactoring.md). No backend selected.
+
+- [ ] UI-1: Shared application display scale, DPI diagnostics and viewport-filling
+  Library; replace the fixed six-row presentation cap with adaptive extent and
+  bounded metadata loading. Keep notation zoom separate. Prioritize independently
+  of the score renderer migration; validate on the owner's 4K display.
+- [ ] UI-2: Compare existing Bevy Flexbox/Grid/widgets with a scoped bevy_egui
+  Library/edit-form prototype; assess scrolling, text editing, focus and themes.
+- [ ] N-1: Compare Staveloom and Verovio using identical dense piano fixtures,
+  cross-staff beams, hand colours and written-to-performance mapping in Bevy.
+- [ ] N-2: Select an engraver from measured results and migrate authored scores
+  gradually, preserving source identity, playback, progress and live feedback.
+- [ ] C-1: Separately evaluate rfd dialogs, RustySynth/SoundFont timbre and optional
+  native notify-based folder watching; no dependency bundle or automatic adoption.
+
 ## Piano/playback foundation
 
 - Profile the delivered Bevy UI/wgpu surface on real desktop/mobile GPUs.
@@ -24,7 +43,8 @@ For user-facing sequencing, see the **proposed** [UX roadmap](design/ux-roadmap.
 - [x] Persist original music sources and add a paged Bevy Library view (ADR-0013).
 - [x] Library title/composer search, metadata editing, sorting/filtering, batch import and source/fingerprint cleanup (ADR-0014).
 - [x] Meaningful score/session recording, results, recent history and adaptive review (ADR-0018).
-- Add library folders/tags and backup restore.
+- [x] Saved library folders and startup/manual recursive scanning (ADR-0035).
+- Add tags and validated backup restore; optional live watching is separate.
 - Move source parsing and slow storage work off rendering/audio scheduling paths after profiling.
 - [x] Add a true native renderer, audio mixer, MIDI inputs and SQLite adapter
   without browser or localhost server (ADR-0012). Validate release binaries on

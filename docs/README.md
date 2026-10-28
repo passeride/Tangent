@@ -27,3 +27,5 @@ GitHub without a documentation server. No docs framework is required yet.
 
 - [Scores, progress and adaptive practice](practice-progress.md) — usage, score meanings and persistence limits.
 - [Piano exercise catalog](piano-exercise-catalog.md) — 83 proposed piano, theory, rhythm, technique and ear-training exercises.
+
+- [Future refactoring and library assessment](design/refactoring-and-library-review.md): notation engines, UI widgets and platform capabilities; includes the [4K/library layout brief](design/display-scaling-and-library-layout.md). Proposed, not implemented.

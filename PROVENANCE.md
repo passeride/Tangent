@@ -321,3 +321,11 @@ Original shared rhythm inference, source-tick MIDI mapping and Bevy music-font
 presentation implement the owner's note-value request (ADR-0036). Existing
 Bravura and its notices are reused, with SMuFL primary documentation consulted.
 No new dependency, runtime asset or excluded project source was imported.
+
+## Future notation/UI library assessment — 2026-10-28
+
+Project-authored research and proposed ADR-0037 record notation-engine reuse,
+4K/library layout requirements and smaller capability/library opportunities.
+Sources are upstream public documentation and Tangent's existing code. No
+third-party engine was integrated or benchmarked, and no dependency, asset or
+excluded implementation was imported. Actual UI/notation fixes remain future work.

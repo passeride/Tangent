@@ -75,6 +75,10 @@ Library → **Folder** now saves a music folder and scans subfolders at startup
 or on demand. Browser rescans follow folder permissions. Manual Import accepts
 up to 500 files; background catalog imports keep your active piece intact.
 
+Future work now includes a [notation/UI library assessment](docs/design/refactoring-and-library-review.md)
+and [4K scaling and library layout requirements](docs/design/display-scaling-and-library-layout.md).
+These are proposals; no renderer or UI framework replacement has shipped.
+
 ## Screenshots
 
 Actual running app, captured with Chromium at 1440 px width using Tangent's
