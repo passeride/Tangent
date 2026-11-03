@@ -304,3 +304,13 @@ automatic groups. Mixed values retain secondary beams and partial hooks. The
 existing score scale and combined overlay apply without a new setting. MIDI
 remains an approximate time-based view. See [ADR-0033](adr/0033-written-beam-groups.md)
 for the supported engraving boundaries.
+
+### Piano command hints
+
+With piano shortcuts enabled in Settings → Accessibility → Keybindings, the
+reserved control note has a sliders icon on the on-screen keyboard. Holding it
+shows command badges on the mapped notes and a full-name/pitch legend above the
+keyboard. The legend includes bindings outside the visible keyboard range.
+Play changes to Pause during playback. Hints follow the saved bindings and stay
+visible during the existing two-second released-prefix window; consuming the
+prefix or its timeout hides them. No bindings or audio/scoring rules change.

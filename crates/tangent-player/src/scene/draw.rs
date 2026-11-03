@@ -604,6 +604,9 @@ pub fn render(
             t,
         );
     }
+    if state.screen == Screen::Session && !state.help {
+        super::command_overlay::render(&mut d, &state, &l, t, platform::clock_us() as u64);
+    }
     if state.screen == Screen::Session
         && !state.help
         && state.shortcuts.piano.armed(platform::clock_us() as u64)
@@ -1054,5 +1057,71 @@ mod rhythm_glyph_tests {
         d.rhythmic_note(100., 100., 5.9, Color::WHITE, None, false, false);
         assert_eq!(d.labels[0].text, "\u{e0a4}");
         assert_eq!(d.labels.len(), 1);
+    }
+}
+
+#[cfg(test)]
+mod command_overlay_tests {
+    use super::*;
+
+    #[test]
+    fn command_hints_follow_bindings_and_prefix_lifetime() {
+        let mut state = State::new();
+        state.shortcuts.config.piano_enabled = true;
+        state.shortcuts.config.control = 60;
+        state
+            .shortcuts
+            .config
+            .rows
+            .iter_mut()
+            .find(|r| r.action == "play")
+            .unwrap()
+            .piano = Some(61);
+        let l = Layout::new(1280., 800., &state.piano);
+        let t = theme::palette(0);
+        let draw = |state: &State, now| {
+            let mut d = Drawing::default();
+            super::super::command_overlay::render(&mut d, state, &l, t, now);
+            d
+        };
+        assert!(draw(&state, 0).labels.is_empty());
+        let cfg = state.shortcuts.config.clone();
+        let _ = state.shortcuts.piano.event(&cfg, "test:60", 60, true, 0);
+        assert!(
+            draw(&state, 3_000_000)
+                .labels
+                .iter()
+                .any(|l| l.text == "C#4 > Play")
+        );
+        state.transport.playing = true;
+        assert!(
+            draw(&state, 1)
+                .labels
+                .iter()
+                .any(|l| l.text == "C#4 II Pause")
+        );
+        let _ = state.shortcuts.piano.event(&cfg, "test:60", 60, false, 1);
+        assert!(
+            draw(&state, 2)
+                .labels
+                .iter()
+                .any(|l| l.text.starts_with("Piano controls /"))
+        );
+        assert!(draw(&state, 2_000_001).labels.is_empty());
+        let _ = state
+            .shortcuts
+            .piano
+            .event(&cfg, "test:60", 60, true, 3_000_000);
+        let _ = state
+            .shortcuts
+            .piano
+            .event(&cfg, "test:60", 60, false, 3_000_001);
+        let _ = state
+            .shortcuts
+            .piano
+            .event(&cfg, "test:61", 61, true, 3_000_002);
+        assert!(draw(&state, 3_000_003).labels.is_empty());
+        state.shortcuts.config.piano_enabled = false;
+        assert!(draw(&state, 0).shapes.is_empty());
     }
 }
