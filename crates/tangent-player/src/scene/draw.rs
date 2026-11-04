@@ -939,7 +939,10 @@ fn falling_block(d: &mut Drawing, r: Rect, key: u8, color: Color, show_names: bo
         Color::WHITE.with_alpha(0.24),
         1.,
     );
-    if show_names && r.h >= 16. && let Some((label, size)) = falling_block_label(key, w) {
+    if show_names
+        && r.h >= 16.
+        && let Some((label, size)) = falling_block_label(key, w)
+    {
         let rgb = fill.to_srgba();
         let brightness = 0.2126 * rgb.red + 0.7152 * rgb.green + 0.0722 * rgb.blue;
         let ink = if brightness > 0.58 {
