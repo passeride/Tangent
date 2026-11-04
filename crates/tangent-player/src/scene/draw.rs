@@ -896,12 +896,7 @@ fn falling_block_color(color: Color, key: u8) -> Color {
         return color;
     }
     let rgb = color.to_srgba();
-    Color::srgba(
-        rgb.red * 0.52,
-        rgb.green * 0.52,
-        rgb.blue * 0.52,
-        rgb.alpha,
-    )
+    Color::srgba(rgb.red * 0.52, rgb.green * 0.52, rgb.blue * 0.52, rgb.alpha)
 }
 
 /// Prefer the full MIDI pitch (C#4), falling back to a pitch class (C#)
@@ -944,25 +939,23 @@ fn falling_block(d: &mut Drawing, r: Rect, key: u8, color: Color, show_names: bo
         Color::WHITE.with_alpha(0.24),
         1.,
     );
-    if show_names && r.h >= 16. {
-        if let Some((label, size)) = falling_block_label(key, w) {
-            let rgb = fill.to_srgba();
-            let brightness = 0.2126 * rgb.red + 0.7152 * rgb.green + 0.0722 * rgb.blue;
-            let ink = if brightness > 0.58 {
-                Color::BLACK
-            } else {
-                Color::WHITE
-            };
-            let text_w = label.len() as f32 * size * 0.62;
-            d.text(
-                x + (w - text_w) * 0.5,
-                r.y + (r.h.min(26.) - size) * 0.5,
-                label.clone(),
-                size,
-                ink,
-            );
-            d.block_labels.push(label);
-        }
+    if show_names && r.h >= 16. && let Some((label, size)) = falling_block_label(key, w) {
+        let rgb = fill.to_srgba();
+        let brightness = 0.2126 * rgb.red + 0.7152 * rgb.green + 0.0722 * rgb.blue;
+        let ink = if brightness > 0.58 {
+            Color::BLACK
+        } else {
+            Color::WHITE
+        };
+        let text_w = label.len() as f32 * size * 0.62;
+        d.text(
+            x + (w - text_w) * 0.5,
+            r.y + (r.h.min(26.) - size) * 0.5,
+            label.clone(),
+            size,
+            ink,
+        );
+        d.block_labels.push(label);
     }
 }
 fn falling(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
