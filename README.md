@@ -81,6 +81,12 @@ These are proposals; no renderer or UI framework replacement has shipped.
 
 ## Screenshots
 
+Piano control-key command hints (real Bevy UI, held MIDI control note):
+
+![Piano command hints](docs/screenshots/piano-command-overlay.png)
+
+Reproduce with `TANGENT_CAPTURE_COMMANDS=1 node web/piano/capture.mjs` after building the WASM package.
+
 Actual running app, captured with Chromium at 1440 px width using Tangent's
 original demonstration study. These are app screenshots, not design mockups.
 

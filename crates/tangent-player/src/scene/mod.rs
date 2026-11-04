@@ -1,4 +1,5 @@
 //! One shared Bevy/wgpu window and UI renderer for native desktop and web.
+mod command_overlay;
 mod controls;
 mod draw;
 mod effects;
