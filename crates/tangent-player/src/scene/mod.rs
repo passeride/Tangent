@@ -408,7 +408,15 @@ impl State {
             if self.screen != Screen::Session || self.help {
                 return;
             }
-            self.stop_reference();
+            // Keep the chord sounding while the learner tries the same note.
+            let exploring_harmony = self.mode == Mode::Lesson
+                && self.lesson.current().is_some_and(|step| {
+                    step.illustration == tangent_core::lesson::Illustration::Harmony
+                        && matches!(step.task, tangent_core::lesson::Task::Explore(_))
+                });
+            if !exploring_harmony {
+                self.stop_reference();
+            }
             let fresh = !self.held.values().any(|&held| held == key);
             self.held.insert(id.clone(), key);
             if self.mode == Mode::Lesson {
@@ -933,7 +941,13 @@ fn update(
             );
         }
         state.reference_keys = keys;
-        state.reference_remaining = if state.reference_keys.len() > 1 {
+        let exploring_harmony = state.lesson.current().is_some_and(|step| {
+            step.illustration == tangent_core::lesson::Illustration::Harmony
+                && matches!(step.task, tangent_core::lesson::Task::Explore(_))
+        });
+        state.reference_remaining = if exploring_harmony {
+            3.0
+        } else if state.reference_keys.len() > 1 {
             0.9
         } else {
             0.43

@@ -93,9 +93,9 @@ const HOME: &[Step] = &[
         "Samme tone, ny rolle",
         &[
             "B er ikke akkordtone over C-dur, men er tersen i G-dur.",
-            "Bytt bakgrunnsakkord og prøv B hver gang. Avslør fargene etter at du har lyttet.",
+            "Trykk Lytt og spill B mens akkorden klinger. Bytt akkord og prøv igjen.",
         ],
-        "Spill B4. Bruk «Bytt akkord» og prøv igjen.",
+        "Trykk Lytt, og spill B4 over akkorden.",
         Illustration::Harmony,
         Task::Explore(71),
         &[71],

@@ -562,14 +562,15 @@ pub fn render(
         }
     }
     if matches!(state.screen, Screen::Main | Screen::Train) && !state.help {
+        let progress_y = if state.screen == Screen::Train && l.height < 620. {
+            10.
+        } else {
+            l.height - 44.
+        };
         d.button(
             &mut state,
             l.width - 148.,
-            if state.screen == Screen::Train && l.height < 620. {
-                10.
-            } else {
-                l.height - 44.
-            },
+            progress_y,
             120.,
             "Progress",
             Action::Progress,

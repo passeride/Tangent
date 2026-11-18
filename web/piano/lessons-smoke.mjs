@@ -58,7 +58,12 @@ try {
   assert.equal((await page.evaluate(() => tangentDiagnostics())).lesson_context, 2);
   await click(page, 'lesson-reveal');
   assert.equal((await page.evaluate(() => tangentDiagnostics())).lesson_reveal, true);
-  await note(71, true); await note(71, false);
+  await click(page, 'lesson-listen');
+  await page.waitForFunction(() => tangentDiagnostics().lesson_audition.length === 3);
+  await note(71, true);
+  assert.equal((await page.evaluate(() => tangentDiagnostics())).lesson_audition.length, 3,
+    'The reference chord must continue while the student tries B');
+  await note(71, false);
   await click(page, 'lesson-next');
   await page.waitForFunction(() => tangentDiagnostics().lesson_step === 4);
 

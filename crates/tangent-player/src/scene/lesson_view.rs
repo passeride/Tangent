@@ -42,6 +42,7 @@ pub(super) fn catalog(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::
 }
 
 /// Text wrapping is explicit: the renderer's Drawing::text draws one line.
+#[allow(clippy::too_many_arguments)]
 fn wrapped(
     d: &mut Drawing,
     x: f32,
@@ -334,6 +335,7 @@ fn harmony(d: &mut Drawing, state: &mut State, x: f32, y: f32, w: f32, h: f32, t
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn intervals(
     d: &mut Drawing,
     state: &State,
@@ -355,7 +357,7 @@ fn intervals(
     } else {
         ["C", "D", "E", "F", "G", "A", "B", "C"]
     };
-    let mut previous = None;
+    let mut previous: Option<(f32, u8)> = None;
     for i in 0..8 {
         let pos = if i == 7 { 12 } else { semitones[i] } as f32;
         let cx = x + 14. + pos / 12. * span;
