@@ -25,6 +25,12 @@ organized into Audio & MIDI, Visuals, Practice, Effects, Accessibility (planned)
 and Data & About. Opening Pause stops playback and releases live notes; returning
 from Settings stays paused until Resume.
 
+**Interaktive læringsmoduler:** Velg **Train → Lær musikkteori** for
+«Finn hjem», dur, naturlig moll og kvintsirkelen. Moduler kombinerer forklaring,
+lyd, mønstre og oppgaver på MIDI-piano, PC-tastatur eller skjermpiano. Hjelpefarger
+viser forholdet mellom akkord- og skalatoner uten å klassifisere spenning som feil.
+Se [designbriefen](docs/design/interactive-lessons.md).
+
 The UI v2 branch opens at a responsive, action-card main menu: **Play**, **Library**, **Train**, **FreeForm**, and
 **Settings**. Train offers treble/bass note reading with three levels, optional hints and diatonic chord exercises; FreeForm
 keeps song playback silent. Return home from the corner-gear pause screen.
