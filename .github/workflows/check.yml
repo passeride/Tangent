@@ -93,6 +93,10 @@ jobs:
       - run: npm ci --prefix web/piano
       - name: Install Chromium and system dependencies
         run: cd web/piano && npx playwright install --with-deps chromium
+      - name: Verify MIDI importer in real Chromium
+        if: matrix.shard == 'foundations'
+        timeout-minutes: 5
+        run: npm test --prefix web/midi-import
       - name: Run ${{ matrix.shard }} browser tests
         timeout-minutes: 22
         run: node web/piano/ci-shard.mjs ${{ matrix.shard }}
