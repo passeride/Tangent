@@ -23,3 +23,5 @@ pub mod major_scale;
 pub mod beaming;
 
 pub mod metadata;
+
+pub mod lesson;
