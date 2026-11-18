@@ -46,11 +46,14 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         d.text(x, title_y + 114., "Choose what to learn", 14., t.muted);
         let top = title_y + if short { 137. } else { 156. };
         let height = if short {
-            ((l.height - top - 48.) / 6. - 8.).clamp(30., 48.)
-        } else {
-            62.
-        };
+            ((l.height - top - 55.) / 7. - 4.).clamp(22., 48.)
+        } else { 59. };
         for (i, (label, caption, action)) in [
+            (
+                "Lær musikkteori",
+                "Interaktive moduler med teori, lyd og piano",
+                Action::Learn,
+            ),
             (
                 "Read notes",
                 "Treble, bass and mixed clefs",
@@ -84,7 +87,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
             d.menu_card(
                 state,
                 x,
-                top + i as f32 * (height + if short { 8. } else { 12. }),
+                top + i as f32 * (height + if short { 4. } else { 10. }),
                 width,
                 height,
                 label,

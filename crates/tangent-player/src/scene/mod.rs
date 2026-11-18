@@ -6,6 +6,7 @@ mod explorer_view;
 mod flow_view;
 mod guided;
 mod layout;
+mod lesson_view;
 mod library;
 mod menu;
 mod metadata_view;
@@ -46,6 +47,7 @@ impl View {
 enum Screen {
     Main,
     Train,
+    Learn,
     Library,
     Session,
     Progress,
@@ -60,6 +62,7 @@ enum Mode {
     Explorer,
     FiveFinger,
     MajorScale,
+    Lesson,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SettingsTab {
@@ -103,6 +106,8 @@ pub struct State {
     mode: Mode,
     practice: tangent_core::practice::Practice,
     training: training::Sessions,
+    lesson: tangent_core::lesson::Session,
+    lesson_demo: Vec<Vec<u8>>,
     reference_remaining: f32,
     reference_keys: Vec<u8>,
     song: Song,
@@ -193,6 +198,8 @@ impl State {
             mode: Mode::Play,
             practice: tangent_core::practice::Practice::default(),
             training: training::Sessions::default(),
+            lesson: tangent_core::lesson::Session::default(),
+            lesson_demo: vec![],
             reference_remaining: 0.,
             reference_keys: vec![],
             song,
@@ -404,6 +411,10 @@ impl State {
             self.stop_reference();
             let fresh = !self.held.values().any(|&held| held == key);
             self.held.insert(id.clone(), key);
+            if self.mode == Mode::Lesson {
+                let held: Vec<_> = self.held.values().copied().collect();
+                self.lesson.press(key, &held, fresh);
+            }
             personal::capture(self, key);
             self.capture_for_recognition(key);
             if self.mode == Mode::Play
@@ -440,7 +451,7 @@ impl State {
                     key,
                     Some(&selection),
                 )),
-                Mode::Play | Mode::FreeForm => Some(effects::Grade::Neutral),
+                Mode::Play | Mode::FreeForm | Mode::Lesson => Some(effects::Grade::Neutral),
                 Mode::Notes
                 | Mode::Chords
                 | Mode::Explorer
@@ -508,11 +519,15 @@ impl State {
     fn effect_scale(&self) -> f32 {
         [0.65, 1.0, 1.35][self.effect_strength as usize]
     }
-    fn stop_reference(&mut self) {
+    fn release_reference(&mut self) {
         for key in self.reference_keys.drain(..) {
             platform::action("off", &format!("reference:{key}"));
         }
         self.reference_remaining = 0.;
+    }
+    fn stop_reference(&mut self) {
+        self.lesson_demo.clear();
+        self.release_reference();
     }
     fn hear_target(&mut self) {
         self.stop_reference();
@@ -900,8 +915,20 @@ fn update(
     if state.reference_remaining > 0. {
         state.reference_remaining -= time.delta_secs();
         if state.reference_remaining <= 0. {
-            state.stop_reference();
+            state.release_reference();
         }
+    }
+    // Reference notes are output-only; they never enter live input evaluation.
+    if state.screen == Screen::Session && state.mode == Mode::Lesson
+        && !state.help && state.reference_remaining <= 0.
+        && let Some(keys) = state.lesson_demo.pop()
+    {
+        for &key in &keys {
+            platform::action("on",
+                &serde_json::json!({"id":format!("reference:{key}"),"key":key,"velocity":80}).to_string());
+        }
+        state.reference_keys = keys;
+        state.reference_remaining = if state.reference_keys.len() > 1 { 0.9 } else { 0.43 };
     }
     state.particles.retain(|p| p.life > 0.);
     state.ripples.retain(|r| r.age < r.preset.lifetime() * 0.8);

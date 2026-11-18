@@ -43,6 +43,14 @@ pub enum Action {
     LibraryPrevious,
     LibraryNext,
     Train,
+    Learn,
+    LessonOpen(u8),
+    LessonNext,
+    LessonPrevious,
+    LessonReveal,
+    LessonListen,
+    LessonContext,
+    LessonExit,
     StartPlay,
     FreeForm,
     TrainNotes,
@@ -154,6 +162,17 @@ impl Action {
             Self::LibraryPrevious => "library-previous",
             Self::LibraryNext => "library-next",
             Self::Train => "train",
+            Self::Learn => "learn",
+            Self::LessonOpen(0) => "lesson-home",
+            Self::LessonOpen(1) => "lesson-major",
+            Self::LessonOpen(2) => "lesson-minor",
+            Self::LessonOpen(_) => "lesson-fifths",
+            Self::LessonNext => "lesson-next",
+            Self::LessonPrevious => "lesson-previous",
+            Self::LessonReveal => "lesson-reveal",
+            Self::LessonListen => "lesson-listen",
+            Self::LessonContext => "lesson-context",
+            Self::LessonExit => "lesson-exit",
             Self::StartPlay => "start-play",
             Self::FreeForm => "freeform",
             Self::TrainNotes => "train-notes",
@@ -592,6 +611,58 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
                     state.library.pending_delete = Some(id);
                 }
             }
+        }
+        Action::Learn => {
+            training::end(state, false);
+            state.panic();
+            state.help = false;
+            state.settings_open = false;
+            state.screen = Screen::Learn;
+        }
+        Action::LessonOpen(index) => {
+            if !state.lesson.open(index as usize) { return; }
+            training::end(state, false);
+            state.panic();
+            state.help = false;
+            state.settings_open = false;
+            state.screen = Screen::Session;
+            state.mode = Mode::Lesson;
+        }
+        Action::LessonNext => {
+            if state.mode == Mode::Lesson {
+                state.stop_reference();
+                state.lesson.next();
+            }
+        }
+        Action::LessonPrevious => {
+            if state.mode == Mode::Lesson {
+                state.stop_reference();
+                state.lesson.previous();
+            }
+        }
+        Action::LessonReveal => {
+            if state.mode == Mode::Lesson { state.lesson.reveal = !state.lesson.reveal; }
+        }
+        Action::LessonListen => {
+            if state.mode == Mode::Lesson { lesson_view::audition(state); }
+        }
+        Action::LessonContext => {
+            if state.mode == Mode::Lesson {
+                state.stop_reference();
+                match state.lesson.current().map(|step| step.illustration) {
+                    Some(tangent_core::lesson::Illustration::Harmony) =>
+                        state.lesson.context = (state.lesson.context + 1) % 3,
+                    Some(tangent_core::lesson::Illustration::Fifths) =>
+                        state.lesson.fifth = (state.lesson.fifth + 1) % 12,
+                    _ => {}
+                }
+            }
+        }
+        Action::LessonExit => {
+            state.panic();
+            state.help = false;
+            state.settings_open = false;
+            state.screen = Screen::Learn;
         }
         Action::Main | Action::Train => {
             training::end(state, false);
