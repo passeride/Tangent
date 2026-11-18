@@ -620,7 +620,9 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             state.screen = Screen::Learn;
         }
         Action::LessonOpen(index) => {
-            if !state.lesson.open(index as usize) { return; }
+            if !state.lesson.open(index as usize) {
+                return;
+            }
             training::end(state, false);
             state.panic();
             state.help = false;
@@ -641,19 +643,25 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
             }
         }
         Action::LessonReveal => {
-            if state.mode == Mode::Lesson { state.lesson.reveal = !state.lesson.reveal; }
+            if state.mode == Mode::Lesson {
+                state.lesson.reveal = !state.lesson.reveal;
+            }
         }
         Action::LessonListen => {
-            if state.mode == Mode::Lesson { lesson_view::audition(state); }
+            if state.mode == Mode::Lesson {
+                lesson_view::audition(state);
+            }
         }
         Action::LessonContext => {
             if state.mode == Mode::Lesson {
                 state.stop_reference();
                 match state.lesson.current().map(|step| step.illustration) {
-                    Some(tangent_core::lesson::Illustration::Harmony) =>
-                        state.lesson.context = (state.lesson.context + 1) % 3,
-                    Some(tangent_core::lesson::Illustration::Fifths) =>
-                        state.lesson.fifth = (state.lesson.fifth + 1) % 12,
+                    Some(tangent_core::lesson::Illustration::Harmony) => {
+                        state.lesson.context = (state.lesson.context + 1) % 3
+                    }
+                    Some(tangent_core::lesson::Illustration::Fifths) => {
+                        state.lesson.fifth = (state.lesson.fifth + 1) % 12
+                    }
                     _ => {}
                 }
             }

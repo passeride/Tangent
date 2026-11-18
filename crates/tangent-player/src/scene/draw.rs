@@ -565,7 +565,11 @@ pub fn render(
         d.button(
             &mut state,
             l.width - 148.,
-            if state.screen == Screen::Train && l.height < 620. { 10. } else { l.height - 44. },
+            if state.screen == Screen::Train && l.height < 620. {
+                10.
+            } else {
+                l.height - 44.
+            },
             120.,
             "Progress",
             Action::Progress,
@@ -648,17 +652,22 @@ pub fn render(
             "block_labels":d.block_labels,"visible_labels":d.labels.iter().map(|s|s.text.as_str()).collect::<Vec<_>>()
         }).as_object().unwrap().clone());
         report.as_object_mut().unwrap().extend(serde_json::json!({"guided_waiting":guided::waiting(&state),"guided_gate":state.guidance.engine.barrier(),"guided_targets":state.guidance.engine.targets(),"flow_notes":state.practice.sequence_notes(),"flow_step":state.practice.sequence_step(),"flow_left":state.practice.scale_task().map(|p|p.left).or_else(||state.practice.flow_task().map(|p|p.left)),"explorer_source":state.practice.explorer_task().map(|task|task.source),"piano_renderer":"bevy-pbr-3d","piano_keys":state.piano.keys.len(),"personal_open":state.personal.open,"personal_token":state.personal.token,"personal_status":state.personal.status,"personal_matched":state.personal.matched,"personal_unresolved":state.personal.unresolved}).as_object().unwrap().clone());
-        report.as_object_mut().unwrap().extend(serde_json::json!({
-            "lesson_id":state.lesson.module.map(|i|tangent_core::lesson::MODULES[i].id),
-            "lesson_step":state.lesson.step,
-            "lesson_cursor":state.lesson.cursor,
-            "lesson_complete":state.lesson.complete(),
-            "lesson_reveal":state.lesson.reveal,
-            "lesson_next_target":state.lesson.next_target(),
-            "lesson_context":state.lesson.context,
-            "lesson_fifth":state.lesson.fifth,
-            "lesson_audition":state.reference_keys,
-        }).as_object().unwrap().clone());
+        report.as_object_mut().unwrap().extend(
+            serde_json::json!({
+                "lesson_id":state.lesson.module.map(|i|tangent_core::lesson::MODULES[i].id),
+                "lesson_step":state.lesson.step,
+                "lesson_cursor":state.lesson.cursor,
+                "lesson_complete":state.lesson.complete(),
+                "lesson_reveal":state.lesson.reveal,
+                "lesson_next_target":state.lesson.next_target(),
+                "lesson_context":state.lesson.context,
+                "lesson_fifth":state.lesson.fifth,
+                "lesson_audition":state.reference_keys,
+            })
+            .as_object()
+            .unwrap()
+            .clone(),
+        );
         platform::report(&report.to_string());
     }
     apply(&mut commands, &mut pool, d, &music_font.0, &ui_font.0);

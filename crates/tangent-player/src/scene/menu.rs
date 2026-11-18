@@ -47,7 +47,9 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
         let top = title_y + if short { 137. } else { 156. };
         let height = if short {
             ((l.height - top - 55.) / 7. - 4.).clamp(22., 48.)
-        } else { 59. };
+        } else {
+            59.
+        };
         for (i, (label, caption, action)) in [
             (
                 "Lær musikkteori",

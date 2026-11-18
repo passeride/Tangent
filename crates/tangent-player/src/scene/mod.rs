@@ -919,16 +919,25 @@ fn update(
         }
     }
     // Reference notes are output-only; they never enter live input evaluation.
-    if state.screen == Screen::Session && state.mode == Mode::Lesson
-        && !state.help && state.reference_remaining <= 0.
+    if state.screen == Screen::Session
+        && state.mode == Mode::Lesson
+        && !state.help
+        && state.reference_remaining <= 0.
         && let Some(keys) = state.lesson_demo.pop()
     {
         for &key in &keys {
-            platform::action("on",
-                &serde_json::json!({"id":format!("reference:{key}"),"key":key,"velocity":80}).to_string());
+            platform::action(
+                "on",
+                &serde_json::json!({"id":format!("reference:{key}"),"key":key,"velocity":80})
+                    .to_string(),
+            );
         }
         state.reference_keys = keys;
-        state.reference_remaining = if state.reference_keys.len() > 1 { 0.9 } else { 0.43 };
+        state.reference_remaining = if state.reference_keys.len() > 1 {
+            0.9
+        } else {
+            0.43
+        };
     }
     state.particles.retain(|p| p.life > 0.);
     state.ripples.retain(|r| r.age < r.preset.lifetime() * 0.8);
