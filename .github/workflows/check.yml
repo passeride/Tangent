@@ -91,8 +91,14 @@ jobs:
           path: web
       - run: npm ci --prefix web/midi-import
       - run: npm ci --prefix web/piano
-      - name: Install Chromium and system dependencies
-        run: cd web/piano && npx playwright install --with-deps chromium
+      # Ubuntu 24.04 GitHub runners already provide Chromium shared libraries.
+      # Avoid a per-shard apt upgrade/install (unpredictable mirror/dpkg stalls).
+      - name: Install and verify Chromium
+        timeout-minutes: 6
+        run: |
+          cd web/piano
+          npx playwright install chromium
+          node --input-type=module -e "import {chromium} from 'playwright'; import {gpuArgs} from './browser-helpers.mjs'; const b = await chromium.launch({headless:true,args:gpuArgs}); await b.close();"
       - name: Verify MIDI importer in real Chromium
         if: matrix.shard == 'foundations'
         timeout-minutes: 5
