@@ -350,7 +350,7 @@ impl Session {
             None => false,
         }
     }
-    pub fn next(&mut self) -> bool {
+    pub fn advance_step(&mut self) -> bool {
         if !self.complete() {
             return false;
         }
@@ -536,22 +536,22 @@ mod tests {
             s.press(note, &[note], true);
         }
         assert!(s.complete());
-        assert!(s.next());
+        assert!(s.advance_step());
         assert!(!s.reveal);
     }
     #[test]
     fn chord_requires_simultaneous_notes_and_navigation_is_gated() {
         let mut s = Session::default();
         s.open(0);
-        assert!(!s.next());
+        assert!(!s.advance_step());
         s.press(60, &[60], true);
-        assert!(s.next());
+        assert!(s.advance_step());
         s.press(60, &[60], true);
         s.press(64, &[64], true);
         assert!(!s.complete());
         s.press(67, &[60, 64, 67], true);
         assert!(s.complete());
-        assert!(s.next());
+        assert!(s.advance_step());
         assert_eq!(s.step, 2);
     }
     #[test]

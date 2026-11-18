@@ -633,7 +633,7 @@ pub(super) fn activate(state: &mut State, action: Action, shift: bool) {
         Action::LessonNext => {
             if state.mode == Mode::Lesson {
                 state.stop_reference();
-                state.lesson.next();
+                state.lesson.advance_step();
             }
         }
         Action::LessonPrevious => {
