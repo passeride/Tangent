@@ -11,9 +11,10 @@ concurrency:
   cancel-in-progress: true
 jobs:
   web:
-    name: Web · WASM and browser tests
-    # Playwright 1.56.1 does not support Ubuntu 26.04 (ubuntu-latest).
+    name: Web · WASM build and package
+    # Playwright 1.56 needs Ubuntu 24.04; keep the same distro for build/test.
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.99.1
@@ -27,7 +28,9 @@ jobs:
       - run: cargo test -p tangent-musicxml --locked
       - run: cargo test -p tangent-core --locked
       - run: cargo clippy -p tangent-player --target wasm32-unknown-unknown --locked -- -D warnings
-      - run: cargo build -p tangent-midi-web -p tangent-player --target wasm32-unknown-unknown --release --locked
+      - name: Build optimized WASM
+        timeout-minutes: 35
+        run: cargo build -p tangent-midi-web -p tangent-player --target wasm32-unknown-unknown --release --locked
       - run: cargo install wasm-bindgen-cli --version 0.2.129 --locked
       - run: wasm-bindgen target/wasm32-unknown-unknown/release/tangent_midi_web.wasm --target web --out-dir web/midi-import/pkg
       - run: wasm-bindgen target/wasm32-unknown-unknown/release/tangent_player.wasm --target web --out-dir web/piano/pkg
@@ -35,25 +38,22 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            web/midi-import/package-lock.json
-            web/piano/package-lock.json
-      - run: npm ci --prefix web/midi-import
+          cache-dependency-path: web/piano/package-lock.json
+      # postinstall places the pinned sql.js WASM files under web/piano/vendor.
       - run: npm ci --prefix web/piano
-      - run: cd web/piano && npx playwright install --with-deps chromium
-      - run: npm test --prefix web/midi-import
-      - run: npm test --prefix web/piano
-      - name: Preserve browser build for failed-test reproduction
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: tangent-web-debug
-          path: web/piano/pkg
-          if-no-files-found: ignore
-          retention-days: 3
       - run: python scripts/package_web.py
-      - name: Test packaged site under the GitHub Pages project path
-        run: node web/piano/site-smoke.mjs dist/piano
+      - name: Prepare WASM for parallel browser test jobs
+        run: |
+          mkdir -p dist/ci-wasm/piano dist/ci-wasm/midi-import
+          cp -R web/piano/pkg dist/ci-wasm/piano/
+          cp -R web/midi-import/pkg dist/ci-wasm/midi-import/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tangent-web-test-bundle
+          path: dist/ci-wasm/
+          retention-days: 3
+          if-no-files-found: error
+          compression-level: 1
       - uses: actions/upload-artifact@v4
         with:
           name: tangent-piano-web
@@ -64,8 +64,60 @@ jobs:
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         with:
           path: dist/piano
+
+  browser:
+    name: Browser · ${{ matrix.shard }}
+    needs: web
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [foundations, practice, interface, sequences]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            web/midi-import/package-lock.json
+            web/piano/package-lock.json
+      # Download the single already-built WASM pair instead of recompiling it
+      # four times. Artifact layout restores web/{piano,midi-import}/pkg.
+      - uses: actions/download-artifact@v4
+        with:
+          name: tangent-web-test-bundle
+          path: web
+      - run: npm ci --prefix web/midi-import
+      - run: npm ci --prefix web/piano
+      # Ubuntu 24.04 GitHub runners already provide Chromium shared libraries.
+      # Avoid a per-shard apt upgrade/install (unpredictable mirror/dpkg stalls).
+      - name: Install and verify Chromium
+        timeout-minutes: 6
+        run: |
+          cd web/piano
+          npx playwright install chromium
+          node --input-type=module -e "import {chromium} from 'playwright'; import {gpuArgs} from './browser-helpers.mjs'; const b = await chromium.launch({headless:true,args:gpuArgs}); await b.close();"
+      - name: Verify MIDI importer in real Chromium
+        if: matrix.shard == 'foundations'
+        timeout-minutes: 5
+        run: npm test --prefix web/midi-import
+      - name: Run ${{ matrix.shard }} browser tests
+        timeout-minutes: 22
+        run: node web/piano/ci-shard.mjs ${{ matrix.shard }}
+      - uses: actions/download-artifact@v4
+        if: matrix.shard == 'foundations'
+        with:
+          name: tangent-piano-web
+          path: dist/piano
+      - name: Test published GitHub Pages paths and audio
+        if: matrix.shard == 'foundations'
+        timeout-minutes: 6
+        run: node web/piano/site-smoke.mjs dist/piano
   native:
     name: ${{ matrix.name }}
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:
@@ -94,6 +146,11 @@ jobs:
       - run: cargo test --workspace --target ${{ matrix.target }} --locked
       - run: cargo clippy --workspace --all-targets --target ${{ matrix.target }} --locked -- -D warnings
       - name: Build native Bevy desktop (no WASM/web server)
+        timeout-minutes: 30
+        # Single-codegen-unit release is needed for WASM, not native desktop.
+        # More CGUs reduce Windows LLVM compilation time at a small binary-speed cost.
+        env:
+          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "4"
         run: cargo build -p tangent-desktop --release --target ${{ matrix.target }} --locked
       - name: Test the real platform executable
         run: python scripts/smoke_desktop.py target/${{ matrix.target }}/release/${{ matrix.binary }}
@@ -113,7 +170,7 @@ jobs:
           compression-level: 6
   deploy:
     name: Publish GitHub Pages
-    needs: [web, native]
+    needs: [web, browser, native]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

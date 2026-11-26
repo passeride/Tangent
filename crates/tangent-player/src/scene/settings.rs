@@ -447,7 +447,7 @@ pub(super) fn render(d: &mut Drawing, state: &mut State, l: &Layout, t: theme::T
                 ),
                 (
                     format!(
-                        "Names on blocks: {}",
+                        "Note names in falling blocks: {}",
                         if state.note_names { "On" } else { "Off" }
                     ),
                     Action::NoteNames,

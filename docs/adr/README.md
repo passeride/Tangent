@@ -85,3 +85,5 @@ layout, native adapters and local storage. See [follow-up tasks](../TODO.md).
 - [ADR-0036: Rhythmic reading and note glyphs](0036-rhythmic-reading-and-note-glyphs.md) - source-beat MIDI estimates and Bravura notes/flags.
 
 - [ADR-0037: Notation and UI refactoring](0037-notation-and-ui-refactoring.md) — proposed library evaluation, retained domain boundaries and 4K/library layout work.
+
+- [ADR-0038: Interactive learning modules](0038-interactive-learning-modules.md) — accepted; declarative lessons, MIDI tasks and one-surface presentation.

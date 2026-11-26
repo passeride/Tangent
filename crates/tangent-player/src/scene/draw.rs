@@ -311,6 +311,8 @@ pub fn render(
             training::render(&mut d, &mut state, &l, t);
         } else if state.screen == Screen::Library {
             super::library::render(&mut d, &mut state, &l, t);
+        } else if state.screen == Screen::Learn {
+            super::lesson_view::catalog(&mut d, &mut state, &l, t);
         } else {
             super::menu::render(&mut d, &mut state, &l, t);
         }
@@ -483,6 +485,10 @@ pub fn render(
             }
         }
         keyboard(&mut d, &state, &l, t, &piano_scene.image);
+        if state.mode == Mode::Lesson {
+            super::lesson_view::piano_overlay(&mut d, &state, &l, t);
+            super::lesson_view::render(&mut d, &mut state, &l, t);
+        }
         if matches!(
             state.mode,
             Mode::Notes | Mode::Chords | Mode::Explorer | Mode::FiveFinger | Mode::MajorScale
@@ -556,10 +562,15 @@ pub fn render(
         }
     }
     if matches!(state.screen, Screen::Main | Screen::Train) && !state.help {
+        let progress_y = if state.screen == Screen::Train && l.height < 620. {
+            10.
+        } else {
+            l.height - 44.
+        };
         d.button(
             &mut state,
             l.width - 148.,
-            l.height - 44.,
+            progress_y,
             120.,
             "Progress",
             Action::Progress,
@@ -645,6 +656,22 @@ pub fn render(
             "block_labels":d.block_labels,"visible_labels":d.labels.iter().map(|s|s.text.as_str()).collect::<Vec<_>>()
         }).as_object().unwrap().clone());
         report.as_object_mut().unwrap().extend(serde_json::json!({"guided_waiting":guided::waiting(&state),"guided_gate":state.guidance.engine.barrier(),"guided_targets":state.guidance.engine.targets(),"flow_notes":state.practice.sequence_notes(),"flow_step":state.practice.sequence_step(),"flow_left":state.practice.scale_task().map(|p|p.left).or_else(||state.practice.flow_task().map(|p|p.left)),"explorer_source":state.practice.explorer_task().map(|task|task.source),"piano_renderer":"bevy-pbr-3d","piano_keys":state.piano.keys.len(),"personal_open":state.personal.open,"personal_token":state.personal.token,"personal_status":state.personal.status,"personal_matched":state.personal.matched,"personal_unresolved":state.personal.unresolved}).as_object().unwrap().clone());
+        report.as_object_mut().unwrap().extend(
+            serde_json::json!({
+                "lesson_id":state.lesson.module.map(|i|tangent_core::lesson::MODULES[i].id),
+                "lesson_step":state.lesson.step,
+                "lesson_cursor":state.lesson.cursor,
+                "lesson_complete":state.lesson.complete(),
+                "lesson_reveal":state.lesson.reveal,
+                "lesson_next_target":state.lesson.next_target(),
+                "lesson_context":state.lesson.context,
+                "lesson_fifth":state.lesson.fifth,
+                "lesson_audition":state.reference_keys,
+            })
+            .as_object()
+            .unwrap()
+            .clone(),
+        );
         platform::report(&report.to_string());
     }
     apply(&mut commands, &mut pool, d, &music_font.0, &ui_font.0);
@@ -893,6 +920,77 @@ fn staff(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
         }
     }
 }
+/// Keep the hand colour while making black-key (sharp/flat) lanes clearly darker.
+fn falling_block_color(color: Color, key: u8) -> Color {
+    if !tangent_core::piano::black(key) {
+        return color;
+    }
+    let rgb = color.to_srgba();
+    Color::srgba(rgb.red * 0.52, rgb.green * 0.52, rgb.blue * 0.52, rgb.alpha)
+}
+
+/// Prefer the full MIDI pitch (C#4), falling back to a pitch class (C#)
+/// when the keyboard range or viewport makes the note lane narrow.
+fn falling_block_label(key: u8, width: f32) -> Option<(String, f32)> {
+    let name = tangent_core::explorer::note_name(key);
+    let pitch = if tangent_core::piano::black(key) {
+        &name[..2]
+    } else {
+        &name[..1]
+    };
+    let text = if width >= name.len() as f32 * 10. * 0.62 + 4. {
+        name.as_str()
+    } else {
+        pitch
+    };
+    let size = ((width - 4.) / (text.len() as f32 * 0.62)).min(13.);
+    (size >= 8.).then(|| (text.to_owned(), size))
+}
+
+fn falling_block(d: &mut Drawing, r: Rect, key: u8, color: Color, show_names: bool) {
+    let fill = falling_block_color(color, key);
+    let x = r.x + r.w * 0.15;
+    let w = r.w * 0.7;
+    d.rect(x, r.y, w, r.h, fill.with_alpha(0.82), 4.);
+    // Retain an undimmed hand-colour strip for orientation.
+    d.rect(
+        r.x + r.w * 0.19,
+        r.y + 1.,
+        (r.w * 0.08).max(1.),
+        (r.h - 2.).max(1.),
+        color.with_alpha(0.75),
+        2.,
+    );
+    d.rect(
+        r.x + r.w * 0.23,
+        r.y + 1.,
+        r.w * 0.48,
+        1.5,
+        Color::WHITE.with_alpha(0.24),
+        1.,
+    );
+    if show_names
+        && r.h >= 16.
+        && let Some((label, size)) = falling_block_label(key, w)
+    {
+        let rgb = fill.to_srgba();
+        let brightness = 0.2126 * rgb.red + 0.7152 * rgb.green + 0.0722 * rgb.blue;
+        let ink = if brightness > 0.58 {
+            Color::BLACK
+        } else {
+            Color::WHITE
+        };
+        let text_w = label.len() as f32 * size * 0.62;
+        d.text(
+            x + (w - text_w) * 0.5,
+            r.y + (r.h.min(26.) - size) * 0.5,
+            label.clone(),
+            size,
+            ink,
+        );
+        d.block_labels.push(label);
+    }
+}
 fn falling(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
     d.falling_region = Some((l.top, l.strike));
     if matches!(state.view, View::Staff | View::Notes) {
@@ -956,36 +1054,17 @@ fn falling(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
             }
         } else {
             let top = tail.max(l.top + 25.);
-            d.rect(
-                r.x + r.w * 0.15,
-                top,
-                r.w * 0.7,
-                (onset.min(l.strike) - top).max(3.),
-                color.with_alpha(0.82),
-                4.,
-            );
-            let h = (onset.min(l.strike) - top).max(3.);
-            if state.note_names && h >= 14. {
-                let label = tangent_core::explorer::note_name(n.key);
-                d.block_labels.push(label.clone());
-                let size = (r.w * 0.7 / (label.len() as f32 * 0.62)).clamp(6., 12.);
-                d.text(r.x + r.w * 0.17, top + 2., label, size, t.ink);
-            }
-            d.rect(
-                r.x + r.w * 0.19,
-                top + 1.,
-                (r.w * 0.08).max(1.),
-                (h - 2.).max(1.),
-                color.with_alpha(0.75),
-                2.,
-            );
-            d.rect(
-                r.x + r.w * 0.23,
-                top + 1.,
-                r.w * 0.48,
-                1.5,
-                t.ink.with_alpha(0.3),
-                1.,
+            falling_block(
+                d,
+                Rect {
+                    x: r.x,
+                    y: top,
+                    w: r.w,
+                    h: (onset.min(l.strike) - top).max(3.),
+                },
+                n.key,
+                color,
+                state.note_names,
             );
         }
     }
@@ -1016,6 +1095,49 @@ fn falling(d: &mut Drawing, state: &State, l: &Layout, t: theme::Theme) {
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod falling_block_tests {
+    use super::*;
+
+    #[test]
+    fn only_black_keys_are_darkened() {
+        let color = Color::srgb(0.8, 0.6, 0.4);
+        assert_eq!(falling_block_color(color, 60), color); // C4
+        assert_eq!(falling_block_color(color, 62), color); // D4
+        let sharp = falling_block_color(color, 61).to_srgba(); // C#4
+        assert!((sharp.red - 0.416).abs() < 0.0001);
+        assert!((sharp.green - 0.312).abs() < 0.0001);
+        assert!((sharp.blue - 0.208).abs() < 0.0001);
+    }
+
+    #[test]
+    fn optional_labels_fit_inside_the_block_or_hide_when_too_narrow() {
+        assert_eq!(falling_block_label(61, 60.).unwrap().0, "C#4");
+        assert_eq!(falling_block_label(61, 19.).unwrap().0, "C#");
+        assert_eq!(falling_block_label(60, 11.).unwrap().0, "C");
+        assert!(falling_block_label(61, 8.).is_none());
+
+        let rect = Rect {
+            x: 10.,
+            y: 30.,
+            w: 80.,
+            h: 50.,
+        };
+        let mut labelled = Drawing::default();
+        falling_block(&mut labelled, rect, 61, Color::srgb(0.8, 0.6, 0.4), true);
+        assert_eq!(labelled.block_labels, ["C#4"]);
+        assert_eq!(labelled.labels.len(), 1);
+        let label = &labelled.labels[0];
+        assert!(label.x >= rect.x && label.x < rect.x + rect.w);
+        assert!(label.y >= rect.y && label.y < rect.y + rect.h);
+
+        let mut hidden = Drawing::default();
+        falling_block(&mut hidden, rect, 61, Color::srgb(0.8, 0.6, 0.4), false);
+        assert!(hidden.labels.is_empty());
+        assert!(hidden.block_labels.is_empty());
     }
 }
 
