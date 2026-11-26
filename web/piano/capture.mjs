@@ -1,3 +1,9 @@
+if (process.env.TANGENT_CAPTURE_COMMANDS === '1') {
+  await import('./bindings-smoke.mjs');
+  const {copyFile} = await import('node:fs/promises');
+  await copyFile(new URL('../../dist/verification/piano-command-overlay.png', import.meta.url), new URL('../../docs/screenshots/piano-command-overlay.png', import.meta.url));
+  process.exit(0);
+}
 if(process.env.TANGENT_CAPTURE_FOLDER==='1'){await import('./folder-smoke.mjs');process.exit(0);}
 if(process.env.TANGENT_CAPTURE_METADATA==='1'){await import('./metadata-smoke.mjs');process.exit(0);}
 if (process.env.TANGENT_CAPTURE_BEAMS === '1') {

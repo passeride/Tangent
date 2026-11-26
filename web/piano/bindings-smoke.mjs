@@ -63,6 +63,16 @@ try {
  await click(page,'settings-back');await click(page,'settings-back');await click(page,'start-play');
  await page.keyboard.press('KeyZ');await page.waitForFunction(()=>tangentDiagnostics().playing);
  await page.keyboard.press('KeyZ');await page.waitForFunction(()=>!tangentDiagnostics().playing);
+ // The discoverability overlay follows held and released-prefix grammar.
+ const commandVisible=()=>tangentDiagnostics().visible_labels.some(s=>s.startsWith('Piano controls /'));
+ assert.equal(await page.evaluate(commandVisible),false);
+ await midi(23);
+ await page.waitForFunction(commandVisible);
+ await page.waitForFunction(()=>tangentDiagnostics().visible_labels.includes('C5 > Play'));
+ await page.screenshot({path:new URL('../../dist/verification/piano-command-overlay.png',import.meta.url).pathname});
+ await midi(23,false);
+ await page.waitForFunction(commandVisible); // Still armed after release.
+ await page.waitForFunction(()=>!tangentDiagnostics().visible_labels.some(s=>s.startsWith('Piano controls /')),{},{timeout:4000});
  // Same poll, opposite message order: simultaneous keys still form a command.
  await page.evaluate(()=>{const p=fakeMidi.inputs.get('bindings-in');p.onmidimessage({data:[0x90,60,90]});p.onmidimessage({data:[0x90,23,90]});});
  await page.waitForFunction(()=>tangentDiagnostics().preferences.speed_percent===105);
